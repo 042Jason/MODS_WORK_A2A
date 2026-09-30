@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 검토 회의실</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --canvas:#ECEFF3; --surface:#FFFFFF; --ink:#151B23; --muted:#5F6B7A; --line:#D7DDE5; --soft:#F5F7FA;
+  --table:#27303D; --table-rim:#3A4556; --focus:#2563EB; --danger:#B42318; --ok:#067647;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  background:var(--canvas);color:var(--ink);font-size:16px;line-height:1.55;display:grid;grid-template-rows:auto 1fr;overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:10px;font-weight:600;font-size:15px;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.stop{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.small{padding:5px 10px;font-size:13.5px;border-radius:8px}
+
+header{display:flex;align-items:center;gap:14px;padding:12px 22px;background:var(--surface);border-bottom:1px solid var(--line)}
+header h1{margin:0;font-size:21px;font-weight:800;letter-spacing:-.02em}
+header .sub{color:var(--muted);font-size:14px;margin-left:2px}
+.spacer{flex:1}
+.mode{font-size:13.5px;font-weight:700;padding:4px 11px;border-radius:999px;background:#EEF2F7;color:#3B4757}
+.mode[data-m="user"]{background:#E6F4EA;color:var(--ok)}
+.mode[data-m="mock"]{background:#FFF1E0;color:#9A4B00}
+
+main{display:grid;grid-template-columns:minmax(520px,46%) 1fr;min-height:0}
+
+/* 회의실 */
+.room{position:relative;padding:18px 22px 20px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.room.drag::after{content:"여기에 놓으면 검토 자료로 올라가요";position:absolute;inset:10px;border:3px dashed var(--focus);border-radius:22px;background:rgba(37,99,235,.06);
+  display:grid;place-items:center;font-size:20px;font-weight:700;color:var(--focus);z-index:5}
+.stage{position:relative;height:580px;flex:none}
+.table{position:absolute;inset:160px 118px 150px;background:var(--table);border-radius:50%/44%;box-shadow:inset 0 0 0 10px var(--table-rim),0 18px 40px rgba(21,27,35,.18);
+  display:grid;place-items:center;padding:30px 46px;color:#E8EDF4;text-align:center}
+.table .now-name{font-size:14px;font-weight:700;opacity:.8;margin-bottom:6px}
+.table .now-text{font-size:17px;line-height:1.6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical}
+.table .idle{opacity:.85;font-size:16px}
+.table .idle strong{display:block;font-size:19px;margin-bottom:4px;color:#fff}
+.table .pick{margin-top:12px;display:flex;gap:8px;justify-content:center}
+.table .pick .btn{background:transparent;color:#fff;border-color:#5B6778}
+.doc-chip{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;gap:10px;align-items:center;font-size:14px;min-width:0}
+.doc-chip .lbl{font-weight:700;color:var(--muted);white-space:nowrap}
+.doc-chip b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-chip span{color:var(--muted);white-space:nowrap}
+
+.seat{position:absolute;width:136px;transform:translate(-50%,-29px);text-align:center;border:0;background:none;padding:0}
+.seat .av{width:58px;height:58px;border-radius:50%;margin:0 auto 6px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:22px;
+  background:var(--c);box-shadow:0 0 0 4px var(--canvas);transition:box-shadow .25s,transform .25s}
+.seat .nm{font-weight:800;font-size:15.5px;line-height:1.25}
+.seat .tt{font-size:12.5px;color:var(--muted)}
+.seat .vd{font-size:12px;font-weight:700;color:var(--c);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seat .st{display:flex;gap:5px;justify-content:center;align-items:center;margin-top:4px;min-height:20px}
+.chip{font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:#EEF1F5;color:#475467}
+.chip[data-s="우려"]{background:#FEE4E2;color:#B42318}
+.chip[data-s="동의"]{background:#DCFAE6;color:#067647}
+.chip[data-s="보류"]{background:#FEF0C7;color:#93370D}
+.bar{width:34px;height:5px;border-radius:3px;background:#DDE3EA;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--c)}
+.lock{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:3px}
+.seat.speaking .av{box-shadow:0 0 0 4px var(--canvas),0 0 0 8px var(--c);transform:scale(1.08)}
+.seat.speaking .av::after{content:"";position:absolute}
+.seat.thinking .av{animation:breathe 1.4s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:0 0 0 4px var(--canvas),0 0 0 11px color-mix(in srgb,var(--c) 45%,transparent)}}
+
+.tracker{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.tracker .head{display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px}
+.tracker .head b{font-size:15px}
+.cells{display:grid;grid-template-columns:repeat(5,1fr) 10px repeat(5,1fr) 10px 1fr 10px 1fr;gap:4px}
+.cell{height:12px;border-radius:4px;background:#E3E8EF}
+.cell.now{background:#9AA7B8;animation:pulse 1.2s ease-in-out infinite}
+.cell.done{background:var(--c)}
+@keyframes pulse{50%{opacity:.45}}
+.groups{display:grid;grid-template-columns:5fr 10px 5fr 10px 1fr 10px 1fr;gap:4px;margin-top:5px;font-size:12px;color:var(--muted)}
+.groups span:nth-child(odd){white-space:nowrap}
+.status-line{font-size:14.5px;color:var(--muted);min-height:22px}
+
+/* 오른쪽 패널 */
+.panel{background:var(--surface);border-left:1px solid var(--line);display:grid;grid-template-rows:auto 1fr;min-height:0}
+.tabs{display:flex;gap:4px;padding:10px 16px 0;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:none;padding:10px 14px;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;font-size:15px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.tabs .count{font-size:12px;background:#EEF1F5;border-radius:999px;padding:1px 7px;margin-left:4px}
+.pane{overflow:auto;padding:18px 22px 60px;display:none}
+.pane.on{display:block}
+
+.line{display:grid;grid-template-columns:36px 1fr;gap:10px;margin-bottom:14px}
+.line .av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;background:var(--c)}
+.line .who{font-size:13.5px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.line .who b{color:var(--ink);font-size:14.5px}
+.line .txt{font-size:16.5px;margin-top:2px}
+.line.mod .txt{color:#3B4757}
+.line.mod .av{background:#6B7685}
+.line .asktag{display:inline-block;margin-top:5px;font-size:13px;background:#F2F4F7;border-radius:8px;padding:3px 9px;color:#344054}
+.line.err .txt{color:var(--danger)}
+.phase{display:flex;align-items:center;gap:10px;margin:18px 0 12px;color:var(--muted);font-size:13px;font-weight:700}
+.phase::after{content:"";flex:1;height:1px;background:var(--line)}
+.jsonbtn{border:0;background:none;padding:0;color:var(--muted);font-size:12.5px;font-weight:600}
+pre.json{display:none;margin:8px 0 0;max-height:320px;overflow:auto;background:#121820;color:#D5E0EC;font-size:12px;line-height:1.5;padding:12px;border-radius:10px;white-space:pre-wrap;word-break:break-all}
+pre.json.open{display:block}
+.typing{display:inline-flex;gap:3px;vertical-align:middle}
+.typing i{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.3;animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{50%{opacity:.9}}
+.empty{color:var(--muted);text-align:center;margin-top:12vh}
+.empty strong{display:block;color:var(--ink);font-size:18px;margin-bottom:4px}
+
+/* 검토결과 */
+.verdict{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:16px;background:var(--soft);border:1px solid var(--line);margin-bottom:18px}
+.verdict .badge{font-weight:800;font-size:15px;padding:6px 12px;border-radius:10px;white-space:nowrap;background:#FEF0C7;color:#93370D}
+.verdict .badge[data-v="배포 가능"]{background:#DCFAE6;color:#067647}
+.verdict .badge[data-v="재검토 필요"]{background:#FEE4E2;color:#B42318}
+.verdict p{margin:0;font-size:17px;font-weight:600}
+.rv h3{font-size:15px;margin:20px 0 8px}
+.item{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px}
+.item .where{font-size:12.5px;color:var(--muted)}
+.item .issue{font-weight:700}
+.item .fix{color:#344054}
+.item .by{font-size:12.5px;font-weight:700}
+.rv ul{margin:0;padding-left:20px}
+.rv-actions{display:flex;gap:8px;margin-top:22px}
+.notes{display:grid;gap:12px}
+.note{border:1px solid var(--line);border-radius:14px;padding:12px 16px;border-left:5px solid var(--c)}
+.note .h{display:flex;gap:8px;align-items:center;font-weight:800;margin-bottom:4px}
+.note .body{white-space:pre-wrap;font-size:15px;color:#344054}
+.note .trail{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+
+/* 설정 서랍 */
+.scrim{position:fixed;inset:0;background:rgba(21,27,35,.35);opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(620px,100%);background:var(--surface);z-index:10;transform:translateX(102%);transition:transform .25s;display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.drawer .dh{display:flex;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--line)}
+.drawer .dh h2{margin:0;font-size:19px;flex:1}
+.drawer .db{overflow:auto;padding:18px 22px 40px}
+.field{margin-bottom:22px}
+.field > label,.field > .lbl{display:block;font-weight:800;margin-bottom:6px}
+.field .help{font-size:13.5px;color:var(--muted);margin:4px 0 0}
+.row{display:flex;gap:8px;align-items:center}
+.inp{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:#fff}
+.radio{display:flex;gap:16px;margin-top:8px;font-size:14.5px}
+.mrow{display:grid;grid-template-columns:32px 118px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.mrow .av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;background:var(--c)}
+.mrow .n{font-weight:800;font-size:14.5px;line-height:1.2}
+.mrow .n small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.mrow .res{grid-column:2 / -1;font-size:12.5px;color:var(--muted);margin-top:-4px}
+.mrow .res.ok{color:var(--ok)}.mrow .res.bad{color:var(--danger)}
+.warn{background:#FFF6E5;border:1px solid #F5D08A;color:#7A4B00;border-radius:12px;padding:10px 14px;font-size:14px;margin-bottom:18px}
+
+dialog{border:0;border-radius:18px;padding:0;width:min(720px,94vw);box-shadow:0 30px 60px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(21,27,35,.4)}
+dialog .dh{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+dialog .dh h2{margin:0;font-size:18px;flex:1}
+dialog .db{padding:16px 20px}
+dialog textarea{width:100%;height:320px;border:1px solid var(--line);border-radius:10px;padding:12px;resize:vertical}
+dialog pre{margin:0;max-height:60vh;overflow:auto;background:#121820;color:#D5E0EC;font-size:12.5px;padding:14px;border-radius:10px;white-space:pre-wrap}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14.5px;z-index:20;display:none}
+.toast.on{display:block}
+
+@media (max-width:1100px){body{overflow:auto}main{grid-template-columns:1fr}.panel{min-height:70vh}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>AI 검토 회의실</h1><span class="sub">A2A로 연결된 에이전트 여섯이 분석 결과를 검토해요</span>
+  <div class="spacer"></div>
+  <span class="mode" id="mode" data-m="mock">확인 중</span>
+  <button class="btn" id="btn-settings">설정</button>
+  <button class="btn" id="btn-new">새 회의</button>
+  <button class="btn primary" id="btn-run" disabled>회의 시작</button>
+</header>
+
+<main>
+  <section class="room" id="room" aria-label="회의실">
+    <div class="stage" id="stage">
+      <div class="table" id="table">
+        <div class="idle" id="table-idle">
+          <strong id="idle-title">검토할 분석 결과를 끌어다 놓으세요</strong>
+          <span id="idle-sub">PDF, HWPX, Word, Excel, CSV, 텍스트를 읽을 수 있어요.</span>
+          <div class="pick">
+            <button class="btn small" id="btn-file">파일 고르기</button>
+            <button class="btn small" id="btn-paste">텍스트 붙여넣기</button>
+          </div>
+        </div>
+        <div id="table-now" hidden><div class="now-name" id="now-name"></div><div class="now-text" id="now-text"></div></div>
+      </div>
+    </div>
+    <div class="doc-chip" id="doc-chip" hidden><span class="lbl">검토 자료</span><b id="doc-name"></b><span id="doc-meta"></span><div class="spacer"></div><button class="btn small" id="doc-view">내용 보기</button><button class="btn small" id="doc-change">바꾸기</button></div>
+    <div class="tracker">
+      <div class="head"><b id="turn-label">12턴 회의</b></div>
+      <div class="cells" id="cells"></div>
+      <div class="groups"><span>1라운드 첫 의견</span><span></span><span>2라운드 반론과 보완</span><span></span><span>최종 반론</span><span></span><span>결론</span></div>
+    </div>
+    <div class="status-line" id="status" aria-live="polite"></div>
+    <input type="file" id="file" hidden accept=".pdf,.hwpx,.docx,.xlsx,.xls,.csv,.tsv,.txt,.md,.json">
+  </section>
+
+  <section class="panel">
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="log">회의록<span class="count" id="log-count">0</span></button>
+      <button role="tab" aria-selected="false" data-tab="review">검토결과</button>
+      <button role="tab" aria-selected="false" data-tab="minds">속마음</button>
+    </div>
+    <div class="pane on" id="pane-log"><div class="empty"><strong>아직 회의 전이에요</strong>자료를 올리고 '회의 시작'을 누르면 사회자가 회의를 열어요.</div></div>
+    <div class="pane" id="pane-review"><div class="empty"><strong>검토결과가 아직 없어요</strong>12번째 턴에서 사회자가 정리해 드려요.</div></div>
+    <div class="pane" id="pane-minds">
+      <div class="empty" id="minds-empty"><strong>각자의 메모는 암호화되어 있어요</strong>회의실도 열어 볼 수 없어요. 회의가 끝나면 각 에이전트에게 공개를 부탁할 수 있어요.
+        <div style="margin-top:14px"><button class="btn" id="btn-reveal" disabled>속마음 공개 요청</button></div></div>
+      <div class="notes" id="notes"></div>
+    </div>
+  </section>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="설정" aria-hidden="true">
+  <div class="dh"><h2>설정</h2><button class="btn" id="btn-close">닫기</button></div>
+  <div class="db">
+    <div class="warn" id="set-warn" hidden></div>
+    <div class="field">
+      <label for="key">OpenRouter API 키</label>
+      <div class="row"><input class="inp" id="key" type="password" autocomplete="off" placeholder="sk-or-로 시작하는 키">
+        <button class="btn small" id="key-show">보기</button><button class="btn small" id="key-clear">지우기</button></div>
+      <div class="radio">
+        <label><input type="radio" name="keystore" value="session" checked> 이 탭에서만 쓰기 (닫으면 지워짐)</label>
+        <label><input type="radio" name="keystore" value="local"> 이 브라우저에 저장</label>
+      </div>
+      <p class="help">키는 이 브라우저에만 보관하고, 요청할 때 이 사이트 서버를 거쳐 OpenRouter로만 보내요. 서버에 저장하지 않아요. 공용 PC에서는 저장하지 마세요.
+        키는 openrouter.ai의 Keys 메뉴에서 만들 수 있어요.</p>
+    </div>
+    <div class="field" id="pass-field" hidden>
+      <label for="pass">입장 암호</label>
+      <input class="inp" id="pass" type="password" autocomplete="off" placeholder="서버 공용 키를 쓸 때 필요해요">
+      <p class="help">본인 API 키를 넣으면 암호 없이 쓸 수 있어요.</p>
+    </div>
+    <div class="field">
+      <div class="lbl">에이전트별 모델</div>
+      <p class="help" id="models-help">목록을 불러오는 중이에요.</p>
+      <div id="model-rows"></div>
+      <datalist id="model-list"></datalist>
+      <div class="row" style="margin-top:12px">
+        <button class="btn small" id="test-all">모두 연결 테스트</button>
+        <button class="btn small ghost" id="reset-models">기본값으로</button>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<dialog id="dlg-paste"><div class="dh"><h2>텍스트 붙여넣기</h2><button class="btn small" data-close>닫기</button></div>
+  <div class="db"><input class="inp" id="paste-title" placeholder="자료 제목 (선택)" style="margin-bottom:8px"><textarea id="paste-text" placeholder="보도자료나 분석 결과를 붙여넣으세요"></textarea>
+  <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn primary" id="paste-ok">자료로 올리기</button></div></div></dialog>
+<dialog id="dlg-view"><div class="dh"><h2 id="view-title">보기</h2><button class="btn small" data-close>닫기</button></div><div class="db"><pre id="view-body"></pre></div></dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ───────────── 기본 정보 ───────────── */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const SEATS = {  // 탁자 둘레 자리 (가로 %, 아바타 중심 세로 px)
+  moderator: [50, 42], critic: [11, 178], strategist: [89, 178], method: [14, 392], policy: [86, 392], reader: [50, 478],
+};
+const MEMBERS = ["critic", "strategist", "reader", "method", "policy"];
+const ORDER = ["moderator", ...MEMBERS];
+const PLAN = [...Array(5).fill("round1"), ...Array(5).fill("round2"), "last_word", "conclusion"];
+const PHASE_LABEL = { round1: "1라운드 첫 의견", round2: "2라운드 반론과 보완", last_word: "최종 반론", conclusion: "결론" };
+const MAX_CHARS = 60000;
+
+const S = {
+  agents: {},          // id -> {url, card, name, title, color, vendor, defaultModel}
+  registry: null,
+  doc: null,           // {name, text, meta}
+  transcript: [],      // 공개 회의록 [{role, speaker, text, ask}]
+  tokens: {},          // id -> 암호화된 개인 상태 토큰 (회의실은 열어 볼 수 없음)
+  contexts: {},        // id -> contextId
+  last: {},            // id -> {stance, confidence}
+  running: false, abort: null, review: null, turnsDone: [],
+};
+
+/* ───────────── 설정 저장 ───────────── */
+const SET_KEY = "meetingroom.settings";
+function loadSettings() { try { return JSON.parse(localStorage.getItem(SET_KEY)) || {}; } catch { return {}; } }
+function saveSettings(p) { try { localStorage.setItem(SET_KEY, JSON.stringify({ ...loadSettings(), ...p })); } catch {} }
+function getKey() {
+  try { return sessionStorage.getItem("meetingroom.key") || localStorage.getItem("meetingroom.key") || ""; } catch { return ""; }
+}
+function setKey(v, where) {
+  try {
+    sessionStorage.removeItem("meetingroom.key"); localStorage.removeItem("meetingroom.key");
+    if (v) (where === "local" ? localStorage : sessionStorage).setItem("meetingroom.key", v);
+  } catch {}
+}
+function getPass() { try { return sessionStorage.getItem("meetingroom.pass") || ""; } catch { return ""; } }
+function modelFor(id) { return (loadSettings().models || {})[id] || S.agents[id]?.defaultModel || ""; }
+
+/* ───────────── A2A 호출 ───────────── */
+function headers(id) {
+  const h = { "Content-Type": "application/json" };
+  const k = getKey(); if (k) h["x-openrouter-key"] = k;
+  const p = getPass(); if (p) h["x-meeting-passcode"] = p;
+  const m = modelFor(id); if (m) h["x-agent-model"] = m;
+  return h;
+}
+async function send(id, text, data, signal) {
+  const message = {
+    messageId: crypto.randomUUID(), role: "ROLE_USER",
+    ...(S.contexts[id] ? { contextId: S.contexts[id] } : {}),
+    parts: [{ text }, { data }],
+    metadata: S.tokens[id] ? { stateToken: S.tokens[id] } : {},
+  };
+  const req = { jsonrpc: "2.0", id: crypto.randomUUID(), method: "SendMessage", params: { message } };
+  const res = await fetch(S.agents[id].url, { method: "POST", headers: headers(id), body: JSON.stringify(req), signal });
+  const body = await res.json();
+  if (body.error) { const e = new Error(body.error.message); e.code = body.error.code; e.raw = { req, res: body }; throw e; }
+  const r = body.result;
+  if (r.message) return { kind: "message", text: r.message.parts.map((p) => p.text).filter(Boolean).join("\n"),
+    data: r.message.parts.find((p) => p.data)?.data || {}, raw: { req, res: body } };
+  const t = r.task;
+  S.contexts[id] = t.contextId;
+  if (t.metadata?.stateToken) S.tokens[id] = t.metadata.stateToken;
+  const parts = t.status.message?.parts || [];
+  return {
+    kind: "task", state: t.status.state, failed: t.status.state === "TASK_STATE_FAILED",
+    text: parts.map((p) => p.text).filter(Boolean).join("\n"), data: parts.find((p) => p.data)?.data || {},
+    artifacts: t.artifacts || [], raw: { req, res: body },
+  };
+}
+
+/* ───────────── 회의실 그리기 ───────────── */
+function drawSeats() {
+  document.querySelectorAll(".seat").forEach((e) => e.remove());
+  for (const id of ORDER) {
+    const a = S.agents[id]; if (!a) continue;
+    const [x, y] = SEATS[id];
+    const b = document.createElement("button");
+    b.className = "seat"; b.id = `seat-${id}`; b.style.left = x + "%"; b.style.top = y + "px"; b.style.setProperty("--c", a.color);
+    b.title = `${a.name}의 명함 보기`;
+    b.innerHTML = `<div class="av">${esc(a.name[0])}</div><div class="nm">${esc(a.name)}</div><div class="tt">${esc(a.title)}</div>
+      <div class="vd" id="vd-${id}"></div><div class="st"><span id="st-${id}" style="display:contents"></span><span class="lock" id="lk-${id}"></span></div>`;
+    b.onclick = () => showCard(id);
+    $("#stage").appendChild(b);
+  }
+  refreshSeatInfo();
+}
+function vendorOf(model) {
+  const v = (model || "").split("/")[0];
+  return { openai: "GPT", anthropic: "Claude", google: "Gemini", "x-ai": "Grok", upstage: "Solar" }[v] || v;
+}
+function shortModel(model) {
+  const [v, rest = ""] = (model || "").split("/");
+  const tail = rest.replace(/^(claude|gpt|gemini|grok|solar)-?/i, "").replace(/-preview$/, "");
+  return `${vendorOf(model)} ${tail}`.trim();
+}
+function refreshSeatInfo() {
+  for (const id of ORDER) {
+    if (!S.agents[id]) continue;
+    const m = modelFor(id);
+    $(`#vd-${id}`).textContent = shortModel(m); $(`#vd-${id}`).title = m;
+    const l = S.last[id];
+    $(`#st-${id}`).innerHTML = l ? `<span class="chip" data-s="${esc(l.stance)}">${esc(l.stance)}</span><span class="bar" title="배포해도 된다는 정도 ${l.confidence}"><i style="width:${l.confidence}%"></i></span>` : "";
+    const t = S.tokens[id];
+    const lk = $(`#lk-${id}`);
+    lk.innerHTML = t ? `<svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 10V8a6 6 0 1 1 12 0v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1h1Zm2 0h8V8a4 4 0 1 0-8 0v2Z"/></svg>` : "";
+    lk.title = t ? `암호화된 개인 메모 ${t.length}자. 회의실은 열어 볼 수 없어요.` : "";
+  }
+}
+function setSpeaking(id, mode) {
+  document.querySelectorAll(".seat").forEach((e) => e.classList.remove("speaking", "thinking"));
+  if (id) $(`#seat-${id}`)?.classList.add(mode === "thinking" ? "thinking" : "speaking");
+}
+function showOnTable(id, text) {
+  $("#table-idle").hidden = true; $("#table-now").hidden = false;
+  $("#now-name").textContent = S.agents[id]?.name || ""; $("#now-text").textContent = text;
+}
+function drawCells() {
+  const box = $("#cells"); box.innerHTML = "";
+  PLAN.forEach((p, i) => {
+    if (i === 5 || i === 10 || i === 11) box.appendChild(document.createElement("span"));
+    const c = document.createElement("div"); c.className = "cell"; c.id = `cell-${i}`;
+    const done = S.turnsDone[i];
+    if (done) { c.classList.add("done"); c.style.setProperty("--c", S.agents[done]?.color || "#999"); c.title = S.agents[done]?.name; }
+    box.appendChild(c);
+  });
+}
+function markCell(i, state, who) {
+  const c = $(`#cell-${i}`); if (!c) return;
+  c.classList.toggle("now", state === "now");
+  if (state === "done") { S.turnsDone[i] = who; c.classList.add("done"); c.style.setProperty("--c", S.agents[who]?.color); c.title = S.agents[who]?.name; }
+  $("#turn-label").textContent = state === "now" ? `${i + 1}번째 턴, ${PHASE_LABEL[PLAN[i]]}` : $("#turn-label").textContent;
+}
+const status = (t) => ($("#status").innerHTML = t);
+function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => e.classList.remove("on"), 3200); }
+
+/* ───────────── 회의록 ───────────── */
+function logPane() { const p = $("#pane-log"); if (p.querySelector(".empty")) p.innerHTML = ""; return p; }
+function addPhase(label) { logPane().insertAdjacentHTML("beforeend", `<div class="phase">${esc(label)}</div>`); }
+function addLine({ id, to, text, ask, stance, confidence, raw, cls = "", model }) {
+  const a = S.agents[id] || { name: id, color: "#999" };
+  const el = document.createElement("div");
+  el.className = `line ${id === "moderator" ? "mod" : ""} ${cls}`; el.style.setProperty("--c", a.color);
+  el.innerHTML = `<div class="av">${esc(a.name[0])}</div><div>
+    <div class="who"><b>${esc(a.name)}</b>${to ? `→ ${esc(S.agents[to]?.name || to)}` : ""}
+      ${stance ? `<span class="chip" data-s="${esc(stance)}">${esc(stance)} ${confidence ?? ""}</span>` : ""}
+      ${model ? `<span>${esc(vendorOf(model))}</span>` : ""}
+      ${raw ? `<button class="jsonbtn">JSON 보기</button>` : ""}</div>
+    <div class="txt">${esc(text)}</div>
+    ${ask ? `<div class="asktag">${esc(ask.to)} 님께 질문: ${esc(ask.question)}</div>` : ""}
+    ${raw ? `<pre class="json">${esc(JSON.stringify(raw, null, 2))}</pre>` : ""}</div>`;
+  const jb = el.querySelector(".jsonbtn"); if (jb) jb.onclick = () => el.querySelector("pre.json").classList.toggle("open");
+  logPane().appendChild(el); el.scrollIntoView({ block: "end", behavior: "smooth" });
+  $("#log-count").textContent = S.transcript.length;
+  return el;
+}
+function addThinking(id) {
+  const a = S.agents[id];
+  const el = document.createElement("div"); el.className = "line"; el.style.setProperty("--c", a.color);
+  el.innerHTML = `<div class="av">${esc(a.name[0])}</div><div><div class="who"><b>${esc(a.name)}</b> 생각 중 <span class="typing"><i></i><i></i><i></i></span> <span class="sec">0초</span></div></div>`;
+  logPane().appendChild(el); el.scrollIntoView({ block: "end", behavior: "smooth" });
+  const t0 = Date.now(); const timer = setInterval(() => { const s = el.querySelector(".sec"); if (s) s.textContent = `${Math.round((Date.now() - t0) / 1000)}초`; }, 1000);
+  return () => { clearInterval(timer); el.remove(); };
+}
+
+/* ───────────── 회의 진행 ───────────── */
+const publicTranscript = () => S.transcript.map(({ role, speaker, text, ask }) => ({ role, speaker, text, ask }));
+const docForAgents = () => ({ name: S.doc.name, text: S.doc.text });
+
+async function call(id, text, data) {
+  setSpeaking(id, "thinking");
+  const done = addThinking(id);
+  try {
+    let r;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      r = await send(id, text, data, S.abort.signal);
+      if (!r.failed) break;
+      if (attempt === 0) status(`${S.agents[id].name} 응답이 실패해서 한 번 더 부탁하는 중이에요.`);
+    }
+    return r;
+  } finally { done(); }
+}
+
+async function runMeeting() {
+  if (!S.doc) return toast("먼저 검토할 자료를 올려 주세요.");
+  newMeeting(true);
+  S.running = true; S.abort = new AbortController(); updateRunButton();
+  const spoken = { round1: new Set(), round2: new Set(), last_word: new Set() };
+  let lastPhase = null;
+  try {
+    for (let i = 0; i < PLAN.length; i++) {
+      const phase = PLAN[i], turn = i + 1;
+      if (phase !== lastPhase) { addPhase(`${turn}번째 턴부터, ${PHASE_LABEL[phase]}`); lastPhase = phase; }
+      markCell(i, "now");
+
+      if (phase === "conclusion") {
+        status("사회자가 회의 내용을 정리하고 있어요.");
+        const r = await call("moderator", "[회의실→사회자] 결론 정리 요청", { type: "summarize", document: docForAgents(), transcript: publicTranscript() });
+        if (r.failed) throw new Error(r.text);
+        const review = r.artifacts[0]?.parts?.find((p) => p.data)?.data;
+        S.transcript.push({ role: "moderator", speaker: "사회자", text: r.text });
+        addLine({ id: "moderator", text: r.text, raw: r.raw, model: r.data.model });
+        showOnTable("moderator", r.text); setSpeaking("moderator");
+        markCell(i, "done", "moderator");
+        if (review) { S.review = review; renderReview(review); selectTab("review"); }
+        break;
+      }
+
+      // 이번 차례에 말할 수 있는 사람
+      let eligible, hint = "";
+      if (phase === "last_word") {
+        const ranked = MEMBERS.slice().sort((a, b) => (S.last[a]?.confidence ?? 50) - (S.last[b]?.confidence ?? 50));
+        eligible = ranked.slice(0, 2);
+        hint = `아직 가장 우려가 큰 사람: ${ranked.slice(0, 2).map((id) => `${S.agents[id].name}(배포 동의 정도 ${S.last[id]?.confidence ?? "?"})`).join(", ")}`;
+      } else {
+        eligible = MEMBERS.filter((id) => !spoken[phase].has(id));
+      }
+
+      // 1) 사회자가 다음 발언자를 정함
+      status(`사회자가 ${turn}번째 발언자를 고르고 있어요.`);
+      let next, say, modRaw, modModel;
+      try {
+        const m = await call("moderator", `[회의실→사회자] ${turn}번째 턴 진행 요청`, {
+          type: "moderate", document: docForAgents(), transcript: publicTranscript(), phase, turn, eligible, hint,
+        });
+        if (m.failed) throw new Error(m.text);
+        next = m.data.next; say = m.text; modRaw = m.raw; modModel = m.data.model;
+      } catch (e) {
+        if (e.name === "AbortError") throw e;
+        if (e.code === -32001) throw e;
+        next = eligible[0]; say = `${S.agents[next].name} 님 의견 부탁드립니다.`;
+        status(`사회자 응답이 없어 순서대로 ${S.agents[next].name} 님께 넘겨요. (${esc(e.message)})`);
+      }
+      if (!eligible.includes(next)) next = eligible[0];
+      S.transcript.push({ role: "moderator", speaker: "사회자", text: say });
+      addLine({ id: "moderator", to: next, text: say, raw: modRaw, model: modModel });
+      showOnTable("moderator", say); setSpeaking("moderator");
+
+      // 2) 발언자가 말함
+      status(`${S.agents[next].name} 님이 자료와 회의록을 보고 있어요.`);
+      const r = await call(next, `[사회자→${S.agents[next].name}] ${say}`, {
+        type: "review_turn", document: docForAgents(), transcript: publicTranscript(), request: { from: "사회자", text: say }, phase, turn,
+      });
+      spoken[phase].add(next);
+      if (r.failed) {
+        addLine({ id: next, text: r.text, cls: "err", raw: r.raw });
+      } else {
+        const { stance, confidence, ask, model } = r.data;
+        S.last[next] = { stance, confidence };
+        S.transcript.push({ role: next, speaker: S.agents[next].name, text: r.text, ask: ask || null });
+        addLine({ id: next, text: r.text, ask, stance, confidence, raw: r.raw, model });
+        showOnTable(next, r.text); setSpeaking(next);
+      }
+      markCell(i, "done", next);
+      refreshSeatInfo();
+    }
+    status("회의가 끝났어요. 검토결과 탭에서 정리본을 확인하세요.");
+    $("#btn-reveal").disabled = false;
+  } catch (e) {
+    if (e.name === "AbortError") status("회의를 멈췄어요.");
+    else if (e.code === -32001) { status(esc(e.message)); openSettings(e.message); }
+    else { status(`회의 중 문제가 생겼어요: ${esc(e.message)}`); }
+  } finally {
+    S.running = false; updateRunButton(); setSpeaking(null);
+    document.querySelectorAll(".cell.now").forEach((c) => c.classList.remove("now"));
+  }
+}
+
+function newMeeting(keepDoc = true) {
+  if (S.running && S.abort) S.abort.abort();
+  Object.assign(S, { transcript: [], tokens: {}, contexts: {}, last: {}, review: null, turnsDone: [] });
+  if (!keepDoc) S.doc = null;
+  $("#pane-log").innerHTML = `<div class="empty"><strong>아직 회의 전이에요</strong>자료를 올리고 '회의 시작'을 누르면 사회자가 회의를 열어요.</div>`;
+  $("#pane-review").innerHTML = `<div class="empty"><strong>검토결과가 아직 없어요</strong>12번째 턴에서 사회자가 정리해 드려요.</div>`;
+  $("#notes").innerHTML = ""; $("#minds-empty").hidden = false; $("#btn-reveal").disabled = true;
+  $("#log-count").textContent = "0"; $("#turn-label").textContent = "12턴 회의";
+  $("#table-now").hidden = true; $("#table-idle").hidden = false;
+  if (S.doc) {
+    $("#idle-title").textContent = "준비됐어요. '회의 시작'을 누르세요";
+    $("#idle-sub").textContent = `사회자와 참석자 다섯이 12턴 동안 '${S.doc.name}'을 검토해요.`;
+    $("#table-idle").querySelector(".pick").hidden = true;
+  }
+  drawCells(); refreshSeatInfo(); selectTab("log"); status("");
+}
+function updateRunButton() {
+  const b = $("#btn-run");
+  b.disabled = !S.doc && !S.running;
+  b.textContent = S.running ? "멈추기" : "회의 시작";
+  b.className = `btn ${S.running ? "stop" : "primary"}`;
+}
+
+/* ───────────── 검토결과, 속마음 ───────────── */
+function renderReview(v) {
+  const items = (arr, withWhere) => (arr || []).map((x) => `<div class="item">
+      ${withWhere && x.where ? `<div class="where">${esc(x.where)}</div>` : ""}
+      <div class="issue">${esc(x.issue)}</div>${x.suggestion ? `<div class="fix">${esc(x.suggestion)}</div>` : ""}
+      ${x.raised_by ? `<div class="by" style="color:${S.agents[nameToId(x.raised_by)]?.color || "#667"}">${esc(x.raised_by)}</div>` : ""}</div>`).join("") || `<p class="help">없음</p>`;
+  const list = (arr) => (arr?.length ? `<ul>${arr.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : `<p class="help">없음</p>`);
+  $("#pane-review").innerHTML = `<div class="rv">
+    <div class="verdict"><span class="badge" data-v="${esc(v.verdict)}">${esc(v.verdict)}</span><p>${esc(v.headline)}</p></div>
+    <h3>꼭 고칠 것</h3>${items(v.must_fix, true)}
+    <h3>검토하면 좋을 것</h3>${items(v.consider)}
+    <h3>잘된 점</h3>${list(v.strengths)}
+    <h3>결론 나지 않은 질문</h3>${list(v.open_questions)}
+    <div class="rv-actions"><button class="btn" id="dl-md">마크다운으로 내려받기</button><button class="btn" id="copy-md">복사</button></div></div>`;
+  $("#dl-md").onclick = () => download(`${S.doc.name.replace(/\.[^.]+$/, "")}_검토결과.md`, reviewMarkdown(v));
+  $("#copy-md").onclick = async () => { try { await navigator.clipboard.writeText(reviewMarkdown(v)); toast("복사했어요."); } catch { toast("복사하지 못했어요. 내려받기를 써 주세요."); } };
+}
+const nameToId = (n) => ORDER.find((id) => S.agents[id]?.name === n);
+function reviewMarkdown(v) {
+  const it = (a, w) => (a || []).map((x) => `- ${w && x.where ? `[${x.where}] ` : ""}**${x.issue}**${x.suggestion ? ` → ${x.suggestion}` : ""}${x.raised_by ? ` (${x.raised_by})` : ""}`).join("\n") || "- 없음";
+  const li = (a) => (a || []).map((s) => `- ${s}`).join("\n") || "- 없음";
+  const log = S.transcript.map((t) => `- **${t.speaker}**: ${t.text}`).join("\n");
+  const models = ORDER.map((id) => `${S.agents[id].name}=${modelFor(id)}`).join(", ");
+  return `# ${S.doc.name} 검토결과\n\n> ${v.verdict}: ${v.headline}\n\n## 꼭 고칠 것\n${it(v.must_fix, true)}\n\n## 검토하면 좋을 것\n${it(v.consider)}\n\n## 잘된 점\n${li(v.strengths)}\n\n## 결론 나지 않은 질문\n${li(v.open_questions)}\n\n## 회의록\n${log}\n\n---\n모델: ${models}\n생성: ${new Date().toLocaleString("ko-KR")}\n`;
+}
+function download(name, text) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+  a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function reveal() {
+  $("#btn-reveal").disabled = true; $("#minds-empty").hidden = true; const box = $("#notes"); box.innerHTML = "";
+  for (const id of MEMBERS) {
+    const a = S.agents[id];
+    const el = document.createElement("div"); el.className = "note"; el.style.setProperty("--c", a.color);
+    el.innerHTML = `<div class="h">${esc(a.name)} <span class="tt" style="font-weight:500;color:var(--muted)">${esc(a.title)}</span></div><div class="body">공개를 부탁하는 중 <span class="typing"><i></i><i></i><i></i></span></div>`;
+    box.appendChild(el);
+    try {
+      const r = await send(id, "[회의실→참석자] 회의가 끝났으니 메모를 공개해 주실 수 있나요?", { type: "reveal" });
+      el.querySelector(".body").textContent = r.text;
+      const trail = (r.data.stances || []).map((s) => `<span class="chip" data-s="${esc(s.stance)}">${s.turn}턴 ${esc(s.stance)} ${s.confidence}</span>`).join("");
+      el.insertAdjacentHTML("beforeend", `<div class="trail">${trail}</div>`);
+    } catch (e) { el.querySelector(".body").textContent = `공개 요청에 실패했어요: ${e.message}`; }
+  }
+}
+
+/* ───────────── 자료 읽기 ───────────── */
+const loaded = {};
+function loadScript(src) {
+  return loaded[src] ||= new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => no(new Error(`${src}를 불러오지 못했어요.`)); document.head.appendChild(s); });
+}
+function decodeText(buf) {
+  const u = new TextDecoder("utf-8").decode(buf);
+  if ((u.match(/\uFFFD/g) || []).length > 5) { try { return new TextDecoder("euc-kr").decode(buf); } catch {} }
+  return u;
+}
+async function readFile(file) {
+  const ext = file.name.split(".").pop().toLowerCase();
+  const buf = await file.arrayBuffer();
+  if (["txt", "md", "csv", "tsv", "json"].includes(ext)) return { text: decodeText(buf), meta: ext.toUpperCase() };
+  if (ext === "pdf") {
+    await loadScript("vendor/pdf.min.js");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js";
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const pages = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const c = await (await pdf.getPage(i)).getTextContent();
+      let line = "", out = [], lastY = null;
+      for (const it of c.items) { const y = it.transform[5]; if (lastY !== null && Math.abs(y - lastY) > 3) { out.push(line); line = ""; } line += it.str; lastY = y; }
+      out.push(line);
+      pages.push(`[${i}쪽]\n${out.filter((s) => s.trim()).join("\n")}`);
+    }
+    const text = pages.join("\n\n");
+    if (text.replace(/\[\d+쪽\]/g, "").trim().length < 50) throw new Error("글자를 찾지 못했어요. 스캔한 이미지 PDF는 읽을 수 없어요.");
+    return { text, meta: `PDF ${pdf.numPages}쪽` };
+  }
+  if (ext === "hwpx") {
+    await loadScript("vendor/jszip.min.js");
+    const zip = await JSZip.loadAsync(buf);
+    const secs = Object.keys(zip.files).filter((n) => /Contents\/section\d+\.xml$/i.test(n)).sort((a, b) => parseInt(a.match(/\d+/)) - parseInt(b.match(/\d+/)));
+    const paras = [];
+    for (const n of secs) {
+      const xml = new DOMParser().parseFromString(await zip.file(n).async("string"), "application/xml");
+      // 글자(t)마다 가장 가까운 문단(p)에 모읍니다. 표 안 문단이 바깥 문단에 중복으로 섞이지 않게 합니다.
+      const byPara = new Map();
+      for (const t of xml.getElementsByTagNameNS("*", "t")) {
+        let p = t.parentNode; while (p && p.localName !== "p") p = p.parentNode;
+        if (!p) continue;
+        byPara.set(p, (byPara.get(p) || "") + t.textContent);
+      }
+      for (const text of byPara.values()) if (text.trim()) paras.push(text);
+    }
+    return { text: paras.join("\n"), meta: `HWPX ${secs.length}구역` };
+  }
+  if (ext === "docx") {
+    await loadScript("vendor/mammoth.browser.min.js");
+    const r = await mammoth.extractRawText({ arrayBuffer: buf });
+    return { text: r.value, meta: "Word" };
+  }
+  if (["xlsx", "xls"].includes(ext)) {
+    await loadScript("vendor/xlsx.full.min.js");
+    const wb = XLSX.read(buf, { type: "array" });
+    const text = wb.SheetNames.map((n) => `[시트: ${n}]\n${XLSX.utils.sheet_to_csv(wb.Sheets[n])}`).join("\n\n");
+    return { text, meta: `Excel ${wb.SheetNames.length}시트` };
+  }
+  if (ext === "hwp") throw new Error("HWP 파일은 바로 읽을 수 없어요. 한글에서 HWPX나 PDF로 저장해서 올려 주세요.");
+  throw new Error(`${ext} 파일은 아직 읽을 수 없어요.`);
+}
+async function acceptFile(file) {
+  if (S.running) return toast("회의 중에는 자료를 바꿀 수 없어요.");
+  status(`${esc(file.name)} 읽는 중이에요.`);
+  try {
+    const { text, meta } = await readFile(file);
+    setDoc(file.name, text, meta);
+  } catch (e) { status(""); toast(e.message); }
+}
+function setDoc(name, text, meta) {
+  const clean = text.replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim();
+  const cut = clean.length > MAX_CHARS;
+  S.doc = { name, text: cut ? clean.slice(0, MAX_CHARS) : clean, meta };
+  $("#doc-chip").hidden = false; $("#doc-name").textContent = name;
+  $("#doc-meta").textContent = `${meta}, ${S.doc.text.length.toLocaleString()}자${cut ? " (앞부분만)" : ""}`;
+  newMeeting(true); updateRunButton();
+  status(`자료가 올라왔어요.${cut ? ` 너무 길어서 앞 ${MAX_CHARS.toLocaleString()}자만 씁니다.` : ""}`);
+}
+
+/* ───────────── 설정 화면 ───────────── */
+let modelCatalog = [];
+async function loadModels() {
+  try {
+    const r = await (await fetch("api/models")).json();
+    modelCatalog = r.models || [];
+    $("#model-list").innerHTML = modelCatalog.map((m) => `<option value="${esc(m.id)}">${esc(m.vendor)} ${esc(m.name)}${m.priceIn != null ? `, 100만 토큰당 $${m.priceIn.toFixed(2)}/$${m.priceOut.toFixed(2)}` : ""}</option>`).join("");
+    $("#models-help").textContent = r.live
+      ? `OpenRouter에서 ${r.vendors.join(", ")} 모델 ${modelCatalog.length}개를 불러왔어요. 칸을 비우면 기본값을 써요.`
+      : "OpenRouter 목록을 불러오지 못해 기본 모델만 보여요. 모델 ID를 직접 입력해도 돼요.";
+  } catch { $("#models-help").textContent = "모델 목록을 불러오지 못했어요. 모델 ID를 직접 입력해도 돼요."; }
+}
+function drawModelRows() {
+  const box = $("#model-rows"); box.innerHTML = "";
+  const saved = loadSettings().models || {};
+  for (const id of ORDER) {
+    const a = S.agents[id]; if (!a) continue;
+    const row = document.createElement("div"); row.className = "mrow"; row.style.setProperty("--c", a.color);
+    row.innerHTML = `<div class="av">${esc(a.name[0])}</div><div class="n">${esc(a.name)}<small>${esc(a.title)}</small></div>
+      <input class="inp" list="model-list" value="${esc(saved[id] || "")}" placeholder="${esc(a.defaultModel)}" aria-label="${esc(a.name)} 모델">
+      <button class="btn small">테스트</button><div class="res" id="res-${id}"></div>`;
+    const inp = row.querySelector("input");
+    inp.onchange = () => {
+      const models = { ...(loadSettings().models || {}) };
+      const v = inp.value.trim(); if (v) models[id] = v; else delete models[id];
+      saveSettings({ models }); refreshSeatInfo();
+      const known = !v || modelCatalog.some((m) => m.id === v);
+      $(`#res-${id}`).className = "res" + (known ? "" : " bad");
+      $(`#res-${id}`).textContent = known ? "" : "목록에 없는 모델이에요. 테스트로 확인해 보세요.";
+    };
+    row.querySelector("button").onclick = () => testAgent(id);
+    box.appendChild(row);
+  }
+}
+async function testAgent(id) {
+  const res = $(`#res-${id}`); res.className = "res"; res.textContent = "확인 중…";
+  try {
+    const r = await send(id, "[회의실] 연결 확인", { type: "ping" });
+    delete S.tokens[id]; delete S.contexts[id];
+    if (r.failed) { res.className = "res bad"; res.textContent = r.text; return; }
+    res.className = "res ok";
+    res.textContent = r.data.mock ? "모의 모드라 실제 모델은 부르지 않았어요." : `연결됐어요. ${r.data.model}, ${(r.data.ms / 1000).toFixed(1)}초. "${r.text}"`;
+  } catch (e) { res.className = "res bad"; res.textContent = e.message; }
+}
+function updateMode() {
+  const m = $("#mode"); const r = S.registry || {};
+  if (getKey()) { m.dataset.m = "user"; m.textContent = "내 API 키"; }
+  else if (r.serverKey) { m.dataset.m = "server"; m.textContent = "서버 키"; }
+  else { m.dataset.m = "mock"; m.textContent = "모의 모드 (API 키 없음)"; }
+  $("#pass-field").hidden = !(r.serverKey && r.requiresPasscode && !getKey());
+}
+function openSettings(warn) {
+  $("#set-warn").hidden = !warn; $("#set-warn").textContent = warn || "";
+  $("#drawer").classList.add("on"); $("#scrim").classList.add("on"); $("#drawer").setAttribute("aria-hidden", "false");
+  $("#key").value = getKey(); $("#pass").value = getPass();
+  document.querySelector(`input[name=keystore][value=${localStorage.getItem("meetingroom.key") ? "local" : "session"}]`).checked = true;
+  drawModelRows(); $("#key").focus();
+}
+function closeSettings() { $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); $("#drawer").setAttribute("aria-hidden", "true"); }
+function showCard(id) {
+  const a = S.agents[id];
+  $("#view-title").textContent = `${a.name}의 명함 (Agent Card)`;
+  $("#view-body").textContent = JSON.stringify(a.card, null, 2) + `\n\n// 지금 쓰는 모델: ${modelFor(id)}\n// 개인 메모: ${S.tokens[id] ? `암호화된 토큰 ${S.tokens[id].length}자. 회의실은 열어 볼 수 없어요.` : "아직 없음"}`;
+  $("#dlg-view").showModal();
+}
+
+/* ───────────── 시작 ───────────── */
+function selectTab(name) {
+  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
+  document.querySelectorAll(".pane").forEach((p) => p.classList.toggle("on", p.id === `pane-${name}`));
+}
+async function boot() {
+  drawCells();
+  try {
+    S.registry = await (await fetch("api/registry", { headers: getPass() ? { "x-meeting-passcode": getPass() } : {} })).json();
+    for (const url of S.registry.agents) {
+      const card = await (await fetch(`${url}/.well-known/agent-card.json`)).json();
+      const id = url.split("/").pop();
+      const p = card.capabilities?.extensions?.find((e) => e.uri === "urn:a2a-meeting-room:persona")?.params || {};
+      S.agents[id] = { url, card, name: p.shortName || card.name, title: p.title || "", color: p.color || "#667085", vendor: p.vendor, defaultModel: p.defaultModel };
+    }
+    drawSeats(); updateMode(); updateRunButton();
+    status("에이전트 여섯의 명함을 받았어요. 검토할 자료를 올려 주세요.");
+  } catch (e) { status(`에이전트 명함을 받지 못했어요: ${esc(e.message)}`); }
+  loadModels();
+}
+
+$("#btn-run").onclick = () => (S.running ? S.abort?.abort() : runMeeting());
+$("#btn-new").onclick = () => { if (!S.running || confirm("진행 중인 회의를 멈추고 새로 시작할까요?")) newMeeting(true); };
+$("#btn-settings").onclick = () => openSettings();
+$("#btn-close").onclick = closeSettings; $("#scrim").onclick = closeSettings;
+$("#btn-file").onclick = () => $("#file").click();
+$("#file").onchange = (e) => e.target.files[0] && acceptFile(e.target.files[0]);
+$("#btn-paste").onclick = () => $("#dlg-paste").showModal();
+$("#paste-ok").onclick = () => { const t = $("#paste-text").value.trim(); if (!t) return; setDoc($("#paste-title").value.trim() || "붙여넣은 자료", t, "텍스트"); $("#dlg-paste").close(); };
+$("#doc-change").onclick = () => (S.running ? toast("회의 중에는 자료를 바꿀 수 없어요.") : $("#file").click());
+$("#doc-view").onclick = () => { $("#view-title").textContent = S.doc.name; $("#view-body").textContent = S.doc.text; $("#dlg-view").showModal(); };
+document.querySelectorAll("dialog [data-close]").forEach((b) => (b.onclick = () => b.closest("dialog").close()));
+document.querySelectorAll(".tabs button").forEach((b) => (b.onclick = () => selectTab(b.dataset.tab)));
+$("#btn-reveal").onclick = reveal;
+$("#key").onchange = () => { setKey($("#key").value.trim(), document.querySelector("input[name=keystore]:checked").value); updateMode(); };
+document.querySelectorAll("input[name=keystore]").forEach((r) => (r.onchange = () => { setKey(getKey(), r.value); }));
+$("#key-show").onclick = () => { const k = $("#key"); k.type = k.type === "password" ? "text" : "password"; $("#key-show").textContent = k.type === "password" ? "보기" : "숨기기"; };
+$("#key-clear").onclick = () => { setKey(""); $("#key").value = ""; updateMode(); toast("키를 지웠어요."); };
+$("#pass").onchange = () => { try { sessionStorage.setItem("meetingroom.pass", $("#pass").value.trim()); } catch {} };
+$("#test-all").onclick = () => ORDER.forEach(testAgent);
+$("#reset-models").onclick = () => { saveSettings({ models: {} }); drawModelRows(); refreshSeatInfo(); toast("기본 모델로 되돌렸어요."); };
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
+
+const room = $("#room");
+["dragenter", "dragover"].forEach((t) => room.addEventListener(t, (e) => { e.preventDefault(); room.classList.add("drag"); }));
+["dragleave", "drop"].forEach((t) => room.addEventListener(t, (e) => { e.preventDefault(); if (t === "drop" || !room.contains(e.relatedTarget)) room.classList.remove("drag"); }));
+room.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) acceptFile(f); });
+
+boot();
+</script>
+</body>
+</html>
