@@ -4,12 +4,12 @@ export const MEMBER_NAMES = ["한결", "나래", "보람", "서진", "하율"];
 
 const COMMON_MEMBER_RULES = `
 [회의 규칙]
-- 통계 분석 결과(보도자료, 보고서, 표 등)를 검토하는 회의입니다. 참석자는 한결, 나래, 보람, 서진, 하율 다섯 명과 사회자입니다.
+- 통계 분석 결과(보도자료, 보고서, 표 등)를 검토하는 회의입니다. 이번 회의 참석자는 요청에 적혀 있습니다.
 - 실제 회의에서 말하듯 구어체로 2~4문장만 말합니다. 목록, 마크다운, 이모지를 쓰지 않습니다.
 - 문서에 있는 내용만 근거로 삼고, 지적할 때는 어느 부분인지 짧게 짚습니다(예: "2쪽 1인가구 문단").
 - 앞 사람 말을 반복하지 않습니다. 동의하면 한마디로 넘기고 당신 관점을 더합니다.
-- 다른 참석자에게 꼭 묻고 싶은 게 있을 때만 ask를 씁니다.
-- private_notes는 당신만 보는 메모입니다. 다른 사람에게 공개되지 않으니 솔직하게 씁니다.
+- 다른 참석자에게 꼭 묻고 싶은 게 있을 때만 ask를 씁니다. 이번 회의 참석자에게만 물을 수 있습니다.
+- private_notes는 속마음입니다. 회의장 화면에는 보이지만 다른 참석자에게는 전달되지 않으니 솔직하게 씁니다.
 
 [출력 형식] 아래 JSON 하나만 출력합니다.
 {
@@ -17,7 +17,7 @@ const COMMON_MEMBER_RULES = `
   "stance": "동의" | "우려" | "보류",
   "confidence": 0~100 정수 (지금 이대로 배포해도 된다고 보는 정도),
   "ask": { "to": "한결" | "나래" | "보람" | "서진" | "하율" | null, "question": "상대에게 묻고 싶은 것" },
-  "private_notes": "나만 보는 메모: 파악한 문제, 다음에 확인할 것, 다른 참석자에 대한 생각 (500자 이내)"
+  "private_notes": "속마음: 지금 판단, 다음에 확인할 것, 다른 참석자에 대한 생각 (2~3문장)"
 }`;
 
 const member = (p) => ({ ...p, system: `${p.system}\n${COMMON_MEMBER_RULES}` });
@@ -27,7 +27,8 @@ export const PERSONAS = {
     id: "moderator",
     name: "사회자",
     title: "회의 진행",
-    color: "#374151",
+    color: "#111111",
+    tint: "#111111",
     vendor: "Google",
     modelEnv: "MODEL_MODERATOR",
     defaultModel: "google/gemini-3-flash-preview",
@@ -37,8 +38,8 @@ export const PERSONAS = {
       { id: "summarize", name: "검토결과 정리", description: "회의 내용을 수정사항 중심의 검토결과로 정리합니다." },
     ],
     system: `당신은 통계 분석 결과 검토 회의의 사회자입니다. 중립적이고 간결하며, 회의가 겉돌지 않게 합니다.
-참석자: 한결(critic, 깐깐한 검증가), 나래(strategist, 큰 그림 전략가), 보람(reader, 독자 대변인), 서진(method, 방법론 전문가), 하율(policy, 정책·리스크 담당).
-회의는 1라운드(각자 첫 의견) → 2라운드(서로 반론과 보완) → 최종 반론(가장 우려가 큰 사람) → 결론 순서입니다.
+참석 가능한 사람: 한결(critic, 깐깐한 검증가), 나래(strategist, 큰 그림 전략가), 보람(reader, 독자 대변인), 서진(method, 방법론 전문가), 하율(policy, 정책·리스크 담당). 회의마다 이 중 일부만 참석할 수 있습니다.
+회의는 1라운드(각자 첫 의견) → 2라운드 이후(서로 반론과 보완) → 최종 반론(가장 우려가 큰 사람) → 결론 순서입니다. 턴 수는 회의마다 다릅니다.
 - 이번 차례에 말할 수 있는 사람(eligible) 중에서만 고릅니다.
 - 직전 발언자가 ask로 누군가에게 질문했고 그 사람이 eligible이면 보통 그 사람을 고릅니다.
 - 2라운드에서는 앞선 발언과 부딪치는 관점을 가진 사람을 붙여 티키타카가 되게 합니다.
@@ -49,7 +50,8 @@ export const PERSONAS = {
     id: "critic",
     name: "한결",
     title: "깐깐한 검증가",
-    color: "#C2410C",
+    color: "#B4431B",
+    tint: "#F3C9B6",
     vendor: "Anthropic",
     modelEnv: "MODEL_CRITIC",
     defaultModel: "anthropic/claude-sonnet-5",
@@ -65,7 +67,8 @@ export const PERSONAS = {
     id: "strategist",
     name: "나래",
     title: "큰 그림 전략가",
-    color: "#2563EB",
+    color: "#5A3FC0",
+    tint: "#C5B0F4",
     vendor: "OpenAI",
     modelEnv: "MODEL_STRATEGIST",
     defaultModel: "openai/gpt-5.5",
@@ -80,7 +83,8 @@ export const PERSONAS = {
     id: "reader",
     name: "보람",
     title: "독자 대변인",
-    color: "#059669",
+    color: "#1F7A43",
+    tint: "#C8E6CD",
     vendor: "Upstage",
     modelEnv: "MODEL_READER",
     defaultModel: "upstage/solar-pro4",
@@ -95,7 +99,8 @@ export const PERSONAS = {
     id: "method",
     name: "서진",
     title: "방법론 전문가",
-    color: "#7C3AED",
+    color: "#587311",
+    tint: "#DCEEB1",
     vendor: "Google",
     modelEnv: "MODEL_METHOD",
     defaultModel: "google/gemini-3-flash-preview",
@@ -110,7 +115,8 @@ export const PERSONAS = {
     id: "policy",
     name: "하율",
     title: "정책·리스크 담당",
-    color: "#DB2777",
+    color: "#B8325E",
+    tint: "#EFD4D4",
     vendor: "xAI",
     modelEnv: "MODEL_POLICY",
     defaultModel: "x-ai/grok-4.20",
@@ -142,6 +148,7 @@ export function agentCard(persona, baseUrl) {
     description: persona.description,
     version: "1.1.0",
     provider: { organization: "충청지방데이터연구회 시연", url: baseUrl },
+    iconUrl: `${baseUrl}/vendor/avatars/${persona.id}.png`,
     supportedInterfaces: [
       { url: `${baseUrl}/agents/${persona.id}`, protocolBinding: "JSONRPC", protocolVersion: "1.0" },
     ],
@@ -151,7 +158,8 @@ export function agentCard(persona, baseUrl) {
         uri: "urn:a2a-meeting-room:persona",
         description: "회의실 화면 표시 정보와 기본 모델",
         required: false,
-        params: { shortName: persona.name, title: persona.title, color: persona.color,
+        params: { shortName: persona.name, title: persona.title, color: persona.color, tint: persona.tint,
+                  avatarFace: `${baseUrl}/vendor/avatars/${persona.id}-face.png`,
                   vendor: persona.vendor, defaultModel: defaultModelOf(persona) },
       }],
     },

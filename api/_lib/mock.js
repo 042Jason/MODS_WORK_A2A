@@ -23,10 +23,10 @@ export function mockModerate({ transcript, phase, eligible }) {
       ? `자료 잘 받았습니다. ${NAME(next)} 님부터 첫 의견 부탁드려요.`
       : asked === next
         ? `${NAME(next)} 님, 방금 질문에 답해 주시겠어요?`
-        : phase === "round2"
+        : phase !== "round1"
           ? `${NAME(next)} 님, 앞선 의견 중 동의하기 어려운 게 있으면 짚어 주세요.`
           : `${NAME(next)} 님은 어떻게 보셨어요?`;
-  return { next, say, reason: "모의 모드" };
+  return { next, say, reason: asked === next ? `${NAME(next)} 님이 질문을 받았으니 바로 답하게 함` : `아직 이번 라운드에 말하지 않은 ${NAME(next)} 님 차례` };
 }
 
 const LINES = {
@@ -57,7 +57,7 @@ export function mockMember(personaId, { document, myTurn, phase }) {
   const k = MEMBER_IDS.indexOf(personaId) + myTurn * 2;
   const a = cut(f[k % f.length]);
   const b = cut(f[(k + 3) % f.length]);
-  const i = phase === "round1" ? 0 : 1;
+  const i = phase === "round1" ? 0 : 1;  // 2라운드 이후와 최종 반론은 두 번째 대사
   const ask = phase === "round1" && personaId === "critic" ? { to: "나래", question: "이 수치를 제목에 꼭 올려야 하나요?" }
             : phase === "round1" && personaId === "reader" ? { to: "서진", question: "이 용어, 각주 정의면 충분할까요?" }
             : { to: null, question: "" };
@@ -66,7 +66,9 @@ export function mockMember(personaId, { document, myTurn, phase }) {
     stance: phase === "round1" ? "우려" : personaId === "policy" ? "우려" : "동의",
     confidence: phase === "round1" ? 40 + k * 3 : 60 + k * 2,
     ask,
-    private_notes: `[모의] ${myTurn}번째 발언. 다음에 "${b}" 부분을 더 볼 것.`,
+    private_notes: phase === "round1"
+      ? `첫인상으로는 고칠 게 꽤 보인다. 다음엔 "${b}" 부분을 더 봐야겠다.`
+      : `다른 분들 의견으로 많이 정리됐다. 그래도 "${a}" 부분은 끝까지 짚고 넘어가고 싶다.`,
   };
 }
 

@@ -16,7 +16,10 @@ if (fs.existsSync(envFile)) {
   }
 }
 
-const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json", ".css": "text/css" };
+const TYPES = {
+  ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json", ".css": "text/css",
+  ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".woff2": "font/woff2",
+};
 const handlers = {
   a2a: (await import(pathToFileURL(path.join(ROOT, "api/a2a.js")))).default,
   registry: (await import(pathToFileURL(path.join(ROOT, "api/registry.js")))).default,

@@ -1,9 +1,11 @@
-// OpenRouter 호출. 키는 (1) 브라우저에서 보낸 사용자 키 → (2) 서버 환경변수 순서로 씁니다.
-// 둘 다 없으면 모의 모드(mock.js)로 답합니다.
+// OpenRouter 호출. 키는 (1) 브라우저에서 보낸 사용자 키 → (2) 인증된 사람에게만 서버 공용 키 순서로 씁니다.
+// 둘 다 안 되면 모의 모드(mock.js)로 답합니다.
 
-export function resolveKey(userKey) {
+export function resolveKey(userKey, serverAllowed) {
   if (process.env.MOCK_LLM === "1") return null;
-  return userKey || process.env.OPENROUTER_API_KEY || null;
+  if (userKey) return userKey;
+  if (serverAllowed && process.env.OPENROUTER_API_KEY) return process.env.OPENROUTER_API_KEY;
+  return null;
 }
 
 export function parseJSON(text) {
