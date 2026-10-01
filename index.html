@@ -235,6 +235,11 @@ pre.json.open{display:block}
 .minds-head{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
 .minds-head .eyebrow{white-space:nowrap}
 .minds-head p{margin:0;font-size:13.5px;color:var(--muted)}
+.minds-head{flex-wrap:wrap}
+.minds-head .legend{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:2px;font-size:12px;color:var(--ink-2)}
+.minds-head .legend span{display:inline-flex;align-items:center;gap:5px}
+.minds-head .legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.minds-head .legend .pct{font-family:var(--mono);font-size:11px;color:var(--muted)}
 .minds{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
 .mind{background:var(--t);border-radius:var(--r-sm);padding:14px 14px 12px;box-shadow:var(--lift);transform:rotate(var(--rot,0deg));min-height:150px;display:flex;flex-direction:column}
 .mind.inverse{color:#fff}
@@ -244,14 +249,18 @@ pre.json.open{display:block}
 .mind .h .eyebrow{opacity:.7}
 .mind .body{font-size:14px;line-height:1.55;flex:1}
 .mind .body.none{opacity:.6}
-.mind .trail{margin-top:10px}
-.mind .trail-h{display:block;font-size:11.5px;font-weight:650;opacity:.7;margin-bottom:5px}
-.mind .steps{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
-.mind .step{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;line-height:1.2;background:rgba(255,255,255,.75);color:var(--ink);padding:3px 7px 4px;border-radius:999px}
-.mind .step em{font-style:normal;opacity:.6}
-.mind .step b{font-weight:700}
-.mind .step[data-s="동의"] b{color:#067647}.mind .step[data-s="우려"] b{color:#B42318}.mind .step[data-s="보류"] b{color:#93370D}
-.mind .arrow{font-size:11px;opacity:.55}
+.mind .trail{margin-top:12px;background:rgba(255,255,255,.62);border-radius:12px;padding:9px 10px 10px}
+.mind .trail-h{display:block;font-size:11px;font-weight:700;letter-spacing:.02em;opacity:.65;margin-bottom:7px}
+.mind .tl{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.mind .tl li{position:relative;display:grid;grid-template-columns:10px minmax(0,1fr) auto;column-gap:8px;align-items:start}
+.mind .tl li:not(:last-child)::before{content:"";position:absolute;left:4px;top:13px;bottom:-9px;width:2px;border-radius:2px;background:rgba(10,10,10,.14)}
+.mind .tl-dot{width:10px;height:10px;border-radius:50%;margin-top:3px;background:#93370D;box-shadow:0 0 0 2px #fff}
+.mind .tl li[data-s="동의"] .tl-dot{background:#12B76A}.mind .tl li[data-s="우려"] .tl-dot{background:#F04438}.mind .tl li[data-s="보류"] .tl-dot{background:#F79009}
+.mind .tl-body{min-width:0;line-height:1.35}
+.mind .tl-body em{display:block;font-style:normal;font-size:10.5px;font-weight:600;opacity:.6;white-space:nowrap}
+.mind .tl-body b{display:block;font-size:12.5px;font-weight:700;word-break:keep-all;overflow-wrap:anywhere}
+.mind .tl li[data-s="동의"] b{color:#067647}.mind .tl li[data-s="우려"] b{color:#B42318}.mind .tl li[data-s="보류"] b{color:#93370D}
+.mind .tl-pct{font:600 11px/1 var(--mono);opacity:.7;white-space:nowrap;margin-top:15px}
 
 /* 결론 */
 .vblock{border-radius:var(--r-lg);padding:24px 26px;background:var(--cream);margin-bottom:22px}
@@ -679,9 +688,13 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
   .mrow .res{grid-column:1/-1;grid-row:3;margin-top:0}
 
   /* 대화상자는 아래에서 올라오는 시트처럼 */
-  dialog{width:100vw;max-width:100vw;max-height:90vh;margin:auto 0 0;border-radius:20px 20px 0 0}
+  dialog,dialog.newdlg,dialog.topicdlg{width:100vw;max-width:100vw;max-height:90vh;margin:auto 0 0;border-radius:20px 20px 0 0}
+  dialog.carddlg{width:auto;max-width:96vw;max-height:100dvh;margin:auto;border-radius:0}
   dialog .db{padding-bottom:calc(20px + env(safe-area-inset-bottom))}
-  dialog textarea{height:42vh}
+  #tp-text{height:34vh}
+  #more-text{height:22vh!important}
+  #me-about{height:96px}
+  .nm-actions .pill,.tp-foot .pill{flex:1 1 auto}
   .toast{bottom:calc(var(--m-nav) + 18px + env(safe-area-inset-bottom));max-width:90vw;text-align:center}
 }
 @media (max-width:380px){
@@ -739,8 +752,8 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
     </div>
     <div class="pane on" id="pane-log"></div>
     <div class="pane" id="pane-minds">
-      <div class="minds-head"><span class="eyebrow ko">속마음</span><p>발언할 때 함께 적는 생각이에요. 화면에만 보이고, 다른 참석자에게는 전달되지 않아요.<br>
-        입장 색은 지금 모이는 의견과 비교한 방향이에요: <b style="color:#067647">초록 같은 방향</b> · <b style="color:#B42318">빨강 다른 시각</b> · <b style="color:#93370D">노랑 고민 중</b>. %는 확신 정도예요.</p></div>
+      <div class="minds-head"><span class="eyebrow ko">속마음</span><p>발언할 때 함께 적는 생각이에요. 다른 참석자에게는 보이지 않아요.</p>
+        <div class="legend"><span><i style="background:#12B76A"></i>같은 방향</span><span><i style="background:#F04438"></i>다른 시각</span><span><i style="background:#F79009"></i>고민 중</span><span class="pct">% 확신</span></div></div>
       <div class="minds" id="minds"></div>
     </div>
     <div class="pane" id="pane-review"></div>
@@ -1301,8 +1314,8 @@ function drawMinds() {
   for (const id of seatIds()) {
     const a = S.agents[id]; if (!a) continue;
     const t = cleanNote(S.thoughts[id]);
-    const steps = (S.trail[id] || []).map((s) => `<span class="step" data-s="${esc(s.stance)}"><em>${esc(shortPhase(phaseOfTurn(s.turn)))}</em><b title="${esc(stanceWord(s.stance))}">${esc(posOf(s))}</b>${s.confidence}%</span>`).join(`<span class="arrow">→</span>`);
-    const trail = steps ? `<span class="trail-h">입장 변화</span><div class="steps">${steps}</div>` : "";
+    const steps = (S.trail[id] || []).map((s) => `<li data-s="${esc(s.stance)}"><span class="tl-dot" title="${esc(stanceWord(s.stance))}"></span><div class="tl-body"><em>${esc(shortPhase(phaseOfTurn(s.turn)))}</em><b>${esc(posOf(s))}</b></div><span class="tl-pct">${s.confidence}%</span></li>`).join("");
+    const trail = steps ? `<span class="trail-h">입장 변화</span><ol class="tl">${steps}</ol>` : "";
     box.insertAdjacentHTML("beforeend", `<div class="mind ${id === "moderator" ? "inverse" : ""}" style="${styleVars(id)}">
       <div class="h"><img src="${esc(a.bust)}" alt=""><div><b>${esc(a.name)}</b><span class="eyebrow ko" style="opacity:.7">${esc(id === "moderator" ? "진행" : a.title)}</span></div></div>
       <div class="body ${t ? "" : "none"}">${t ? esc(t) : "아직 발언 전이에요."}</div>${trail ? `<div class="trail">${trail}</div>` : ""}</div>`);
