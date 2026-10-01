@@ -346,6 +346,42 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px 10px;border-radius:var(--pill);font-size:14px;z-index:20;display:none}
 .toast.on{display:block}
 /* 나도 참여 */
+.note.mine{background:#fff;border:2px solid var(--ink)}
+.note.mine.hand::after{content:"✋ 발언 신청";position:absolute;right:-8px;top:-12px;background:#FFD43B;color:#0A0A0A;font-size:11px;font-weight:700;padding:2px 8px 3px;border-radius:999px;border:1.5px solid #0A0A0A;animation:bob 1s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+/* 보드 위 말풍선: 지금 누가 무슨 말을 하는지 자리에서 바로 보여요 */
+.say-bubble{position:absolute;z-index:5;max-width:230px;min-width:72px;background:#fff;color:var(--ink);border:2px solid var(--ink);border-radius:14px;padding:7px 11px 8px;
+  font-size:12.5px;line-height:1.45;box-shadow:0 4px 16px rgba(0,0,0,.08);transform:translate(-50%,-100%);pointer-events:none;animation:pop .22s cubic-bezier(.3,1.4,.5,1)}
+.say-bubble::after{content:"";position:absolute;left:50%;bottom:-8px;width:12px;height:12px;background:#fff;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:translateX(-50%) rotate(45deg)}
+.say-bubble.below{transform:translate(-50%,0)}
+.say-bubble.side{transform:translate(0,-50%)}
+.say-bubble.side::after{left:-8px;top:50%;bottom:auto;transform:translateY(-50%) rotate(135deg)}
+.say-bubble.below::after{bottom:auto;top:-8px;transform:translateX(-50%) rotate(225deg)}
+.say-bubble p{margin:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.say-bubble.dark{background:#0A0A0A;color:#fff;border-color:#0A0A0A}.say-bubble.dark::after{background:#0A0A0A;border-color:#0A0A0A}
+.say-bubble .typing{display:inline-flex;gap:4px;padding:4px 2px}
+.say-bubble .typing i{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.35;animation:blinkdot 1s infinite}
+.say-bubble .typing i:nth-child(2){animation-delay:.15s}.say-bubble .typing i:nth-child(3){animation-delay:.3s}
+@keyframes blinkdot{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes pop{from{opacity:0;scale:.85}to{opacity:1;scale:1}}
+/* 상황판: 내가 말한 칸에 작은 표시 */
+.cell{position:relative}
+.cell .me-dot{position:absolute;right:-5px;top:-7px;width:15px;height:15px;border-radius:50%;background:#0A0A0A;color:#fff;font-size:8.5px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 1.5px #fff}
+#mood .m.me{background:#0A0A0A;color:#fff}
+/* 회의록: 내 말은 오른쪽 말풍선 (메신저처럼) */
+.cmt.meme,.cmt.me.note{grid-template-columns:32px 1fr!important;direction:rtl}   /* 오른쪽부터: 얼굴 → 말풍선 */
+.cmt.meme > *,.cmt.me.note > *{direction:ltr}
+.cmt.meme > div,.cmt.me.note > div{text-align:right}
+.cmt.meme .meta,.cmt.me.note .meta{justify-content:flex-end}
+.cmt.me.meme .text{display:inline-block;text-align:left;background:#0A0A0A;color:#fff;border-radius:14px 4px 14px 14px;padding:9px 13px;max-width:88%}
+.cmt.me.note .text{display:inline-block;text-align:left;background:#FFF4D6;border:1.5px dashed #E3B341;border-radius:14px 4px 14px 14px;padding:9px 13px;max-width:88%}
+.cmt.me.note .files{justify-content:flex-end}
+/* 회의 중 빠른 반응 */
+.live-quick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:8px}
+.live-quick button{flex:none;border:1px solid var(--hair);background:#fff;border-radius:999px;padding:5px 11px 6px;font:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.live-quick button:hover{border-color:var(--ink)}
+.live-quick button.on{background:#FFD43B;border-color:#0A0A0A;font-weight:650}
+.note.mine .n-av{font-size:19px}
 .me-seat{position:absolute;right:14px;top:12px;z-index:4;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:999px;border:1.5px solid var(--ink);background:#fff;box-shadow:var(--lift);cursor:pointer}
 .me-seat b{display:block;font-size:13px;line-height:1.1}.me-seat small{font-size:11px;color:var(--muted)}
 .me-ava{width:30px;height:30px;font-size:13px;--t:#0A0A0A;--c:#fff}
@@ -356,6 +392,8 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .live-cp .lq p{margin:4px 0 0;font-size:14.5px;font-weight:600;line-height:1.5}
 .live-cp textarea{flex:1;resize:none;border:1px solid var(--hair);border-radius:14px;padding:10px 12px;font:inherit;font-size:14.5px;max-height:120px}
 .cmt.meme .text{white-space:pre-line}
+.pc-mine{margin:4px 0 0;padding-left:16px;font-size:12.5px;line-height:1.5}
+.pc-mine li{margin-top:3px}
 .pc-me-art{display:grid;place-items:center;background:linear-gradient(135deg,#FDE68A,#C7D2FE 55%,#FBCFE8)}
 .pc-me-art > span:first-child{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:#0A0A0A;color:#fff;font-size:40px;font-weight:700;box-shadow:0 0 0 4px #fff}
 /* 자료·요청 추가, 추가 회의 */
@@ -452,6 +490,8 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .xp-more{display:inline-flex;align-items:center;gap:3px;margin-top:4px;border:0;background:none;padding:2px 0;font:inherit;font-size:12px;font-weight:650;color:var(--c,var(--ink-2));text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .pc-bubble .xp-more{color:var(--ink-2)}
 .table .xp-more{color:rgba(255,255,255,.85)}
+.t-issue{display:inline-flex;align-items:center;gap:7px;align-self:flex-start;margin:-2px 0 8px;padding:3px 11px 4px 4px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:650}
+.t-issue span{background:#FFD43B;color:#0A0A0A;font-size:11px;font-weight:750;padding:2px 8px 3px;border-radius:999px}
 .pc-spacer{flex:1;min-height:150px}
 .pc-strip{background:rgba(255,255,255,.88);border:2px solid var(--ink);border-radius:16px;padding:8px 10px 10px;backdrop-filter:blur(4px)}
 .pc-strip-h{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:7px;text-align:center}
@@ -460,6 +500,14 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .pc-badge img{width:44px;height:44px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.12))}
 .pc-badge span{font-size:10.5px;font-weight:700;text-align:center;line-height:1.2}
 .pc-none{margin:2px 0;font-size:12px;color:var(--ink-2);text-align:center}
+.pc-why{margin:7px 0 0;font-size:11.5px;line-height:1.45;color:var(--ink-2);text-align:center}
+.pc-why b{font-weight:700}
+/* 결론 탭: 사회자가 준 오늘의 배지 */
+.awards{display:grid;gap:8px}
+.award{display:grid;grid-template-columns:40px 1fr;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:var(--soft)}
+.award img{width:40px;height:40px}
+.award b{font-size:13.5px}.award .who{display:inline-block;margin-left:6px;font-size:12px;font-weight:650;padding:1px 8px 2px;border-radius:999px;background:var(--t,#fff)}
+.award p{margin:2px 0 0;font-size:12.5px;color:var(--ink-2);line-height:1.45}
 .pc-dev{margin:8px 0 0;text-align:center}
 .pc-dev button{border:0;background:none;color:rgba(255,255,255,.7);font-size:12px;text-decoration:underline;text-underline-offset:3px}
 .pc-dev button:hover{color:#fff}
@@ -696,6 +744,13 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
     <div class="pane" id="pane-review"></div>
     <div class="live-cp" id="live-cp" hidden>
       <div class="lq" id="live-q" hidden><span class="lq-h"><b id="live-from">사회자</b> 님이 <b id="live-me">나</b> 님께 물어요</span><p id="live-q-text"></p></div>
+      <div class="live-quick" id="live-quick">
+        <button type="button" data-say="좋아요, 그 방향에 동의해요.">👍 동의해요</button>
+        <button type="button" data-say="그 부분은 근거가 조금 더 궁금해요.">🤔 근거가 궁금해요</button>
+        <button type="button" data-say="저는 그 부분이 조금 걱정돼요.">😟 걱정돼요</button>
+        <button type="button" data-say="다른 관점도 한번 들어 보고 싶어요.">🔄 다른 관점도</button>
+        <button type="button" id="live-hand">✋ 발언 신청</button>
+      </div>
       <div class="cp-row"><textarea id="live-text" rows="1" placeholder="회의에 한마디 하기 (다음 발언부터 모두 함께 들어요)"></textarea><button class="pill dark" id="live-send">말하기</button></div>
       <button class="cp-more" id="live-skip" type="button" hidden>이번엔 넘기기</button>
     </div>
@@ -809,6 +864,11 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
     <div class="tp-foot"><span id="more-count" class="eyebrow ko"></span><div class="spacer"></div><button class="pill" data-close>취소</button><button class="pill dark" id="more-go">추가하기</button></div>
   </div>
 </dialog>
+<dialog id="dlg-confirm" class="newdlg" aria-label="확인">
+  <div class="dh"><h2 id="cf-title">확인</h2></div>
+  <div class="db"><p id="cf-body" style="margin:4px 0 16px;font-size:14.5px;line-height:1.6;color:var(--ink-2);white-space:pre-line"></p>
+    <div class="nm-actions"><button class="pill dark" id="cf-ok">확인</button><button class="pill" id="cf-cancel">취소</button></div></div>
+</dialog>
 <dialog id="dlg-new" class="newdlg" aria-label="새 회의">
   <div class="dh"><h2>새 회의를 시작할까요?</h2><button class="pill sm" data-close>닫기</button></div>
   <div class="db">
@@ -865,10 +925,13 @@ async function refreshRegistry() { S.registry = await (await fetch("api/registry
 // 공용 키(운영자 키)로 회의할 때는 운영자가 정한 모델로 고정해요. 모델을 바꾸려면 내 API 키가 필요해요.
 const sharedMode = () => !getKey() && Boolean(S.registry?.serverKey);
 const modelFor = (id) => (sharedMode() ? S.agents[id]?.sharedModel || S.agents[id]?.defaultModel : (loadSettings().models || {})[id] || S.agents[id]?.defaultModel) || "";
+// 자리는 사회자 포함 6개예요. 나도 참여하면 에이전트 참석자는 최대 4명
+function maxMembers() { return meOn() ? ALL_MEMBERS.length - 1 : ALL_MEMBERS.length; }
 function members() {
   const saved = loadSettings().members;
-  const list = Array.isArray(saved) ? ALL_MEMBERS.filter((id) => saved.includes(id)) : ALL_MEMBERS.slice();
-  return list.length >= MIN_MEMBERS ? list : ALL_MEMBERS.slice();
+  let list = Array.isArray(saved) ? ALL_MEMBERS.filter((id) => saved.includes(id)) : ALL_MEMBERS.slice();
+  if (list.length < MIN_MEMBERS) list = ALL_MEMBERS.slice();
+  return list.slice(0, maxMembers());
 }
 const recommendedTurns = (n) => 2 * n + 2;
 // 공용 키(운영자 키)로 회의할 때는 턴 수 상한이 낮아요(기본 12). 내 API 키를 넣으면 최대 30턴.
@@ -967,10 +1030,12 @@ const vendorOf = (m) => ({ openai: "GPT", anthropic: "Claude", google: "Gemini",
 const shortModel = (m) => `${vendorOf(m)} ${((m || "").split("/")[1] || "").replace(/^(claude|gpt|gemini|grok|solar|deepseek|mistral|qwen|llama|kimi|glm|command|nova|minimax|phi|nemotron|ernie|hunyuan)-?/i, "").replace(/-preview$/, "")}`.trim();
 const seatIds = () => ["moderator", ...members()];
 function face(id, cls = "") {   // 캐릭터 얼굴 (이미지를 못 불러오면 이름 첫 글자)
+  if (id === "me") return meFace(cls);
   const a = S.agents[id]; if (!a) return "";
   return `<img class="ava ${cls}" src="${esc(a.face)}" alt="" style="--t:${a.tint};--c:${a.color}" onerror="this.outerHTML='<span class=&quot;ava-fb ${cls}&quot; style=&quot;--t:${a.tint};--c:${a.color}&quot;>${esc(a.name[0])}</span>'">`;
 }
-const crew = (cls = "") => seatIds().map((id) => face(id, cls)).join("");
+const crew = (cls = "") => seatIds().map((id) => face(id, cls)).join("") + (meOn() ? meFace(cls) : "");
+const meFace = (cls = "") => `<span class="ava-fb ${cls}" style="--t:#0A0A0A;--c:#FFFFFF">${esc(meProfile().name.slice(0, 1))}</span>`;
 function styleVars(id) { const a = S.agents[id]; return `--c:${a.color};--t:${a.tint};--rot:${ROT[id] || 0}deg`; }
 
 function drawSeats() {
@@ -987,12 +1052,23 @@ function drawSeats() {
     b.onclick = () => showCard(id);
     $("#stage").appendChild(b);
   }
+  if (meOn()) {   // 나도 같은 모양의 자리에
+    const p = meProfile(), b = document.createElement("button");
+    b.className = `note mine ${S.hand ? "hand" : ""}`; b.id = "seat-me"; b.setAttribute("style", "--c:#0A0A0A;--t:#FFFFFF;--rot:-1.5deg");
+    b.setAttribute("aria-label", `${p.name}, 사용자. 내 카드 보기`);
+    b.innerHTML = `<div class="sel"><b></b><b></b><b></b><b></b><span></span></div>
+      <div class="n-top">${meFace("n-av")}<span class="eyebrow" style="opacity:.6">You</span></div>
+      <div class="n-name">${esc(p.name)}</div><div class="n-title">${esc(p.title || "사용자")}</div>
+      <div class="n-model eyebrow">${esc(p.mbti ? `${p.mbti} · ${MBTI_NAME[p.mbti] || ""}` : "참석 중")}</div><div class="n-state" id="st-me"></div>`;
+    b.onclick = showMeCard;
+    $("#stage").appendChild(b);
+  }
   placeSeats(); refreshSeats();
 }
 function placeSeats() {
   // 사회자를 맨 위에 두고 나머지를 타원 둘레에 고르게 앉힌 뒤, 자리와 겹치지 않을 만큼 탁자 폭을 정해요.
-  const st = $("#stage"), W = st.clientWidth, H = st.clientHeight, n = seatIds().length;
-  const ids = ["moderator", ...SEAT_ORDER.filter((id) => members().includes(id))];
+  const ids = ["moderator", ...SEAT_ORDER.filter((id) => members().includes(id)), ...(meOn() ? ["me"] : [])];
+  const st = $("#stage"), W = st.clientWidth, H = st.clientHeight, n = ids.length;
   const rx = Math.min(W * 0.4, 310), ry = H / 2 - 80, HALF_W = 64, HALF_H = 78, GAP = 14, B = 125;
   let a = Math.min(230, W * 0.36);
   // 자리가 5개(사회자+4명)면 원 둘레에 고르게 앉힐 때 아래 두 자리가 탁자 쪽으로 붙어서 탁자가 좁아져요.
@@ -1070,6 +1146,7 @@ function renderTableInner(state, info = {}) {
   } else if (state === "live") {
     const a = S.agents[info.id];
     t.innerHTML = `<div class="eyebrow"><span class="live ko">진행 중</span><span class="ko">${esc(phaseLabel(info.phase))}</span><span class="ko">전체 ${S.plan.length}턴 중 ${info.turn}번째</span></div>
+      ${info.issue ? `<div class="t-issue"><span>쟁점</span>${esc(info.issue)}</div>` : ""}
       <div class="t-who">${face(info.id)}${esc(a.name)}</div><div class="t-say">${esc(info.text)}</div>
       <div class="t-actions"><button class="pill on-dark sm" id="tb-add">자료·요청 추가</button>${canWrapUp() ? `<button class="pill on-dark sm" id="tb-wrap">여기서 마무리</button>` : ""}</div>`;
     $("#tb-add").onclick = () => openMore();
@@ -1084,7 +1161,7 @@ function renderTableInner(state, info = {}) {
     $("#tb-wrap")?.addEventListener("click", wrapUpMeeting);
     $("#tb-resume").onclick = resumeMeeting;
     if ($("#tb-set")) $("#tb-set").onclick = () => openSettings();
-    $("#tb-restart").onclick = () => { if (confirm("지금까지의 내용을 지우고 처음부터 다시 할까요?")) runMeeting(); };
+    $("#tb-restart").onclick = async () => { if (await askConfirm("처음부터 다시 할까요?", "지금까지의 회의 내용은 지워져요.", "처음부터")) runMeeting(); };
   } else if (state === "done") {
     const v = info.review;
     t.innerHTML = `<div class="eyebrow ko">결론 · ${S.plan.length}턴 모두 끝났어요</div>
@@ -1111,12 +1188,12 @@ function drawTracker() {
     el.innerHTML = `<div class="cells">${g.idx.map((i) => `<div class="cell" id="cell-${i}"></div>`).join("")}</div><span class="glabel">${esc(groupLabel(g.phase))}</span>`;
     box.appendChild(el);
   }
-  $("#turn-label").textContent = `총 ${S.plan.length}턴`; drawMood();
+  $("#turn-label").textContent = `총 ${S.plan.length}턴`; drawMood(); paintMeCells();
 }
 function markCell(i, state, who) {
   const c = $(`#cell-${i}`); if (!c) return;
   c.classList.toggle("now", state === "now");
-  if (state === "done") { const a = S.agents[who]; c.classList.add("done"); c.setAttribute("style", `--t:${a.tint};--c:${a.color}`); c.innerHTML = face(who); c.title = a.name; }
+  if (state === "done") { const a = S.agents[who]; c.classList.add("done"); c.setAttribute("style", `--t:${a.tint};--c:${a.color}`); c.innerHTML = face(who); c.title = a.name; if (S.meeting?.meCells?.[i]) paintMeCells(); }
   if (state === "now") $("#turn-label").textContent = `${i + 1} / ${S.plan.length}턴 · ${phaseLabel(S.plan[i])}`;
 }
 /* ───────────── 상황판 중계 ───────────── */
@@ -1164,6 +1241,11 @@ function castReaction(id, prev, now, ask, turn, total) {
   cast(line, id);
 }
 function drawMood() {
+  drawMoodInner();
+  const n = Object.values(S.meeting?.meCells || {}).reduce((a, b) => a + b, 0);
+  if (n && meOn()) $("#mood").insertAdjacentHTML("beforeend", `<span class="m me">${esc(meProfile().name)} ${n}</span>`);
+}
+function drawMoodInner() {
   const vals = members().map((id) => S.last[id]?.stance).filter(Boolean);
   const c = { 동의: 0, 우려: 0, 보류: 0 }; vals.forEach((v) => c[v]++);
   let vibe = "";
@@ -1190,7 +1272,7 @@ function addMsg({ id, to, text, ask, stance, confidence, position, thought, raw,
   const el = document.createElement("article");
   el.className = `cmt ${isMod ? "mod" : ""} ${err ? "err" : ""}`; el.setAttribute("style", styleVars(id));
   el.innerHTML = `${face(id)}<div>
-    <div class="meta"><b>${esc(a.name)}</b>${to ? `<span class="to">→ ${esc(S.agents[to]?.name)}</span>` : ""}
+    <div class="meta"><b>${esc(a.name)}</b>${to ? `<span class="to">→ ${esc(to === "me" ? meProfile().name : S.agents[to]?.name)}</span>` : ""}
       ${turn && !isMod ? `<span class="phase">${esc(shortPhase(phaseOfTurn(turn)))}</span>` : ""}${label ? `<span class="phase">${esc(label === "Answer" ? "후속 답변" : label)}</span>` : ""}
       ${model ? `<span class="eyebrow">${esc(model === "mock" ? "모의" : shortModel(model))}</span>` : ""}
       ${raw ? `<button class="jsonbtn eyebrow ko">원본</button>` : ""}</div>
@@ -1205,11 +1287,12 @@ function addMsg({ id, to, text, ask, stance, confidence, position, thought, raw,
 }
 function addThinking(id) {
   const a = S.agents[id];
+  showBubble(id, null);
   const el = document.createElement("div"); el.className = `cmt ${id === "moderator" ? "mod" : ""}`; el.setAttribute("style", styleVars(id));
   el.innerHTML = `${face(id)}<div><div class="meta"><b>${esc(a.name)}</b><span class="to">${id === "moderator" ? "순서를 정하는 중" : "생각하는 중"}<span class="typing"><i></i><i></i><i></i></span></span><span class="eyebrow sec">0s</span></div></div>`;
   logPane().appendChild(el); el.scrollIntoView({ block: "end", behavior: "smooth" });
   const t0 = Date.now(); const timer = setInterval(() => { const s = el.querySelector(".sec"); if (s) s.textContent = `${Math.round((Date.now() - t0) / 1000)}s`; }, 1000);
-  return () => { clearInterval(timer); el.remove(); };
+  return () => { clearInterval(timer); el.remove(); document.querySelectorAll(".say-bubble .typing").forEach((t) => t.closest(".say-bubble")?.remove()); };
 }
 function drawMinds() {
   const box = $("#minds"); box.innerHTML = "";
@@ -1275,7 +1358,7 @@ async function runFrom() {
   let i = m.i, wrap = false;
   try {
     for (; i < total; i++) {
-      const phase = m.plan[i], turn = i + 1;
+      const phase = m.plan[i], turn = i + 1, roundStart = phase !== m.lastPhase;
       if (phase !== m.lastPhase) { logDivider(phase); castPhase(phase); m.lastPhase = phase; }
       markCell(i, "now");
 
@@ -1289,29 +1372,49 @@ async function runFrom() {
         const ranked = team.slice().sort((a, b) => rank(a) - rank(b));
         eligible = ranked.slice(0, Math.min(2, ranked.length));
         hint = `지금 모이는 의견과 시각이 가장 다른 사람: ${eligible.map((id) => `${S.agents[id].name}('${posOf(S.last[id])}', ${stanceWord(S.last[id]?.stance)}, 확신 ${S.last[id]?.confidence ?? "?"}%)`).join(", ")}`;
-      } else eligible = team.filter((id) => !said.includes(id));
+      } else if (phase === "round1" || (isMore(phase) && moreLap(phase) === 1)) {
+        eligible = team.filter((id) => !said.includes(id));   // 첫 라운드는 모두의 첫 의견을 들어요
+      } else {
+        // 2라운드부터는 순서를 돌리지 않아요. 직전 발언자만 빼고(연달아 말하지 않게), 너무 많이 말한 사람은 잠시 쉬게 한 뒤 사회자가 흐름을 보고 골라요
+        const talks = (id) => S.transcript.filter((t) => t.role === id).length;
+        const lastSpk = [...S.transcript].reverse().find((t) => team.includes(t.role))?.role;
+        const least = Math.min(...team.map(talks));
+        eligible = team.filter((id) => id !== lastSpk && talks(id) <= least + 2);
+        if (!eligible.length) eligible = team.filter((id) => id !== lastSpk);
+        eligible.sort((a, b) => talks(a) - talks(b));
+      }
 
-      let next, say, modRaw, modModel, modThought, askUser = "";
+      let next, say, modRaw, modModel, modThought, askUser = "", issue = "";
+      const handUp = S.hand && meOn();
+      if (handUp) hint = `${hint ? `${hint} / ` : ""}사용자 ${meProfile().name} 님이 손을 들었어요. 이번 차례에 ask_user로 먼저 발언 기회를 주세요.`;
       try {
-        const mm = await call("moderator", `[회의실→사회자] ${turn}번째 턴 진행 요청`, { type: "moderate", document: docForAgents(), transcript: publicTranscript(), phase, eligible, hint: hint || moreHint(phase), ...base(i) });
+        const mm = await call("moderator", `[회의실→사회자] ${turn}번째 턴 진행 요청`, { type: "moderate", document: docForAgents(), transcript: publicTranscript(), phase, eligible, roundStart, standing: S.last, hint: hint || moreHint(phase), ...base(i) });
         if (mm.failed) throw failErr(mm.text);
-        next = mm.data.next; say = mm.text; modRaw = mm.raw; modModel = mm.data.model; modThought = mm.data.thoughts; askUser = mm.data.askUser || "";
+        next = mm.data.next; say = mm.text; modRaw = mm.raw; modModel = mm.data.model; modThought = mm.data.thoughts; askUser = mm.data.askUser || ""; issue = mm.data.issue || "";
       } catch (e) {
         if (e.name === "AbortError" || isNetErr(e)) throw e;
         next = eligible[0]; say = `${S.agents[next].name} 님 의견 부탁드려요.`;
         status(`사회자 응답이 없어 ${S.agents[next].name} 님께 바로 넘겼어요.`);
       }
       if (!eligible.includes(next)) next = eligible[0];
+      // 나도 참여 중이면: 사회자가 필요하다고 볼 때(라운드마다 한 번까지) 먼저 나에게 따로 묻고, 답을 들은 뒤 다음 사람을 불러요
+      if (handUp && !askUser) askUser = `${meProfile().name} 님, 손을 드셨네요. 말씀해 주세요.`;
+      if (handUp) raiseHand(false);
+      if (askUser && meOn() && (handUp || !(m.asked ||= {})[phase])) {
+        (m.asked ||= {})[phase] = true;
+        const qEntry = { role: "moderator", speaker: "사회자", text: askUser };
+        S.transcript.push(qEntry);
+        const qHist = logMsg({ id: "moderator", to: "me", text: askUser, label: "질문", model: modModel });
+        try { await askUserQuestion("moderator", askUser); }
+        catch (e) { m.asked[phase] = false; const k = S.transcript.lastIndexOf(qEntry); if (k >= 0) S.transcript.splice(k, 1); voidMsg(qHist); throw e; }
+      }
       const modEntry = { role: "moderator", speaker: "사회자", text: say };
       S.transcript.push(modEntry);
-      const modHist = logMsg({ id: "moderator", to: next, text: say, thought: modThought, raw: modRaw, model: modModel });
+      const newIssue = issue && issue !== m.issue;   // 쟁점이 바뀔 때만 회의록에 표시
+      if (issue) { m.issue = issue; $("#turn-label").textContent = `${i + 1} / ${S.plan.length}턴 · ${phaseLabel(phase)} · 쟁점 '${issue}'`; }
+      const modHist = logMsg({ id: "moderator", to: next, text: say, thought: modThought, raw: modRaw, model: modModel, label: newIssue ? `쟁점 · ${issue}` : "" });
       const dropMod = () => { const k = S.transcript.lastIndexOf(modEntry); if (k >= 0) S.transcript.splice(k, 1); voidMsg(modHist); };
-      // 나도 참여 중이면: 사회자가 필요하다고 볼 때(라운드마다 한 번까지) 먼저 나에게 묻고, 답을 들은 뒤 다음 사람이 말해요
-      if (askUser && meOn() && !(m.asked ||= {})[phase]) {
-        m.asked[phase] = true;
-        try { await askUserQuestion("moderator", askUser); } catch (e) { m.asked[phase] = false; dropMod(); throw e; }
-      }
-      renderTable("live", { id: "moderator", text: say, phase, turn }); setSpeaking("moderator"); moveCursor(next);
+      renderTable("live", { id: "moderator", text: say, phase, turn, issue }); setSpeaking("moderator"); moveCursor(next); showBubble("moderator", say);
 
       const lastSpeaker = [...S.transcript].reverse().find((t) => t.role !== "moderator");
       castPick(next, lastSpeaker?.ask?.to === S.agents[next].name ? lastSpeaker.role : null);
@@ -1331,7 +1434,7 @@ async function runFrom() {
       (S.trail[next] ||= []).push({ turn, stance, confidence, position });
       S.transcript.push({ role: next, speaker: S.agents[next].name, text: r.text, ask: ask || null });
       logMsg({ id: next, text: r.text, ask, stance, confidence, position, thought: thoughts, raw: r.raw, model, turn });
-      renderTable("live", { id: next, text: r.text, phase, turn }); setSpeaking(next);
+      renderTable("live", { id: next, text: r.text, phase, turn, issue: m.issue }); setSpeaking(next); showBubble(next, r.text);
       markCell(i, "done", next); m.cells[i] = next; refreshSeats(); drawMinds(); drawMood();
       m.i = i + 1; saveSnapshot();
       // 참석자가 나에게 질문했으면 (라운드마다 한 번까지) 답을 받고 넘어가요
@@ -1355,7 +1458,7 @@ async function concludeMeeting(m, i, { early = false } = {}) {
   moveCursor(null);
   const r = await call("moderator", early ? "[회의실→사회자] 여기서 마무리, 결론 정리 요청" : "[회의실→사회자] 결론 정리 요청", {
     type: "summarize", document: docForAgents(), transcript: publicTranscript(), attendees: m.team, totalTurns: total - ss,
-    topic: topicForAgents(), turn: i - ss + 1, early, doneTurns: m.i - ss, previousReview: ss ? S.reviews?.at(-1) : undefined });
+    topic: topicForAgents(), turn: i - ss + 1, early, doneTurns: m.i - ss, previousReview: ss ? S.reviews?.at(-1) : undefined, user: meForAgents() });
   if (r.failed) throw failErr(r.text);
   const review = r.artifacts[0]?.parts?.find((p) => p.data)?.data, thought = r.data?.thoughts || "";
   S.transcript.push({ role: "moderator", speaker: "사회자", text: r.text });
@@ -1368,13 +1471,16 @@ async function concludeMeeting(m, i, { early = false } = {}) {
     S.review = review; renderReview(review); renderTable("done", { review }); showTab("review");
     cast(early ? `여기서 마무리했어요. 판정은 '${esc(review.verdict)}'이에요. 이제 후속 질문도 할 수 있어요.`
                : `회의 끝! 판정은 '${esc(review.verdict)}'이에요. 이제 사회자나 참석자에게 후속 질문도 할 수 있어요.`, "moderator");
+    if (review.badges?.length) setTimeout(() => cast(`사회자가 오늘의 배지 ${review.badges.length}개를 나눠 줬어요. 카드를 뒤집어 확인해 보세요.`, "moderator"), 2500);
   }
 }
 const canWrapUp = () => !!S.meeting && S.meeting.status !== "done" && !S.wrapping && S.transcript.some((t) => t.role !== "moderator" && t.role !== "user");
 // '여기서 마무리': 남은 턴은 건너뛰고 사회자가 지금까지의 이야기로 결론·회의록·속마음을 정리해요
-function wrapUpMeeting() {
+async function wrapUpMeeting() {
   if (!canWrapUp()) return toast(S.meeting ? "아직 참석자 발언이 없어서 정리할 내용이 없어요." : "진행 중인 회의가 없어요.");
-  if (!confirm("여기서 회의를 마무리할까요?\n남은 턴은 건너뛰고, 사회자가 지금까지 나온 이야기로 결론을 정리해요.")) return;
+  if (!(await askConfirm("여기서 회의를 마무리할까요?", "남은 턴은 건너뛰고, 사회자가 지금까지 나온 이야기로 결론을 정리해요.", "여기서 마무리"))) return;
+  if (!canWrapUp()) return;   // 묻는 사이 회의가 끝났을 수 있어요
+  status("사회자가 지금까지 나온 이야기로 결론을 정리하고 있어요.");
   if (S.running) { S.wrapAfterStop = true; S.abort?.abort(); return; }   // 진행 중이면 지금 턴을 멈춘 뒤 이어서 정리
   finishEarly();
 }
@@ -1436,7 +1542,7 @@ function restoreSnapshot(snap) {
   drawTracker();
   for (const h of snap.history || []) h.t === "divider" ? logDivider(h.phase) : h.t === "user" ? logUserNote(h.a) : h.t === "me" ? logMe(h.a) : logMsg(h.a);
   Object.entries(m.cells || {}).forEach(([i, who]) => markCell(+i, "done", who));
-  refreshSeats(); drawMinds(); drawMood(); setLogCount(S.transcript.length);
+  paintMeCells(); refreshSeats(); drawMinds(); drawMood(); setLogCount(S.transcript.length);
   if (m.status === "running") { m.status = "paused"; m.error = "페이지가 닫혀서 멈춰 있었어요."; }
   showPaused(`지난번 회의를 불러왔어요. ${m.error}`);
   saveSnapshot();
@@ -1445,6 +1551,7 @@ function restoreSnapshot(snap) {
 
 function newMeeting() {
   if (S.running && S.abort) { S.abort.abort(); S.running = false; }
+  hideBubbles(); S.hand = false;
   Object.assign(S, { transcript: [], tokens: {}, contexts: {}, last: {}, thoughts: {}, trail: {}, review: null, reviews: [], meeting: null, history: [], followups: [] });
   clearSnapshot();
   emptyLog();
@@ -1467,17 +1574,28 @@ function meProfile() {
   const m = loadSettings().me || {};
   return { on: !!m.on, name: String(m.name || "").trim() || "나", title: String(m.title || "").trim(), about: String(m.about || "").trim(), mbti: m.mbti || "" };
 }
-const meOn = () => meProfile().on;
+function meOn() { return meProfile().on; }
 const meForAgents = () => { if (!meOn()) return undefined; const p = meProfile(); return { name: p.name, title: p.title, about: p.about }; };
 function drawMe() {
   const p = meProfile();
   $("#me-on").checked = p.on; $("#me-state").textContent = p.on ? "켜짐" : "꺼짐";
   $("#me-summary").textContent = p.on ? `'${p.name}'${p.title ? ` (${p.title})` : ""}로 참여해요.` : "";
-  $("#me-seat").hidden = !p.on; $("#me-seat-name").textContent = p.name; $("#me-seat-ava").textContent = p.name.slice(0, 1);
+  $("#me-seat").hidden = true;
   updateLive();
 }
 function setMe(patch) {
-  saveSettings({ me: { ...(loadSettings().me || {}), ...patch } }); drawMe();
+  if ("on" in patch && patch.on !== meOn() && (S.running || S.meeting?.status === "paused")) {
+    $("#me-on").checked = meOn(); return toast("회의 중에는 참여 여부를 바꿀 수 없어요. 회의가 끝난 뒤나 새 회의에서 바꿔 주세요.");
+  }
+  const saved = loadSettings().members, before = Array.isArray(saved) ? ALL_MEMBERS.filter((id) => saved.includes(id)) : ALL_MEMBERS.slice();
+  saveSettings({ me: { ...(loadSettings().me || {}), ...patch } });
+  if (patch.on && before.length > maxMembers()) {   // 자리가 모자라면 맨 뒤 한 명은 이번엔 빠져요
+    const out = before.slice(maxMembers());
+    saveSettings({ members: before.slice(0, maxMembers()) });
+    toast(`자리는 6개라 ${out.map((id) => S.agents[id]?.name || id).join(", ")} 님은 이번엔 빠져요. 설정에서 바꿀 수 있어요.`);
+  }
+  drawMe();
+  if (S.agents.moderator && !S.running) { if (!S.meeting) applyConfig(); else drawSeats(); }
   if (S.table === "ready" || S.table === "idle") renderTable(S.table);
 }
 function openMe() {
@@ -1489,29 +1607,79 @@ function saveMe(show) {
   setMe({ name: $("#me-name").value.trim(), title: $("#me-title").value.trim(), about: $("#me-about").value.trim(), mbti: $("#me-mbti").value });
   $("#dlg-me").close(); toast("내 프로필을 저장했어요."); if (show) showMeCard();
 }
+const MBTI_NAME = { ISTJ: "현실주의자", ISFJ: "수호자", INFJ: "옹호자", INTJ: "전략가", ISTP: "장인", ISFP: "모험가", INFP: "중재자", INTP: "논리술사",
+  ESTP: "사업가", ESFP: "연예인", ENFP: "활동가", ENTP: "변론가", ESTJ: "경영자", ESFJ: "집정관", ENFJ: "선도자", ENTJ: "통솔자" };
 function showMeCard() {
-  const p = meProfile(), said = S.transcript.filter((t) => t.role === "me").length;
+  const p = meProfile(), mine = S.transcript.filter((t) => t.role === "me"), said = mine.length;
+  const quote = (p.about.split(/(?<=[.!?。])\s|\n/)[0] || "").trim() || "같이 이야기해 봐요.";
+  const recent = mine.slice(-3).map((t) => `<li>${esc(t.text.length > 70 ? `${t.text.slice(0, 70)}…` : t.text)}</li>`).join("");
   $("#pc-wrap").innerHTML = `
-    <div class="pcard" id="pcard" style="--c:#0A0A0A;--t:#F4F1EA;--rot:0deg">
-      <div class="pc-inner"><div class="pc-face pc-front">
-        <div class="pc-top"><span class="pc-stage">Human</span><span class="pc-hp"><small>참여</small>${p.on ? "ON" : "OFF"}</span></div>
-        <div class="pc-name"><b>${esc(p.name)}</b>${p.mbti ? `<span class="pc-mbti">${esc(p.mbti)}</span>` : ""}<span class="spacer"></span><span class="pc-type">나</span></div>
-        <div class="pc-art pc-me-art"><span>${esc(p.name.slice(0, 1))}</span><span class="pc-shine"></span></div>
-        <div class="pc-sub">${esc(p.title || "역할이나 소속을 적어 보세요")}</div>
-        <div class="pc-move"><div class="pc-move-h"><span class="pc-energy"></span><b>소개</b></div><p>${esc(p.about || "아직 소개가 없어요. 적어 두면 사회자와 참석자들이 나를 알고 이야기해요.")}</p></div>
-        <div class="pc-foot"><div><small>참여 방식</small><b>${p.on ? "필요할 때 사회자가 물어봐요" : "지금은 지켜보기만 해요"}</b></div><div><small>오늘 회의</small><b>${said ? `발언 ${said}번` : "아직 발언 전"}</b></div></div>
-      </div></div>
+    <div class="pcard" id="pcard" style="--c:#0A0A0A;--t:#EEF0FF;--rot:0deg">
+      <div class="pc-inner">
+        <div class="pc-face pc-front">
+          <div class="pc-top"><span class="pc-stage">Human</span><span class="pc-hp"><small>참여</small>${p.on ? "ON" : "OFF"}</span></div>
+          <div class="pc-name"><b>${esc(p.name)}</b>${p.mbti ? `<span class="pc-mbti" title="${esc(MBTI_NAME[p.mbti] || "")}">${esc(p.mbti)}<small>${esc(MBTI_NAME[p.mbti] || "")}</small></span>` : ""}<span class="spacer"></span><span class="pc-type">사용자</span></div>
+          <div class="pc-art pc-me-art"><span>${esc(p.name.slice(0, 1))}</span><span class="pc-shine"></span></div>
+          <div class="pc-sub">No.000 · ${esc(p.title || "역할을 적어 보세요")} · 사람 참석자</div>
+          <div class="pc-move"><div class="pc-move-h"><span class="pc-energy"></span><b>나의 관점</b></div><p>${esc(p.about || "아직 소개가 없어요. 적어 두면 사회자와 참석자들이 나를 알고 이야기해요.")}</p></div>
+          <div class="pc-move"><div class="pc-move-h"><span class="pc-energy alt"></span><b>참여 방식</b></div><p>사회자가 내 경험이나 생각이 필요할 때 물어봐요. 회의 중에는 언제든 한마디 할 수 있어요.</p></div>
+          <div class="pc-foot"><div><small>MBTI</small><b>${p.mbti ? `${esc(p.mbti)} ${esc(MBTI_NAME[p.mbti] || "")}` : "-"}</b></div><div><small>오늘 회의</small><b>${said ? `발언 ${said}번` : "아직 발언 전"}</b></div></div>
+          <p class="pc-quote">“${esc(quote)}”</p>
+        </div>
+        <div class="pc-face pc-back">
+          <div class="pc-bubble"><b>${esc(p.name)}의 오늘 발언</b>${recent ? `<ul class="pc-mine">${recent}</ul>` : `<p>아직 회의에서 한 말이 없어요.</p>`}</div>
+          <div class="pc-spacer"></div>
+          ${(() => { const done = S.meeting?.status === "done", b = done ? badgeStrip("me") : null;
+            return `<div class="pc-strip"><span class="pc-strip-h">사회자가 준 오늘의 배지</span><div class="pc-badges">${done ? b.html : `<p class="pc-none">회의가 끝나면 사회자가 배지를 줘요.${said ? ` 지금까지 ${said}번 말했어요.` : ""}</p>`}</div>${done ? b.why : ""}</div>`; })()}
+        </div>
+      </div>
     </div>`;
-  $("#pc-ask").hidden = true; $("#pc-flip").hidden = true; $(".pc-dev").hidden = true;
+  $("#pc-ask").hidden = true; $(".pc-dev").hidden = true; $("#pc-flip").hidden = false;
+  $("#pc-flip").textContent = "뒤집어 보기";
+  $("#pc-flip").onclick = () => { const c = $("#pcard"); c.classList.toggle("flipped"); $("#pc-flip").textContent = c.classList.contains("flipped") ? "앞면 보기" : "뒤집어 보기"; };
   $("#pc-hint").innerHTML = `<button class="pill on-dark sm" id="pc-me-edit">프로필 고치기</button>`;
   $("#pc-me-edit").onclick = () => { $("#dlg-card").close(); openMe(); };
   if (!$("#dlg-card").open) $("#dlg-card").showModal();
+}
+// 보드 위 말풍선: 말하는 사람 자리 위에 띄워요 (생각 중이면 점 세 개)
+function showBubble(id, text) {
+  hideBubbles();
+  if (isMobile()) return;
+  const seat = $(`#seat-${id}`), stage = $("#stage"); if (!seat) return;
+  const r = seat.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+  const x = r.left + r.width / 2 - sr.left, top = r.top - sr.top, below = top < 120;
+  const side = id === "moderator";   // 사회자는 위쪽 가운데라 아래로 띄우면 탁자를 가려요 → 오른쪽 옆에
+  const b = document.createElement("div");
+  b.className = `say-bubble ${side ? "side" : below ? "below" : ""} ${id === "moderator" || id === "me" ? "dark" : ""}`;
+  if (side) { b.style.left = `${r.right - sr.left + 14}px`; b.style.top = `${top + r.height / 2}px`; }
+  else { b.style.left = `${Math.max(120, Math.min(sr.width - 120, x))}px`; b.style.top = `${below ? top + r.height + 12 : top - 10}px`; }
+  b.innerHTML = text ? `<p>${esc(text)}</p>` : `<span class="typing"><i></i><i></i><i></i></span>`;
+  stage.appendChild(b);
+  if (text) { clearTimeout(showBubble.t); showBubble.t = setTimeout(() => b.remove(), 7000); }
+}
+function hideBubbles() { document.querySelectorAll(".say-bubble").forEach((b) => b.remove()); }
+// 손들기: 다음 차례에 사회자가 나를 먼저 불러요
+function raiseHand(on = !S.hand) {
+  S.hand = !!on && meOn() && !!S.meeting && S.meeting.status !== "done";
+  $("#seat-me")?.classList.toggle("hand", S.hand); $("#live-hand")?.classList.toggle("on", S.hand);
+  if (S.hand) cast(`${meProfile().name} 님이 손을 들었어요. 다음 차례에 사회자가 먼저 불러 줄 거예요.`, "me");
+}
+// 상황판: 내가 말한 칸에 작은 표시
+function markMeCell(i) {
+  const m = S.meeting; if (!m) return;
+  const k = Math.min(i ?? m.i, m.plan.length - 1);
+  (m.meCells ||= {})[k] = (m.meCells[k] || 0) + 1;
+  paintMeCells(); drawMood();
+}
+function paintMeCells() {
+  document.querySelectorAll(".cell .me-dot").forEach((d) => d.remove());
+  Object.keys(S.meeting?.meCells || {}).forEach((k) => $(`#cell-${k}`)?.insertAdjacentHTML("beforeend", `<span class="me-dot" title="${esc(meProfile().name)} 님 발언">${esc(meProfile().name.slice(0, 1))}</span>`));
 }
 let pendingAsk = null;
 function updateLive() {
   const running = !!S.meeting && S.meeting.status !== "done";
   $("#live-cp").hidden = !(pendingAsk || (meOn() && running && (S.tab || "log") === "log"));
-  $("#live-q").hidden = !pendingAsk; $("#live-skip").hidden = !pendingAsk;
+  $("#live-q").hidden = !pendingAsk; $("#live-skip").hidden = !pendingAsk; $("#live-quick").hidden = !!pendingAsk;
   $("#live-send").textContent = pendingAsk ? "답하기" : "말하기";
   $("#live-text").placeholder = pendingAsk ? "답을 적어 주세요 (⌘/Ctrl + Enter로 보내기)" : "회의에 한마디 하기 (다음 발언부터 모두 함께 들어요)";
 }
@@ -1523,21 +1691,25 @@ function addMeMsg({ text, label, to }) {
 function logMe(a) { addMeMsg(a); S.history.push({ t: "me", a }); }
 function meSays(text, label, to) {
   S.transcript.push({ role: "me", speaker: `${meProfile().name}(사용자)`, text });
-  logMe({ text, label, to }); setLogCount(S.transcript.length); saveSnapshot();
+  logMe({ text, label, to }); setLogCount(S.transcript.length);
+  markMeCell(); showBubble("me", text);
+  cast(label === "답변" ? `${meProfile().name} 님이 답했어요. 이어서 진행할게요.` : `${meProfile().name} 님이 한마디 했어요. 다음 발언부터 모두 함께 들어요.`, "me");
+  saveSnapshot();
 }
 function askUserQuestion(fromId, question) {   // 답하거나 넘길 때까지 기다려요. 멈추기·새 회의면 그만둬요
   return new Promise((resolve, reject) => {
     const sig = S.abort?.signal, who = S.agents[fromId]?.name || "사회자";
     pendingAsk = { resolve, fromId };
     $("#live-from").textContent = who; $("#live-me").textContent = meProfile().name; $("#live-q-text").textContent = question;
-    $("#me-seat").classList.add("asked"); setSpeaking(null); moveCursor(null);
+    setSpeaking("me", "thinking"); const sp = $("#seat-me .sel span"); if (sp) sp.textContent = "답을 기다려요"; moveCursor("me");
+    showBubble(fromId, question);
     if (isMobile()) setView("log");
     showTab("log"); updateLive(); setTimeout(() => $("#live-text").focus(), 60);
     cast(`${who} 님이 ${meProfile().name} 님께 물었어요. 답을 기다리는 중이에요.`, fromId);
     sig?.addEventListener("abort", () => { if (pendingAsk) { endAsk(); reject(new DOMException("회의를 멈췄어요.", "AbortError")); } }, { once: true });
   });
 }
-function endAsk() { pendingAsk = null; $("#me-seat").classList.remove("asked"); $("#live-text").value = ""; updateLive(); }
+function endAsk() { pendingAsk = null; setSpeaking(null); moveCursor(null); $("#live-text").value = ""; updateLive(); }
 function liveSend() {
   const t = $("#live-text").value.trim();
   if (pendingAsk) {
@@ -1545,7 +1717,7 @@ function liveSend() {
     const p = pendingAsk; endAsk(); meSays(t, "답변", S.agents[p.fromId]?.name); p.resolve(t); return;
   }
   if (!t) return;
-  meSays(t, "한마디"); $("#live-text").value = ""; toast("다음 발언부터 모두 함께 들어요.");
+  meSays(t, "한마디"); $("#live-text").value = "";
 }
 
 // ───── 자료·요청 추가 (회의 중) / 추가 회의 (회의가 끝난 뒤) ─────
@@ -1624,6 +1796,16 @@ function submitMore() {
   drawTracker(); Object.entries(m.cells || {}).forEach(([k, who]) => markCell(+k, "done", who));
   showTab("log"); updateComposer(); runFrom();
 }
+// 확인 창: 브라우저 기본 confirm() 대신 페이지 안 대화상자 (차단돼도 동작하게)
+function askConfirm(title, body, okLabel = "확인") {
+  return new Promise((resolve) => {
+    const d = $("#dlg-confirm");
+    $("#cf-title").textContent = title; $("#cf-body").textContent = body || ""; $("#cf-ok").textContent = okLabel;
+    const done = (v) => { $("#cf-ok").onclick = $("#cf-cancel").onclick = null; d.onclose = null; if (d.open) d.close(); resolve(v); };
+    $("#cf-ok").onclick = () => done(true); $("#cf-cancel").onclick = () => done(false); d.onclose = () => done(false);
+    d.showModal(); setTimeout(() => $("#cf-ok").focus(), 30);
+  });
+}
 // '새 회의'를 누르면 무엇이 지워지는지 보여 주고 물어봐요
 function askNewMeeting() {
   const said = S.transcript.length, hasFu = (S.followups || []).length;
@@ -1636,11 +1818,6 @@ function askNewMeeting() {
   $("#nm-topic").textContent = S.doc ? (S.doc.prompt?.trim() || S.doc.name) : "";
   $("#nm-topic-row").hidden = !S.doc; $("#nm-same").hidden = !S.doc;
   $("#dlg-new").showModal();
-}
-function confirmDiscard() {
-  if (S.running) return confirm("진행 중인 회의를 멈추고 새로 시작할까요?");
-  if (S.meeting?.status === "paused") return confirm("멈춘 회의가 있어요. 지우고 새로 시작할까요?");
-  return true;
 }
 
 /* ───────────── 회의 뒤 후속 질문 ───────────── */
@@ -1701,7 +1878,27 @@ const BADGES = {
   handshake: { name: "합의 도우미",   desc: "모이는 의견에 가장 확신 있게 힘을 보탰어요" },
   bulb:      { name: "아이디어 뱅크", desc: "핵심 결론과 제안에 이름이 가장 많이 올랐어요" },
 };
+// 카드 뒷면 배지 줄: 배지 그림 + 이름, 아래에 사회자가 준 이유
+function badgeStrip(id) {
+  const mine = earnedBadges()[id] || [];
+  if (!mine.length) return { html: `<p class="pc-none">이번 회의에서는 받은 배지가 없어요.</p>`, why: "" };
+  const html = mine.map((k) => `<div class="pc-badge" title="${esc(badgeReason(id, k) || BADGES[k].desc)}"><img src="vendor/badges/${k}.webp" alt=""><span>${esc(BADGES[k].name)}</span></div>`).join("");
+  const why = mine.map((k) => badgeReason(id, k)).filter(Boolean);
+  return { html, why: why.length ? `<p class="pc-why"><b>사회자</b> “${esc(why.join(" "))}”</p>` : "" };
+}
+// 사회자가 준 배지 (결론에 함께 와요). 이름 → 자리 id
+const badgeOwner = (name) => (meOn() && name === meProfile().name ? "me" : nameToId(name));
 function earnedBadges() {
+  const aw = S.review?.badges;
+  if (Array.isArray(aw) && aw.length) {
+    const out = {};
+    for (const b of aw) { const id = badgeOwner(b.to); if (id && BADGES[b.badge] && !(out[id] ||= []).includes(b.badge)) out[id].push(b.badge); }
+    return out;
+  }
+  return autoBadges();   // 예전 회의처럼 사회자 배지가 없으면 기록으로 자동
+}
+const badgeReason = (id, key) => (S.review?.badges || []).find((b) => badgeOwner(b.to) === id && b.badge === key)?.reason || "";
+function autoBadges() {
   const out = {}, team = S.meeting?.team || members(), give = (id, key) => (out[id] ||= []).push(key);
   const most = (score, key) => {   // 가장 많은 사람(동점이면 모두)에게
     const vals = team.map((id) => score(id)), top = Math.max(...vals);
@@ -1725,18 +1922,16 @@ function backHtml(id, a) {
   const isMod = id === "moderator", done = S.meeting?.status === "done";
   const thought = cleanNote(S.thoughts[id]);
   const bubble = thought ? esc(thought) : S.meeting ? "아직 생각을 정리하는 중이에요." : "아직 회의 전이라 속마음이 없어요.";
-  let strip;
+  let strip, why = "";
   if (isMod) strip = `<p class="pc-none">사회자는 배지를 나눠 주는 쪽이에요.</p>`;
   else if (!done) strip = `<p class="pc-none">회의가 끝나면 오늘의 배지를 받아요.</p>`;
   else {
-    const mine = earnedBadges()[id] || [];
-    strip = mine.length ? mine.map((k) => `<div class="pc-badge" title="${esc(BADGES[k].desc)}"><img src="vendor/badges/${k}.webp" alt=""><span>${esc(BADGES[k].name)}</span></div>`).join("")
-      : `<p class="pc-none">이번 회의에서는 받은 배지가 없어요.</p>`;
+    const b = badgeStrip(id); strip = b.html; why = b.why;
   }
   return `<div class="pc-face pc-back">
       <div class="pc-bubble"><b>${esc(a.name)}의 속마음</b><p>${bubble}</p></div>
       <div class="pc-spacer"></div>
-      <div class="pc-strip"><span class="pc-strip-h">오늘의 배지</span><div class="pc-badges">${strip}</div></div>
+      <div class="pc-strip"><span class="pc-strip-h">${S.review?.badges?.length ? "사회자가 준 오늘의 배지" : "오늘의 배지"}</span><div class="pc-badges">${strip}</div>${why}</div>
     </div>`;
 }
 
@@ -1828,6 +2023,9 @@ function renderReview(v) {
       <details><summary>앞선 결론 보기</summary>${S.reviews.map((r, k) => `<p><b>${k + 1}차 · ${esc(r.verdict)}</b> ${esc(r.headline)}</p>`).join("")}</details></div>` : ""}
     <div class="vblock" data-tone="${toneOf(v)}"><span class="eyebrow ko">판정</span><h2>${esc(v.verdict)}</h2><p>${esc(v.headline)}</p></div>
     <div class="rsec"><h3>핵심 결론과 제안 ${cnt(keys)}</h3>${items(keys)}</div>
+    ${v.badges?.length ? `<div class="rsec"><h3>오늘의 배지 <span class="eyebrow ko">사회자가 줬어요</span></h3><div class="awards">${v.badges.filter((b) => BADGES[b.badge]).map((b) => {
+      const id = badgeOwner(b.to), t = id === "me" ? "#E9E9EC" : S.agents[id]?.tint || "#fff";
+      return `<div class="award"><img src="vendor/badges/${b.badge}.webp" alt=""><div><b>${esc(BADGES[b.badge].name)}</b><span class="who" style="--t:${t}">${esc(b.to)}</span><p>${esc(b.reason || BADGES[b.badge].desc)}</p></div></div>`; }).join("")}</div></div>` : ""}
     <div class="rsec"><h3>우려와 반대 의견 ${cnt(worries)}</h3>${items(worries)}</div>
     <div class="rsec"><h3>합의된 점</h3>${list(agree)}</div>
     <div class="rsec"><h3>남은 질문</h3>${list(open)}</div>
@@ -1845,7 +2043,7 @@ function reviewMarkdown(v) {
   const models = seatIds().map((id) => `${S.agents[id].name}=${modelFor(id)}`).join(", ");
   const adds = (S.doc.addenda || []).map((a, k) => `- 추가 요청 ${k + 1}${a.after ? ` (${a.after}번째 발언 뒤)` : " (회의 뒤 추가 회의)"}: ${a.prompt || "(요청 없음)"}${a.files?.length ? ` · 자료: ${a.files.map((f) => f.name).join(", ")}` : ""}`).join("\n");
   const prevs = (S.reviews || []).map((r, k) => `- ${k + 1}차 결론 · ${r.verdict}: ${r.headline}`).join("\n");
-  return `# ${S.doc.name} 회의 결론\n\n${S.doc.prompt ? `## 토론 주제\n${S.doc.prompt}\n\n` : ""}${adds ? `## 추가 요청과 자료\n${adds}\n\n` : ""}${prevs ? `## 앞선 결론\n${prevs}\n\n` : ""}${files ? `## 첨부 자료\n${files}\n\n` : ""}> ${v.verdict}: ${v.headline}\n\n## 핵심 결론과 제안\n${it(keys)}\n\n## 우려와 반대 의견\n${it(worries)}\n\n## 합의된 점\n${li(agree)}\n\n## 남은 질문\n${li(open)}\n\n## 회의록\n${log}\n${fu ? `\n## 후속 질문\n${fu}\n` : ""}\n---\n참석자 ${members().length}명, ${S.meeting?.early ? `${S.meeting.early.doneTurns}턴에서 일찍 마무리(계획 ${S.plan.length}턴)` : `${S.plan.length}턴`}. 모델: ${models}\n생성: ${new Date().toLocaleString("ko-KR")}\n`;
+  return `# ${S.doc.name} 회의 결론\n\n${S.doc.prompt ? `## 토론 주제\n${S.doc.prompt}\n\n` : ""}${adds ? `## 추가 요청과 자료\n${adds}\n\n` : ""}${prevs ? `## 앞선 결론\n${prevs}\n\n` : ""}${files ? `## 첨부 자료\n${files}\n\n` : ""}> ${v.verdict}: ${v.headline}\n\n## 핵심 결론과 제안\n${it(keys)}\n\n## 우려와 반대 의견\n${it(worries)}\n\n## 합의된 점\n${li(agree)}\n\n## 남은 질문\n${li(open)}${v.badges?.length ? `\n\n## 오늘의 배지 (사회자)\n${v.badges.filter((b) => BADGES[b.badge]).map((b) => `- ${b.to}: ${BADGES[b.badge].name} — ${b.reason || BADGES[b.badge].desc}`).join("\n")}` : ""}\n\n## 회의록\n${log}\n${fu ? `\n## 후속 질문\n${fu}\n` : ""}\n---\n참석자 ${members().length}명, ${S.meeting?.early ? `${S.meeting.early.doneTurns}턴에서 일찍 마무리(계획 ${S.plan.length}턴)` : `${S.plan.length}턴`}. 모델: ${models}\n생성: ${new Date().toLocaleString("ko-KR")}\n`;
 }
 function download(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 
@@ -1948,10 +2146,10 @@ function buildDoc(d) {
   const name = first ? (first.length > 60 ? `${first.slice(0, 60)}…` : first) : files[0]?.name || "제목 없는 주제";
   return { name, prompt, files, text, cut, meta: files.length ? `자료 ${files.length}개` : "주제만" };
 }
-function saveTopic(start) {
+async function saveTopic(start) {
   S.draft.prompt = $("#tp-text").value;
   if (!S.draft.prompt.trim() && !S.draft.files.length) return toast("토론 주제를 적거나 자료를 첨부해 주세요.");
-  if (S.meeting?.status === "paused" && !confirm("멈춘 회의가 있어요. 주제를 바꾸면 지금 회의는 지워져요. 바꿀까요?")) return;
+  if (S.meeting?.status === "paused" && !(await askConfirm("주제를 바꿀까요?", "멈춘 회의가 있어요. 주제를 바꾸면 지금 회의는 지워져요.", "바꾸기"))) return;
   S.doc = buildDoc(S.draft); S.draft = { prompt: "", files: [] };
   $("#dlg-topic").close();
   showDocChip(); newMeeting(); updateRunButton();
@@ -2045,6 +2243,7 @@ function drawModelRows() {
     const cb = row.querySelector(".tg input");
     if (cb) cb.onchange = () => {
       let list = members();
+      if (cb.checked && list.length >= maxMembers()) { cb.checked = false; return toast(`나도 참여 중이라 에이전트는 최대 ${maxMembers()}명이에요. 다른 사람을 먼저 빼 주세요.`); }
       if (cb.checked) list = ALL_MEMBERS.filter((x) => list.includes(x) || x === id);
       else if (list.length <= MIN_MEMBERS) { cb.checked = true; return toast(`참석자는 최소 ${MIN_MEMBERS}명이에요.`); }
       else list = list.filter((x) => x !== id);
@@ -2060,7 +2259,7 @@ function drawTurns() {
   const cap = maxTurns();
   $("#t-val").textContent = t; $("#t-minus").disabled = t <= n + 1; $("#t-plus").disabled = t >= cap;
   $("#turns-eyebrow").textContent = t === rec ? "Recommended" : "Custom";
-  $("#turns-desc").textContent = `참석자 ${n}명이면 ${rec}턴을 권해요. 각자 두 번 말하고, 최종 반론과 결론이 한 번씩 붙어요. 최소 ${n + 1}턴, 최대 ${cap}턴까지 정할 수 있어요.`
+  $("#turns-desc").textContent = `참석자 ${n}명이면 ${rec}턴을 권해요. 1라운드는 모두 한 번씩 말하고, 그다음부터는 사회자가 흐름을 보고 발언권을 줘요. 최소 ${n + 1}턴, 최대 ${cap}턴까지 정할 수 있어요.`
     + (cap < MAX_TURNS ? ` 공용 키로는 ${cap}턴까지예요. 더 길게 하려면 내 API 키를 넣어 주세요.` : "");
   $("#plan-preview").innerHTML = planGroups(buildPlan(n, t)).map((g) => `<span data-p="${g.phase}">${esc(phaseLabel(g.phase))} ${g.idx.length}</span>`).join("");
 }
@@ -2167,6 +2366,8 @@ $("#me-save").onclick = () => saveMe(false);
 $("#me-card").onclick = () => { saveMe(true); };
 $("#me-seat").onclick = showMeCard;
 $("#live-send").onclick = liveSend;
+$("#live-quick").querySelectorAll("[data-say]").forEach((b) => (b.onclick = () => { if (!pendingAsk) meSays(b.dataset.say, "한마디"); }));
+$("#live-hand").onclick = () => raiseHand();
 $("#live-skip").onclick = () => { if (!pendingAsk) return; const p = pendingAsk; endAsk(); cast("이번 질문은 넘겼어요.", p.fromId); p.resolve(null); };
 $("#live-text").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); liveSend(); } });
 drawMe();
