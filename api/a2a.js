@@ -226,7 +226,7 @@ ${transcriptText(transcript)}
 [당신의 지난 속마음 (다른 참석자에게는 전달되지 않음)]
 ${state.notes || "(아직 없음)"}
 
-[이번 회의 참석자] ${attendeeLine(attendees)}${input.user?.name ? `, ${userLine(input.user)}` : ""}${userIntro(input.user)}${input.user?.name ? `\n사용자에게 꼭 묻고 싶은 게 있으면 ask.to에 '${input.user.name}'을 적어도 됩니다.` : ""}
+[이번 회의 참석자] ${attendeeLine(attendees)}${input.user?.name ? `, ${userLine(input.user)}` : ""}${userIntro(input.user)}${input.user?.name ? `\n사용자 ${input.user.name}에게는 직접 질문하지 마세요(발언 안에서도, ask에서도). 사용자 의견이 꼭 필요하면 JSON에 "user_question": "사용자에게 듣고 싶은 것 한 문장"을 덧붙이세요. 사회자가 판단해서 대신 물어봅니다.` : ""}
 [지금 차례] 전체 ${totalTurns}턴 중 ${turn}번째. ${phaseGuide(phase)}
 사회자가 당신에게: "${request?.text || "의견 부탁드립니다."}"
 ${myTurn === 1 ? "주제와 자료를 보고 당신 관점에서 가장 중요한 한 가지부터 말하세요." : "지난 메모와 다른 사람 발언을 참고해, 이미 한 말은 반복하지 마세요."}`,
@@ -236,9 +236,10 @@ ${myTurn === 1 ? "주제와 자료를 보고 당신 관점에서 가장 중요�
   const confidence = Math.max(0, Math.min(100, parseInt(out.confidence, 10) || 50));
   const position = String(out.position || "").replace(/^["'“‘]|["'”’]$/g, "").trim().slice(0, 30);
   const names = attendees.map((id) => PERSONAS[id]?.name).filter(Boolean);
+  // 사용자에게 묻고 싶은 건 사회자에게 넘겨요 (ask.to에 사용자를 적었어도 마찬가지)
   const toUser = !!input.user?.name && out.ask?.to === input.user.name;
-  const ask = toUser ? { to: input.user.name, question: String(out.ask.question || ""), toUser: true }
-    : out.ask?.to && MEMBER_NAMES.includes(out.ask.to) && names.includes(out.ask.to) && out.ask.to !== persona.name
+  const wantsUser = input.user?.name ? String((toUser ? out.ask?.question : "") || out.user_question || "").trim().slice(0, 200) : "";
+  const ask = !toUser && out.ask?.to && MEMBER_NAMES.includes(out.ask.to) && names.includes(out.ask.to) && out.ask.to !== persona.name
     ? { to: out.ask.to, question: String(out.ask.question || "") } : null;
   const newState = {
     ...state, turns: myTurn,
@@ -246,7 +247,7 @@ ${myTurn === 1 ? "주제와 자료를 보고 당신 관점에서 가장 중요�
     said: [...(state.said || []), utterance].slice(-6),
     stances: [...(state.stances || []), { turn, stance, confidence, position }],
   };
-  return { text: utterance, data: { stance, confidence, position, ask, phase, thoughts: newState.notes }, newState };
+  return { text: utterance, data: { stance, confidence, position, ask, wantsUser, phase, thoughts: newState.notes }, newState };
 }
 
 // ── 회의 뒤 후속 질문 (사회자, 참석자 모두) ───────────────────────────────
