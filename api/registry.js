@@ -1,5 +1,5 @@
 // 회의실의 주소록: 어떤 에이전트에게 연락할 수 있는지, 지금 어떤 키로 돌아가는지 알려 줍니다.
-import { passcodeOk } from "./_lib/auth.js";
+import { SHARED_MAX_TURNS, passcodeOk } from "./_lib/auth.js";
 
 export default function handler(req, res) {
   const proto = req.headers["x-forwarded-proto"] || "http";
@@ -10,5 +10,6 @@ export default function handler(req, res) {
     serverKey: Boolean(process.env.OPENROUTER_API_KEY) && process.env.MOCK_LLM !== "1",
     requiresPasscode: Boolean(process.env.MEETING_PASSCODE),
     passcodeOk: passcodeOk(req),
+    sharedMaxTurns: SHARED_MAX_TURNS,
   });
 }

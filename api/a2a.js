@@ -9,11 +9,11 @@
 //   x-meeting-passcode 인증키. 맞으면 운영자의 공용 키로 모델을 부름
 
 import crypto from "node:crypto";
-import { ID_BY_NAME, MEMBER_IDS, MEMBER_NAMES, PERSONAS, agentCard, defaultModelOf, isAllowedModel } from "./_lib/personas.js";
+import { ID_BY_NAME, MEMBER_IDS, MEMBER_NAMES, PERSONAS, agentCard, defaultModelOf, isAllowedModel, sharedModelOf } from "./_lib/personas.js";
 import { chatJSON, resolveKey } from "./_lib/llm.js";
 import { mockFollowup, mockMember, mockModerate, mockSummary } from "./_lib/mock.js";
 import { openState, sealState } from "./_lib/state.js";
-import { passcodeOk } from "./_lib/auth.js";
+import { SHARED_MAX_TURNS, passcodeOk } from "./_lib/auth.js";
 
 const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -102,11 +102,11 @@ async function summarize(llm, persona, input, state) {
 ${transcriptText(transcript)}
 
 이제 마지막(${totalTurns}번째) 턴, 결론입니다. 회의에서 나온 의견만 담아 정리하세요.
-주제가 자료 검토라면 고칠 점과 제안을, 찬반 토론이나 아이디어 회의라면 모인 결론과 제안을 key_points에 담습니다.
+찬반 토론이면 모인 결론과 근거를, 아이디어 회의면 고른 아이디어와 실행 방법을, 자료 검토면 고칠 점과 제안을 key_points에 담습니다.
 의견이 갈린 부분은 concerns나 open_questions에 남기고, 누가 제기했는지 raised_by에 이름을 적습니다.
 JSON 하나만 출력합니다.
 {
-  "verdict": "주제에 맞는 판정 10자 이내 (예: 찬성 우세, 조건부 합의, 의견 갈림, 배포 가능, 수정 후 배포, 재검토 필요)",
+  "verdict": "주제에 맞는 판정 10자 이내 (예: 찬성 우세, 반대 우세, 조건부 합의, 의견 갈림, 보완 후 진행, 다시 논의)",
   "tone": "positive (대체로 찬성하거나 진행해도 좋음)" | "mixed (조건부, 보완 필요)" | "negative (반대 우세이거나 다시 봐야 함)" 중 영어 단어 하나,
   "headline": "결론 한두 문장",
   "key_points": [{"title": "핵심 결론이나 제안", "detail": "근거나 방법", "where": "자료 위치(있을 때만)", "raised_by": "이름"}],
@@ -232,10 +232,16 @@ export default async function handler(req, res) {
   if (userKey && wanted && !isAllowedModel(wanted)) {
     return rpcError(res, body.id, -32602, `허용되지 않은 모델이에요: ${wanted}`);
   }
-  const model = userKey && wanted ? wanted : defaultModelOf(persona);
+  // 내 키: 고른 모델(없으면 기본 모델). 공용 키: 운영자가 정한 가벼운 모델.
+  const model = userKey ? (wanted || defaultModelOf(persona)) : apiKey ? sharedModelOf(persona) : defaultModelOf(persona);
   const llm = { apiKey, model, mock: !apiKey };
 
   const input = msg.parts.find((p) => p.data)?.data || {};
+  // 공용 키로는 회의를 SHARED_MAX_TURNS턴까지만 (토큰 비용 보호)
+  if (apiKey && !userKey && ["moderate", "review_turn", "summarize"].includes(input.type)
+      && (Number(input.totalTurns) > SHARED_MAX_TURNS || Number(input.turn) > SHARED_MAX_TURNS)) {
+    return rpcError(res, body.id, -32602, `공용 키로는 최대 ${SHARED_MAX_TURNS}턴까지 회의할 수 있어요. 턴 수를 줄이거나 내 API 키를 넣어 주세요.`);
+  }
   const ctx = { contextId: msg.contextId || uid(), taskId: msg.taskId || uid() };
   const state = openState(persona.id, msg.metadata?.stateToken);
 
