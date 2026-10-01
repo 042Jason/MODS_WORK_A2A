@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ensembly · AI 검토 회의실</title>
 <meta name="description" content="여러 AI가 A2A로 모여 회의하고, 의견을 모아 분석 결과를 검토해요.">
 <link rel="icon" type="image/png" sizes="32x32" href="vendor/brand/favicon-32.png">
@@ -319,6 +319,123 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .toast.on{display:block}
 @media (max-width:1180px){body{overflow:auto}main{grid-template-columns:1fr}.panel{min-height:75vh}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ─────────────────────────────────────────────────────────────
+   모바일 (820px 이하) 전용. 이보다 넓은 화면에는 아무 영향이 없어요.
+   한 번에 한 화면(보드, 회의록, 속마음, 결과)만 보여 주고, 아래 탭 바로 넘겨요.
+   ───────────────────────────────────────────────────────────── */
+.m-only{display:none}
+.mnav{display:none}
+@media (max-width:820px){
+  :root{--m-nav:58px}
+  body{height:100vh;height:100dvh;overflow:hidden;grid-template-rows:auto 1fr auto}
+  header{padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top));gap:8px}
+  .mark{width:32px;height:32px;margin:0}
+  .title b{font-size:16px}
+  .title .tagpill,#subtitle{display:none}
+  .title{min-width:0}
+  .title b{white-space:nowrap}
+  .conn{padding:5px 5px 5px 10px;gap:7px;font-size:13px;white-space:nowrap;flex:none}
+  #btn-run{flex:none}
+  .conn .set{padding:6px 8px}
+  .conn .set-t{display:none}
+  #btn-new{display:none}
+  .m-only{display:inline-flex}
+  .pill.icon{width:38px;height:38px;padding:0;justify-content:center}
+  #btn-run{padding:8px 13px 9px;font-size:14px}
+
+  main{grid-template-columns:1fr;min-height:0;overflow:hidden}
+  body[data-view="board"] .panel{display:none}
+  body:not([data-view="board"]) .board{display:none}
+
+  /* 보드: 지금 발언(탁자) → 상황판(중계) → 참석자 스티커 → 자료 순서로 세로 배치 */
+  .board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:max-content;align-content:start;gap:14px 10px;
+    padding:12px 12px 20px;height:100%;background-size:20px 20px}
+  .stage,.dock{display:contents}
+  .frame-label,.table,.flow,.docchip{grid-column:1/-1}
+  .frame-label{order:0}.table{order:1}.flow{order:2}.note{order:3}.docchip{order:4}
+  .table{position:relative;left:auto;top:auto;transform:none;width:auto!important;height:auto;min-height:190px;
+    padding:20px 20px 18px;border-radius:24px;box-shadow:0 18px 36px -18px rgba(31,29,61,.5)}
+  .table > *{flex-shrink:0}
+  .t-head{font-size:19px}
+  .t-say{display:block;-webkit-line-clamp:unset;max-height:10.9em;font-size:15.5px}   /* 줄 수 제한은 높이로 (화면 전환 뒤 잘림 방지) */
+  .t-crew .ava,.t-crew .ava-fb{width:28px;height:28px}
+  .note{position:relative;left:auto!important;top:auto!important;width:auto;transform:rotate(var(--rot,0deg));padding:10px 10px 9px}
+  .note:hover{transform:rotate(var(--rot,0deg))}
+  .note.speaking,.note.thinking{transform:rotate(0deg) scale(1.03)}
+  .note .n-top{margin-bottom:6px}
+  .note .n-av{width:36px;height:36px}
+  .note .n-top .eyebrow{font-size:9.5px}
+  .note .n-name{font-size:14px}
+  .note .n-title{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .note .n-model{font-size:10px;margin-top:6px}
+  .note .n-state{margin-top:6px}
+  .sel span{top:-22px;font-size:11px}
+  .cursor{display:none}
+  .docchip{padding:8px 8px 8px 10px;gap:8px}
+  .docchip .mt,.docchip .spacer{display:none}
+  .docchip .nm{flex:1}
+  .flow{padding:11px 12px}
+  .flow .top{flex-wrap:wrap;row-gap:6px}
+  .groups{gap:8px}
+  .cell{height:18px;min-width:0}
+  .group .glabel{font-size:11px}
+  .caster .line{font-size:14px}
+
+  /* 회의록, 속마음, 결과 */
+  .panel{display:block;border-left:0;height:100%;min-height:0;overflow:hidden}
+  .panel .tabs{display:none}
+  .pane{height:100%;padding:14px 14px 28px;-webkit-overflow-scrolling:touch}
+  .cmt{grid-template-columns:30px 1fr!important;gap:9px}
+  .cmt .ava,.cmt .ava-fb{width:30px;height:30px}
+  .minds-head{flex-direction:column;gap:4px}
+  .minds{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .mind{min-height:0;padding:12px}
+  .mind .h{gap:8px}
+  .mind .h img,.mind .h .ava-fb{width:40px;height:40px}
+  .mind .body{font-size:13.5px}
+  .mind .h .eyebrow{font-family:var(--sans);letter-spacing:0;text-transform:none;font-size:11.5px}
+  .vblock{padding:18px 18px 20px;border-radius:20px}
+  .vblock h2{font-size:24px}
+  .ractions{flex-wrap:wrap}
+  .empty{margin-top:8vh}
+
+  /* 아래 탭 바 */
+  .mnav{display:flex;gap:4px;padding:7px 10px;padding-bottom:calc(7px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--hair);background:rgba(255,255,255,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .mnav button{flex:1;border:0;background:none;border-radius:999px;padding:10px 4px 11px;font-weight:650;font-size:14px;color:var(--muted);
+    display:inline-flex;justify-content:center;align-items:center;gap:5px;position:relative}
+  .mnav button[aria-selected="true"]{background:var(--ink);color:#fff}
+  .mnav .count{font-family:var(--mono);font-size:11px;opacity:.75}
+  .mnav button.has-new::after{content:"";position:absolute;top:8px;right:18%;width:7px;height:7px;border-radius:50%;background:#FF5A5F}
+
+  /* 손가락으로 누르기 편하게, 입력할 때 화면이 확대되지 않게 */
+  .pill.sm{padding:8px 13px 9px;font-size:13.5px}
+  .inp,dialog textarea{font-size:16px}
+
+  /* 설정: 전체 화면 */
+  .drawer{width:100%;border-left:0}
+  .dh{padding:12px 14px;padding-top:calc(12px + env(safe-area-inset-top))}
+  .db{padding:0 14px calc(32px + env(safe-area-inset-bottom))}
+  .opt .row{flex-wrap:wrap}
+  .opt .row .inp{flex:1 1 100%}
+  .seg{display:flex}
+  .seg label{flex:1}
+  .seg span{text-align:center}
+  .mrow{grid-template-columns:36px 30px 1fr auto;row-gap:8px}
+  .mrow > :nth-child(4){grid-column:1/-1;grid-row:2}
+  .mrow > :nth-child(5){grid-column:4;grid-row:1}
+  .mrow .res{grid-column:1/-1;grid-row:3;margin-top:0}
+
+  /* 대화상자는 아래에서 올라오는 시트처럼 */
+  dialog{width:100vw;max-width:100vw;max-height:90vh;margin:auto 0 0;border-radius:20px 20px 0 0}
+  dialog .db{padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+  dialog textarea{height:42vh}
+  .toast{bottom:calc(var(--m-nav) + 18px + env(safe-area-inset-bottom));max-width:90vw;text-align:center}
+}
+@media (max-width:380px){
+  #conn-label{display:none}
+}
+
 </style>
 </head>
 <body>
@@ -328,9 +445,10 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
   <div class="spacer"></div>
   <button class="conn" id="btn-settings" data-m="mock" aria-label="연결과 회의 설정 열기">
     <span class="dot"></span><span id="conn-label">확인 중</span>
-    <span class="set"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="6" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="18" r="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>설정</span>
+    <span class="set"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="6" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="18" r="2" fill="none" stroke="currentColor" stroke-width="2"/></svg><span class="set-t">설정</span></span>
   </button>
   <button class="pill" id="btn-new">새 회의</button>
+  <button class="pill icon m-only" id="btn-new-m" aria-label="새 회의"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg></button>
   <button class="pill dark" id="btn-run" disabled>회의 시작</button>
 </header>
 
@@ -373,6 +491,12 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
     <div class="pane" id="pane-review"></div>
   </section>
 </main>
+<nav class="mnav" aria-label="화면 전환">
+  <button data-view="board" aria-selected="true">보드</button>
+  <button data-view="log" aria-selected="false">회의록<span class="count" id="m-log-count">0</span></button>
+  <button data-view="minds" aria-selected="false">속마음</button>
+  <button data-view="review" aria-selected="false">결과</button>
+</nav>
 
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-label="설정" aria-hidden="true">
@@ -609,7 +733,7 @@ function renderTable(state, info = {}) {
       <span class="verdict-tag" data-v="${esc(v.verdict)}">${esc(v.verdict)}</span>
       <div class="t-say" style="-webkit-line-clamp:4">${esc(v.headline)}</div>
       <div class="t-actions"><button class="pill light sm" id="tb-review">검토결과 보기</button></div>`;
-    $("#tb-review").onclick = () => selectTab("review");
+    $("#tb-review").onclick = () => showTab("review");
   }
 }
 function describeConfig() {
@@ -713,7 +837,7 @@ function addMsg({ id, to, text, ask, stance, confidence, thought, raw, model, er
     ${raw ? `<pre class="json">${esc(JSON.stringify(raw, null, 2))}</pre>` : ""}</div>`;
   const jb = el.querySelector(".jsonbtn"); if (jb) jb.onclick = () => el.querySelector("pre.json").classList.toggle("open");
   logPane().appendChild(el); el.scrollIntoView({ block: "end", behavior: "smooth" });
-  $("#log-count").textContent = S.transcript.length;
+  setLogCount(S.transcript.length);
 }
 function addThinking(id) {
   const a = S.agents[id];
@@ -771,7 +895,7 @@ async function runMeeting() {
         addMsg({ id: "moderator", text: r.text, raw: r.raw, model: r.data.model, turn });
         setSpeaking("moderator"); markCell(i, "done", "moderator");
         if (review) {
-          S.review = review; renderReview(review); renderTable("done", { review }); selectTab("review");
+          S.review = review; renderReview(review); renderTable("done", { review }); showTab("review");
           cast(`회의 끝! 판정은 '${esc(review.verdict)}'이에요. 검토결과 탭에서 자세히 볼 수 있어요.`, "moderator");
         }
         break;
@@ -833,8 +957,8 @@ function newMeeting() {
   Object.assign(S, { transcript: [], tokens: {}, contexts: {}, last: {}, thoughts: {}, trail: {}, review: null });
   emptyLog();
   $("#pane-review").innerHTML = `<div class="empty"><img class="bust" src="${esc(S.agents.moderator?.bust || "")}" alt=""><strong>검토결과가 아직 없어요</strong>마지막 턴에서 사회자가 고칠 점과 잘된 점을 정리해 드려요.</div>`;
-  $("#log-count").textContent = "0";
-  describeConfig(); drawSeats(); drawTracker(); drawMinds(); selectTab("log");
+  setLogCount(0); $('.mnav [data-view="review"]').classList.remove("has-new");
+  describeConfig(); drawSeats(); drawTracker(); drawMinds(); selectTab("log"); if (isMobile()) setView("board");
   status(S.doc ? "준비 끝! '회의 시작'을 누르면 사회자가 마이크를 잡아요." : "자료만 올려 주세요. 다들 자리에 앉아 기다리고 있어요.");
   renderTable(S.doc ? "ready" : "idle"); moveCursor(null);
 }
@@ -1031,6 +1155,24 @@ function showCard(id) {
 }
 
 /* ───────────── 시작 ───────────── */
+/* ───────────── 모바일: 한 번에 한 화면 ───────────── */
+const mq = window.matchMedia("(max-width: 820px)");
+const isMobile = () => mq.matches;
+function setView(v) {
+  document.body.dataset.view = v;
+  document.querySelectorAll(".mnav button").forEach((b) => b.setAttribute("aria-selected", b.dataset.view === v));
+  if (v !== "board") { selectTab(v); $(`.mnav [data-view="${v}"]`).classList.remove("has-new"); }
+}
+function showTab(name) {   // 데스크톱은 탭만, 모바일은 화면까지 넘겨요
+  selectTab(name);
+  if (isMobile()) setView(name);
+  else if (name === "review") $('.mnav [data-view="review"]').classList.add("has-new");
+}
+function setLogCount(n) {
+  $("#log-count").textContent = n; $("#m-log-count").textContent = n;
+  if (isMobile() && n > 0 && document.body.dataset.view !== "log") $('.mnav [data-view="log"]').classList.add("has-new");
+  if (n === 0) $('.mnav [data-view="log"]').classList.remove("has-new");
+}
 function selectTab(name) {
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
   document.querySelectorAll(".pane").forEach((p) => p.classList.toggle("on", p.id === `pane-${name}`));
@@ -1052,7 +1194,10 @@ async function boot() {
 }
 
 $("#btn-run").onclick = () => (S.running ? S.abort?.abort() : runMeeting());
-$("#btn-new").onclick = () => { if (!S.running || confirm("진행 중인 회의를 멈추고 새로 시작할까요?")) newMeeting(); };
+$("#btn-new").onclick = $("#btn-new-m").onclick = () => { if (!S.running || confirm("진행 중인 회의를 멈추고 새로 시작할까요?")) newMeeting(); };
+document.body.dataset.view = "board";
+document.querySelectorAll(".mnav button").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
+mq.addEventListener("change", () => { placeSeats(); if (!isMobile()) document.body.dataset.view = "board"; });
 $("#btn-settings").onclick = () => openSettings();
 $("#btn-close").onclick = closeSettings; $("#scrim").onclick = closeSettings;
 $("#doc-change").onclick = () => (S.running ? toast("회의 중에는 자료를 바꿀 수 없어요.") : $("#file").click());
