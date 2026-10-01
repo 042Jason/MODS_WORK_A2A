@@ -15,8 +15,9 @@ const COMMON_MEMBER_RULES = `
 [출력 형식] 아래 JSON 하나만 출력합니다.
 {
   "utterance": "회의에서 소리 내어 하는 말 (2~4문장)",
-  "stance": "동의" | "우려" | "보류",
-  "confidence": 0~100 정수 (주제의 제안이나 지금 모이는 결론에 동의하는 정도. 동의는 찬성, 우려는 반대하거나 걸리는 점이 큼, 보류는 판단 유보),
+  "position": "지금 당신의 입장을 한 줄로 (20자 이내. 찬반이 아니어도 됩니다. 예: '시범 도입부터', '근거가 아직 부족', '시뮬레이션은 아닐 듯', 'B안이 더 현실적')",
+  "stance": "동의" | "우려" | "보류" (지금 회의에서 모이는 의견과 비교한 방향. 동의=같은 방향, 우려=다른 시각이거나 걸리는 점이 큼, 보류=아직 고민 중. 찬반 주제가 아니어도 '모이는 의견'을 기준으로 고릅니다),
+  "confidence": 0~100 정수 (내 입장을 얼마나 확신하는지),
   "ask": { "to": "민서" | "나래" | "도윤" | "현우" | "하율" | null, "question": "상대에게 묻고 싶은 것" },
   "private_notes": "지금 판단, 다음에 확인할 것, 다른 참석자에 대한 생각 (2~3문장). '속마음:' 같은 머리말 없이 바로 씁니다"
 }`;
@@ -43,7 +44,8 @@ export const PERSONAS = {
     ],
     system: `당신은 AI 토론 회의의 사회자입니다. 사용자가 낸 주제로 토론하며, 주제는 찬반 토론, 아이디어 회의, 자료 검토, 의사결정 등 무엇이든 될 수 있습니다. 중립적이고 간결하며, 회의가 겉돌지 않게 합니다.
 참석 가능한 사람: 민서(critic, 깐깐한 검증가), 나래(strategist, 큰 그림 전략가), 도윤(reader, 공감 대변인), 현우(method, 논리 점검가), 하율(policy, 리스크 담당). 회의마다 이 중 일부만 참석할 수 있습니다.
-회의는 1라운드(각자 첫 의견) → 2라운드 이후(서로 반론과 보완) → 최종 반론(가장 우려가 큰 사람) → 결론 순서입니다. 턴 수는 회의마다 다릅니다.
+회의는 1라운드(각자 첫 의견) → 2라운드부터는 라운드마다 성격이 바뀌고(반박 → 대안 → 입장 바꿔 보기 → 합의점 찾기 → 실행 계획) → 최종 반론(모이는 의견과 시각이 가장 다른 사람) → 결론 순서입니다. 턴 수는 회의마다 다르니 [진행 상황]의 안내를 따르세요.
+사용자가 함께 참석하는 회의도 있습니다. 그때는 사용자를 손님처럼 존중하되, 꼭 필요할 때만 질문합니다.
 - 이번 차례에 말할 수 있는 사람(eligible) 중에서만 고릅니다.
 - 직전 발언자가 ask로 누군가에게 질문했고 그 사람이 eligible이면 보통 그 사람을 고릅니다.
 - 2라운드에서는 앞선 발언과 부딪치는 관점을 가진 사람을 붙여 티키타카가 되게 합니다.
@@ -156,7 +158,7 @@ export const MEMBER_IDS = ["critic", "strategist", "reader", "method", "policy"]
 export const ID_BY_NAME = Object.fromEntries(Object.values(PERSONAS).map((p) => [p.name, p.id]));
 
 export const ALLOWED_VENDORS = () =>
-  (process.env.ALLOWED_VENDORS || "openai,anthropic,google,x-ai,upstage").split(",").map((s) => s.trim()).filter(Boolean);
+  (process.env.ALLOWED_VENDORS || "openai,anthropic,google,x-ai,upstage,deepseek,mistralai,qwen,meta-llama,moonshotai,z-ai,cohere,amazon,minimax,microsoft,nvidia,baidu,tencent").split(",").map((s) => s.trim()).filter(Boolean);
 
 export function isAllowedModel(model) {
   return typeof model === "string" && ALLOWED_VENDORS().some((v) => model.startsWith(`${v}/`));

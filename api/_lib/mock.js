@@ -81,9 +81,12 @@ export function mockMember(personaId, { document, myTurn, phase, topic }) {
   if (!document?.text) {
     const i = phase === "round1" ? 0 : 1;
     return {
-      utterance: TOPIC_LINES[personaId][i](cut(String(topic || "이 주제").trim(), 30)),
+      utterance: TOPIC_LINES[personaId][i](cut(String(topic || "이 주제").split("\n\n[")[0].trim(), 30)),
       stance: phase === "round1" ? "보류" : personaId === "policy" ? "우려" : "동의",
-      confidence: phase === "round1" ? 50 : personaId === "policy" ? 45 : 70,
+      confidence: phase === "round1" ? 50 : personaId === "policy" ? 75 : 70,
+      position: (phase === "round1"
+        ? { critic: "근거부터 확인", strategist: "목표부터 정하자", reader: "생활 변화가 궁금", method: "성공 기준부터", policy: "이해관계가 갈림" }
+        : { critic: "시범 도입부터", strategist: "작게 시작해 넓히기", reader: "쉽게 설명하면 찬성", method: "조건부로 가능", policy: "반발 대책이 먼저" })[personaId],
       ask: phase === "round1" && personaId === "critic" ? { to: "나래", question: "목표를 숫자로 말하면 뭐예요?" } : { to: null, question: "" },
       private_notes: phase === "round1" ? "아직 판단하기엔 이르다. 다른 사람 생각부터 들어 보자." : "방향은 모였다. 실행 조건만 분명하면 찬성할 수 있다.",
     };
@@ -100,6 +103,9 @@ export function mockMember(personaId, { document, myTurn, phase, topic }) {
     utterance: LINES[personaId][i](a, b),
     stance: phase === "round1" ? "우려" : personaId === "policy" ? "우려" : "동의",
     confidence: phase === "round1" ? 40 + k * 3 : 60 + k * 2,
+    position: (phase === "round1"
+      ? { critic: "근거 보강 필요", strategist: "핵심이 안 보임", reader: "용어가 어려움", method: "비교 기준 불분명", policy: "오해 소지 있음" }
+      : { critic: "출처 달면 가능", strategist: "핵심을 앞으로", reader: "예시 붙이면 OK", method: "단정 표현만 빼면", policy: "표현부터 다듬기" })[personaId],
     ask,
     private_notes: phase === "round1"
       ? `첫인상으로는 고칠 게 꽤 보인다. 다음엔 "${b}" 부분을 더 봐야겠다.`
@@ -109,7 +115,7 @@ export function mockMember(personaId, { document, myTurn, phase, topic }) {
 
 export function mockSummary({ document, topic }) {
   if (!document?.text) {
-    const t = cut(String(topic || "이 주제").trim(), 30);
+    const t = cut(String(topic || "이 주제").split("\n\n[")[0].trim(), 30);
     return {
       verdict: "조건부 합의", tone: "mixed",
       headline: `"${t}"에 대체로 찬성하지만, 목표와 성공 기준을 먼저 정하고 작게 시범으로 시작하자는 결론이에요.`,
@@ -124,6 +130,7 @@ export function mockSummary({ document, topic }) {
       agreements: ["작게 시범으로 시작하는 게 현실적이다", "설명은 보통 사람 눈높이로 쉽게"],
       open_questions: ["시범 기간과 대상을 어떻게 정할지"],
       closing: "(모의 모드) 오늘 나온 조건들을 정리해서 다음 회의에서 다시 보죠.",
+      private_notes: "생각보다 방향은 빨리 모였다. 남은 질문은 다음 회의에서 꼭 다시 짚어야겠다.",
     };
   }
   const f = facts(document?.text);
@@ -142,6 +149,7 @@ export function mockSummary({ document, topic }) {
     agreements: ["전체 방향과 문제의식에는 모두 공감했어요", "근거를 보강하면 설득력이 커진다"],
     open_questions: ["어느 범위까지 근거를 보강할지"],
     closing: "(모의 모드) 오늘 나온 보완점을 반영해서 다시 이야기해 봐요.",
+    private_notes: "근거 보강 이야기가 가장 많았다. 다음에는 자료 담당자를 직접 불러도 좋겠다.",
   };
 }
 
