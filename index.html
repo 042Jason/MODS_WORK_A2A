@@ -88,6 +88,8 @@ main{display:grid;grid-template-columns:minmax(600px,1fr) minmax(460px,40%);min-
 .table .eyebrow{color:rgba(255,255,255,.62);margin-bottom:10px;display:flex;gap:10px;align-items:center}
 .table .eyebrow .live{display:inline-flex;align-items:center;gap:6px;color:#fff}
 .table .eyebrow .live::before{content:"";width:6px;height:6px;border-radius:50%;background:#FF5A5F;animation:blink 1.4s infinite}
+.table .eyebrow .paused{display:inline-flex;align-items:center;gap:6px;color:#fff}
+.table .eyebrow .paused::before{content:"";width:6px;height:6px;border-radius:50%;background:#FDB022}
 .t-head{font-size:22px;font-weight:600;letter-spacing:-.03em;line-height:1.28}
 .t-sub{margin-top:8px;font-size:14px;color:rgba(255,255,255,.72);line-height:1.5}
 .t-actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
@@ -166,7 +168,7 @@ main{display:grid;grid-template-columns:minmax(600px,1fr) minmax(460px,40%);min-
 
 
 /* 오른쪽 패널 */
-.panel{border-left:1px solid var(--hair);background:var(--canvas);display:grid;grid-template-rows:auto 1fr;min-height:0}
+.panel{border-left:1px solid var(--hair);background:var(--canvas);display:grid;grid-template-rows:auto 1fr auto;min-height:0}
 .tabs{display:flex;gap:4px;padding:10px 14px;border-bottom:1px solid var(--hair)}
 .tabs button{border:0;background:none;padding:6px 12px 7px;font-weight:600;color:var(--muted);border-radius:var(--pill);font-size:14px;display:inline-flex;align-items:center;gap:6px}
 .tabs button:hover{color:var(--ink)}
@@ -317,6 +319,79 @@ dialog textarea{width:100%;height:320px;border:1px solid var(--hair);border-radi
 dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4E4;font:12.5px/1.55 var(--mono);padding:14px;border-radius:12px;white-space:pre-wrap}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px 10px;border-radius:var(--pill);font-size:14px;z-index:20;display:none}
 .toast.on{display:block}
+/* 머리 설명의 구성 칩 */
+.cfg-chip{margin-left:8px;border:1px solid var(--hair);background:#fff;border-radius:999px;padding:1px 8px 2px;font-size:12px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;gap:4px;vertical-align:1px}
+.cfg-chip:hover{border-color:#C9C9C9;color:var(--ink)}
+/* 멈춤, 중단된 턴 */
+.cell.fail{background:#FEE4E2;border:1.5px solid var(--danger)}
+.sysline{margin:12px 0;padding:10px 14px;border-radius:12px;background:#FEF3F2;border:1px solid #FECDCA;color:#B42318;font-size:13.5px;line-height:1.5}
+.sysline small{display:block;color:#912018;opacity:.8;margin-top:3px;font-size:12px;word-break:break-all}
+.cmt.void{opacity:.45}
+/* 후속 질문 */
+.cmt.me .text{background:var(--soft);border-radius:4px 14px 14px 14px;padding:9px 12px;display:inline-block}
+.composer{border-top:1px solid var(--hair);padding:10px 16px 14px;background:var(--canvas)}
+.cp-to{display:flex;gap:6px;overflow-x:auto;padding-bottom:9px;scrollbar-width:none}
+.cp-to::-webkit-scrollbar{display:none}
+.cp-to button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hair);background:#fff;border-radius:999px;padding:3px 11px 3px 3px;font-size:13px;font-weight:600;white-space:nowrap}
+.cp-to button .ava,.cp-to button .ava-fb{width:22px;height:22px;font-size:10px}
+.cp-to button[aria-checked="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.cp-row{display:flex;gap:8px;align-items:flex-end}
+.cp-row textarea{flex:1;resize:none;border:1px solid var(--hair);border-radius:16px;padding:10px 14px;font:inherit;font-size:14.5px;line-height:1.45;min-height:42px;max-height:140px}
+.cp-row textarea:focus{border-color:var(--select);outline:none;box-shadow:0 0 0 3px rgba(13,153,255,.15)}
+/* 에이전트 카드 */
+.carddlg{background:transparent;box-shadow:none;border:0;padding:16px;width:auto;max-width:96vw;overflow:visible}
+.carddlg::backdrop{background:rgba(10,10,10,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.pc-wrap{perspective:1300px;display:flex;justify-content:center}
+.pcard{width:340px;max-width:88vw;position:relative;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .18s ease-out}
+.pc-inner{position:relative;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.3,.8,.3,1)}
+.pcard.flipped .pc-inner{transform:rotateY(180deg)}
+.pc-face{border:9px solid #FFFDF7;border-radius:22px;padding:12px 14px 12px;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  background:linear-gradient(165deg,var(--t) 0%,color-mix(in srgb,var(--t) 55%,#fff) 100%);box-shadow:0 30px 70px rgba(0,0,0,.45),inset 0 0 0 1px rgba(0,0,0,.06);
+  display:flex;flex-direction:column;gap:8px;color:var(--ink)}
+.pc-back{position:absolute;inset:0;transform:rotateY(180deg);background:#0B0B0B;color:#E4E4E4;border-color:#1C1C1C}
+.pc-back pre{flex:1;margin:0;overflow:auto;font:10.5px/1.5 var(--mono);white-space:pre-wrap;word-break:break-all;color:#D6D6D6}
+.pc-top{display:flex;justify-content:space-between;align-items:center}
+.pc-stage{font:500 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;opacity:.7}
+.pc-hp{display:inline-flex;align-items:baseline;gap:5px;font-weight:800;font-size:15px;letter-spacing:-.01em}
+.pc-hp small{font:500 9px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;opacity:.65}
+.pc-name{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:-2px}
+.pc-name b{font-size:26px;font-weight:800;letter-spacing:-.04em}
+.pc-type{font-size:12px;font-weight:700;padding:3px 10px 4px;border-radius:999px;background:var(--ink);color:#fff}
+.pc-art{position:relative;height:178px;border-radius:12px;overflow:hidden;border:3px solid #fff;box-shadow:0 2px 0 rgba(0,0,0,.08),inset 0 0 0 1px rgba(0,0,0,.06);
+  background:radial-gradient(circle at 50% 35%,#fff 0%,var(--t) 70%)}
+.pc-art img{width:100%;height:100%;object-fit:cover;object-position:50% 22%;display:block}
+.pc-shine{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.75) 45%,rgba(255,255,255,0) 60%);background-size:250% 100%;background-position:var(--sx,50%) 0}
+.pc-sub{font-size:10.5px;text-align:center;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.65);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-move{border-bottom:1px solid rgba(0,0,0,.09);padding-bottom:7px}
+.pc-move-h{display:flex;align-items:center;gap:7px}
+.pc-move-h b{font-size:14px;font-weight:750}
+.pc-move p{margin:3px 0 0;font-size:11.5px;line-height:1.45;color:var(--ink-2)}
+.pc-energy{width:16px;height:16px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 4px rgba(255,255,255,.55);flex:none}
+.pc-energy.alt{background:var(--ink)}
+.pc-stats{display:grid;gap:4px}
+.pc-stat{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;font-weight:600}
+.pc-stat i{display:flex;gap:3px}
+.pc-stat i b{width:14px;height:6px;border-radius:3px;background:rgba(0,0,0,.12)}
+.pc-stat i b.on{background:var(--c)}
+.pc-foot{display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid rgba(0,0,0,.12);padding-top:7px}
+.pc-foot small{display:block;font:500 9px/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;opacity:.6;margin-bottom:2px}
+.pc-foot b{font-size:11.5px;font-weight:650;line-height:1.35;display:block}
+.pc-quote{margin:2px 0 0;font-size:12px;font-style:italic;text-align:center;color:var(--ink-2)}
+.pcard.inverse .pc-front{background:linear-gradient(165deg,#1B1B1B,#2C2C2C);color:#fff}
+.pcard.inverse .pc-front .pc-type{background:#fff;color:var(--ink)}
+.pcard.inverse .pc-front .pc-sub{background:rgba(255,255,255,.12);color:#E5E5E5}
+.pcard.inverse .pc-front .pc-move{border-color:rgba(255,255,255,.14)}
+.pcard.inverse .pc-front .pc-move p,.pcard.inverse .pc-front .pc-quote{color:#CFCFCF}
+.pcard.inverse .pc-front .pc-energy{background:#fff}
+.pcard.inverse .pc-front .pc-stat i b{background:rgba(255,255,255,.18)}
+.pcard.inverse .pc-front .pc-stat i b.on{background:#fff}
+.pcard.inverse .pc-front .pc-foot{border-color:rgba(255,255,255,.18)}
+.pcard.inverse .pc-art{background:radial-gradient(circle at 50% 35%,#fff 0%,#F1F1EF 70%)}
+.pc-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.pc-actions .pill:disabled{opacity:.45}
+.pc-hint{margin:10px 0 0;text-align:center;color:rgba(255,255,255,.8);font-size:13px;min-height:1em}
+@media (prefers-reduced-motion:reduce){.pcard{transform:none}}
 @media (max-width:1180px){body{overflow:auto}main{grid-template-columns:1fr}.panel{min-height:75vh}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* ─────────────────────────────────────────────────────────────
@@ -328,13 +403,15 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 @media (max-width:820px){
   :root{--m-nav:58px}
   body{height:100vh;height:100dvh;overflow:hidden;grid-template-rows:auto 1fr auto}
-  header{padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top));gap:8px}
-  .mark{width:32px;height:32px;margin:0}
+  header{padding:10px 10px 10px 12px;padding-top:calc(10px + env(safe-area-inset-top));gap:6px}
+  .mark{width:30px;height:30px;margin:0}
   .title b{font-size:16px}
   .title .tagpill,#subtitle{display:none}
-  .title{min-width:0}
-  .title b{white-space:nowrap}
-  .conn{padding:5px 5px 5px 10px;gap:7px;font-size:13px;white-space:nowrap;flex:none}
+  .title{min-width:0;flex:0 1 auto;overflow:hidden}
+  .title b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  header{min-width:0;overflow:hidden}
+  body{overflow-x:hidden}
+  .conn{padding:4px 4px 4px 9px;gap:6px;font-size:13px;white-space:nowrap;flex:none}
   #btn-run{flex:none}
   .conn .set{padding:6px 8px}
   .conn .set-t{display:none}
@@ -382,9 +459,14 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
   .caster .line{font-size:14px}
 
   /* 회의록, 속마음, 결과 */
-  .panel{display:block;border-left:0;height:100%;min-height:0;overflow:hidden}
+  .panel{display:flex;flex-direction:column;border-left:0;height:100%;min-height:0;overflow:hidden}
   .panel .tabs{display:none}
-  .pane{height:100%;padding:14px 14px 28px;-webkit-overflow-scrolling:touch}
+  .pane{flex:1;min-height:0;height:auto;padding:14px 14px 28px;-webkit-overflow-scrolling:touch}
+  .composer{padding:8px 12px 10px}
+  .cp-row textarea{font-size:16px}
+  .carddlg{padding:10px}
+  .pc-art{height:150px}
+  .pc-name b{font-size:23px}
   .cmt{grid-template-columns:30px 1fr!important;gap:9px}
   .cmt .ava,.cmt .ava-fb{width:30px;height:30px}
   .minds-head{flex-direction:column;gap:4px}
@@ -489,6 +571,10 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
       <div class="minds" id="minds"></div>
     </div>
     <div class="pane" id="pane-review"></div>
+    <div class="composer" id="composer" hidden>
+      <div class="cp-to" id="cp-to" role="radiogroup" aria-label="질문할 에이전트"></div>
+      <div class="cp-row"><textarea id="cp-text" rows="1" placeholder="회의 결과에 대해 물어보세요"></textarea><button class="pill dark" id="cp-send">질문하기</button></div>
+    </div>
   </section>
 </main>
 <nav class="mnav" aria-label="화면 전환">
@@ -546,6 +632,11 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 <dialog id="dlg-paste"><div class="dh"><h2>텍스트 붙여넣기</h2><button class="pill sm" data-close>닫기</button></div>
   <div class="db"><input class="inp" id="paste-title" placeholder="자료 제목 (선택)" style="margin-bottom:8px"><textarea id="paste-text" placeholder="보도자료나 분석 결과를 붙여넣으세요"></textarea>
   <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="pill dark" id="paste-ok">자료로 올리기</button></div></div></dialog>
+<dialog id="dlg-card" class="carddlg" aria-label="에이전트 카드">
+  <div class="pc-wrap" id="pc-wrap"></div>
+  <div class="pc-actions"><button class="pill light" id="pc-ask">이 에이전트에게 질문하기</button><button class="pill on-dark" id="pc-flip">뒤집어서 명함 원본 보기</button><button class="pill on-dark" data-close>닫기</button></div>
+  <p class="pc-hint" id="pc-hint"></p>
+</dialog>
 <dialog id="dlg-view"><div class="dh"><h2 id="view-title">보기</h2><button class="pill sm" data-close>닫기</button></div><div class="db"><div id="view-head"></div><pre id="view-body"></pre></div></dialog>
 <div class="toast" id="toast" role="status"></div>
 
@@ -727,6 +818,15 @@ function renderTable(state, info = {}) {
     const a = S.agents[info.id];
     t.innerHTML = `<div class="eyebrow"><span class="live">Live</span><span>${esc(phaseLabel(info.phase))}</span><span>${String(info.turn).padStart(2, "0")}/${String(S.plan.length).padStart(2, "0")}</span></div>
       <div class="t-who">${face(info.id)}${esc(a.name)}</div><div class="t-say">${esc(info.text)}</div>`;
+  } else if (state === "paused") {
+    const m = S.meeting;
+    t.innerHTML = `<div class="eyebrow"><span class="paused">Paused</span><span>${String(m.i + 1).padStart(2, "0")}/${String(m.plan.length).padStart(2, "0")}</span></div>
+      <div class="t-head">회의가 잠시 멈췄어요</div>
+      <div class="t-sub">${esc(m.error)} 지금까지 ${m.i}턴의 내용은 그대로 남아 있어요. 이어서 진행하면 ${m.i + 1}번째 턴부터 다시 해요.</div>
+      <div class="t-actions"><button class="pill light sm" id="tb-resume">이어서 진행</button>${info.auth ? `<button class="pill on-dark sm" id="tb-set">설정 열기</button>` : ""}<button class="pill on-dark sm" id="tb-restart">처음부터</button></div>`;
+    $("#tb-resume").onclick = resumeMeeting;
+    if ($("#tb-set")) $("#tb-set").onclick = () => openSettings();
+    $("#tb-restart").onclick = () => { if (confirm("지금까지의 내용을 지우고 처음부터 다시 할까요?")) runMeeting(); };
   } else if (state === "done") {
     const v = info.review;
     t.innerHTML = `<div class="eyebrow">Conclusion · ${S.plan.length}턴 완료</div>
@@ -738,7 +838,8 @@ function renderTable(state, info = {}) {
 }
 function describeConfig() {
   const n = members().length, T = turns();
-  $("#subtitle").textContent = `사회자와 참석자 ${n}명이 A2A로 모여 ${T}턴 동안 검토해요`;
+  $("#subtitle").innerHTML = `AI 에이전트들이 A2A로 모여 분석 결과를 검토해요<button class="cfg-chip" id="cfg-chip" title="참석자와 턴 수는 설정에서 바꿀 수 있어요">참석자 ${n}명 · ${T}턴<svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 17.3V20h2.7L17.8 8.9l-2.7-2.7L4 17.3Zm16.7-11.4a1 1 0 0 0 0-1.4l-1.2-1.2a1 1 0 0 0-1.4 0l-1.1 1.1 2.6 2.6 1.1-1.1Z"/></svg></button>`;
+  $("#cfg-chip").onclick = openMembers;
   $("#frame-meta").textContent = `${n + 1} agents · ${T} turns`;
 }
 
@@ -822,13 +923,13 @@ function emptyLog() {
 }
 function logPane() { const p = $("#pane-log"); if (p.querySelector(".empty")) p.innerHTML = ""; return p; }
 function addDivider(phase) { logPane().insertAdjacentHTML("beforeend", `<div class="divider"><span class="eyebrow">${esc(phaseEyebrow(phase))}</span><span style="font-size:13px">${esc(phaseLabel(phase))}</span></div>`); }
-function addMsg({ id, to, text, ask, stance, confidence, thought, raw, model, err, turn }) {
+function addMsg({ id, to, text, ask, stance, confidence, thought, raw, model, err, turn, label }) {
   const a = S.agents[id], isMod = id === "moderator";
   const el = document.createElement("article");
   el.className = `cmt ${isMod ? "mod" : ""} ${err ? "err" : ""}`; el.setAttribute("style", styleVars(id));
   el.innerHTML = `${face(id)}<div>
     <div class="meta"><b>${esc(a.name)}</b>${to ? `<span class="to">→ ${esc(S.agents[to]?.name)}</span>` : ""}
-      ${turn ? `<span class="eyebrow">T${String(turn).padStart(2, "0")}</span>` : ""}
+      ${turn ? `<span class="eyebrow">T${String(turn).padStart(2, "0")}</span>` : ""}${label ? `<span class="eyebrow">${esc(label)}</span>` : ""}
       ${model ? `<span class="eyebrow">${esc(model === "mock" ? "Mock" : shortModel(model))}</span>` : ""}
       ${raw ? `<button class="jsonbtn eyebrow">JSON</button>` : ""}</div>
     <div class="text">${esc(text)}</div>
@@ -859,6 +960,7 @@ function drawMinds() {
 }
 
 /* ───────────── 회의 진행 ───────────── */
+/* ───────────── 회의 진행: 끊겨도 멈춘 턴부터 이어서 ───────────── */
 const publicTranscript = () => S.transcript.map(({ role, speaker, text, ask }) => ({ role, speaker, text, ask }));
 const docForAgents = () => ({ name: S.doc.name, text: S.doc.text });
 async function call(id, text, data) {
@@ -874,99 +976,268 @@ async function call(id, text, data) {
     return r;
   } finally { done(); }
 }
-async function runMeeting() {
+const isNetErr = (e) => !!e && (e.name === "TypeError" || /Failed to fetch|NetworkError|network|Load failed/i.test(e.message || ""));
+function failErr(text) { const e = new Error(text); e.kind = "failed"; return e; }
+function logDivider(phase) { addDivider(phase); S.history.push({ t: "divider", phase }); }
+function logMsg(args) { addMsg(args); S.history.push({ t: "msg", a: { ...args, raw: undefined } }); return S.history.length - 1; }
+function voidMsg(histIndex) {   // 끊긴 턴의 사회자 지목은 기록에서 빼고 화면에서는 흐리게
+  S.history.splice(histIndex, 1);
+  const list = $("#pane-log").querySelectorAll("article.cmt"); const el = list[list.length - 1];
+  if (el) { el.classList.add("void"); el.querySelector(".meta")?.insertAdjacentHTML("beforeend", `<span class="tag">중단된 턴</span>`); }
+}
+function freshMeeting() { return { plan: S.plan.slice(), team: members(), i: 0, spoken: {}, lastPhase: null, status: "running", error: "", detail: "", cells: {} }; }
+
+async function runMeeting() {   // 처음부터 시작
   if (!S.doc) return toast("먼저 검토할 자료를 올려 주세요.");
   newMeeting();
-  const team = members(), total = S.plan.length, base = { attendees: team, totalTurns: total };
-  S.running = true; S.abort = new AbortController(); updateRunButton();
-  const spoken = {}; let lastPhase = null;
+  S.meeting = freshMeeting();
+  await runFrom();
+}
+async function resumeMeeting() {   // 멈춘 턴부터 다시
+  const m = S.meeting; if (!m || m.status !== "paused") return;
+  m.status = "running"; m.error = ""; m.detail = "";
+  $(`#cell-${m.i}`)?.classList.remove("fail");
+  $("#pane-log").querySelectorAll(".sysline").forEach((e) => e.remove());
+  status("멈췄던 곳부터 다시 이어 갈게요.");
+  await runFrom();
+}
+async function runFrom() {
+  const m = S.meeting, team = m.team, total = m.plan.length, base = { attendees: team, totalTurns: total };
+  S.running = true; S.abort = new AbortController(); updateRunButton(); updateComposer();
+  let i = m.i;
   try {
-    for (let i = 0; i < total; i++) {
-      const phase = S.plan[i], turn = i + 1;
-      if (phase !== lastPhase) { addDivider(phase); castPhase(phase); lastPhase = phase; }
+    for (; i < total; i++) {
+      const phase = m.plan[i], turn = i + 1;
+      if (phase !== m.lastPhase) { logDivider(phase); castPhase(phase); m.lastPhase = phase; }
       markCell(i, "now");
 
       if (phase === "conclusion") {
         moveCursor(null);
         const r = await call("moderator", "[회의실→사회자] 결론 정리 요청", { type: "summarize", document: docForAgents(), transcript: publicTranscript(), ...base });
-        if (r.failed) throw new Error(r.text);
+        if (r.failed) throw failErr(r.text);
         const review = r.artifacts[0]?.parts?.find((p) => p.data)?.data;
         S.transcript.push({ role: "moderator", speaker: "사회자", text: r.text });
-        addMsg({ id: "moderator", text: r.text, raw: r.raw, model: r.data.model, turn });
-        setSpeaking("moderator"); markCell(i, "done", "moderator");
+        logMsg({ id: "moderator", text: r.text, raw: r.raw, model: r.data.model, turn });
+        setSpeaking("moderator"); markCell(i, "done", "moderator"); m.cells[i] = "moderator";
+        m.i = total; m.status = "done"; clearSnapshot();
         if (review) {
           S.review = review; renderReview(review); renderTable("done", { review }); showTab("review");
-          cast(`회의 끝! 판정은 '${esc(review.verdict)}'이에요. 검토결과 탭에서 자세히 볼 수 있어요.`, "moderator");
+          cast(`회의 끝! 판정은 '${esc(review.verdict)}'이에요. 이제 사회자나 참석자에게 후속 질문도 할 수 있어요.`, "moderator");
         }
         break;
       }
 
       let eligible, hint = "";
+      const said = m.spoken[phase] || [];
       if (phase === "last_word") {
         const ranked = team.slice().sort((a, b) => (S.last[a]?.confidence ?? 50) - (S.last[b]?.confidence ?? 50));
         eligible = ranked.slice(0, Math.min(2, ranked.length));
         hint = `아직 가장 우려가 큰 사람: ${eligible.map((id) => `${S.agents[id].name}(배포 동의 정도 ${S.last[id]?.confidence ?? "?"})`).join(", ")}`;
-      } else { spoken[phase] ||= new Set(); eligible = team.filter((id) => !spoken[phase].has(id)); }
+      } else eligible = team.filter((id) => !said.includes(id));
 
       let next, say, modRaw, modModel, modThought;
       try {
-        const m = await call("moderator", `[회의실→사회자] ${turn}번째 턴 진행 요청`, { type: "moderate", document: docForAgents(), transcript: publicTranscript(), phase, turn, eligible, hint, ...base });
-        if (m.failed) throw new Error(m.text);
-        next = m.data.next; say = m.text; modRaw = m.raw; modModel = m.data.model; modThought = m.data.thoughts;
+        const mm = await call("moderator", `[회의실→사회자] ${turn}번째 턴 진행 요청`, { type: "moderate", document: docForAgents(), transcript: publicTranscript(), phase, turn, eligible, hint, ...base });
+        if (mm.failed) throw failErr(mm.text);
+        next = mm.data.next; say = mm.text; modRaw = mm.raw; modModel = mm.data.model; modThought = mm.data.thoughts;
       } catch (e) {
-        if (e.name === "AbortError" || e.code === -32001) throw e;
+        if (e.name === "AbortError" || isNetErr(e)) throw e;
         next = eligible[0]; say = `${S.agents[next].name} 님 의견 부탁드려요.`;
         status(`사회자 응답이 없어 ${S.agents[next].name} 님께 바로 넘겼어요.`);
       }
       if (!eligible.includes(next)) next = eligible[0];
       S.transcript.push({ role: "moderator", speaker: "사회자", text: say });
-      if (modThought) S.thoughts.moderator = modThought;
-      addMsg({ id: "moderator", to: next, text: say, thought: modThought, raw: modRaw, model: modModel });
+      const modHist = logMsg({ id: "moderator", to: next, text: say, thought: modThought, raw: modRaw, model: modModel });
       renderTable("live", { id: "moderator", text: say, phase, turn }); setSpeaking("moderator"); moveCursor(next);
 
       const lastSpeaker = [...S.transcript].reverse().find((t) => t.role !== "moderator");
       castPick(next, lastSpeaker?.ask?.to === S.agents[next].name ? lastSpeaker.role : null);
-      const r = await call(next, `[사회자→${S.agents[next].name}] ${say}`, { type: "review_turn", document: docForAgents(), transcript: publicTranscript(), request: { from: "사회자", text: say }, phase, turn, ...base });
-      if (spoken[phase]) spoken[phase].add(next);
-      if (r.failed) {
-        addMsg({ id: next, text: r.text, raw: r.raw, err: true, turn });
-      } else {
-        const { stance, confidence, ask, model, thoughts } = r.data;
-        const prev = S.last[next];
-        S.last[next] = { stance, confidence }; S.thoughts[next] = thoughts;
-        castReaction(next, prev, { stance, confidence }, ask, turn, total);
-        (S.trail[next] ||= []).push({ turn, stance, confidence });
-        S.transcript.push({ role: next, speaker: S.agents[next].name, text: r.text, ask: ask || null });
-        addMsg({ id: next, text: r.text, ask, stance, confidence, thought: thoughts, raw: r.raw, model, turn });
-        renderTable("live", { id: next, text: r.text, phase, turn }); setSpeaking(next);
-      }
-      markCell(i, "done", next); refreshSeats(); drawMinds(); drawMood();
+      let r;
+      try {
+        r = await call(next, `[사회자→${S.agents[next].name}] ${say}`, { type: "review_turn", document: docForAgents(), transcript: publicTranscript(), request: { from: "사회자", text: say }, phase, turn, ...base });
+        if (r.failed) throw failErr(r.text);
+      } catch (e) { S.transcript.pop(); voidMsg(modHist); throw e; }
+
+      // 이 턴이 끝까지 성공했을 때만 기록을 확정해요
+      if (modThought) S.thoughts.moderator = modThought;
+      (m.spoken[phase] ||= []).push(next);
+      const { stance, confidence, ask, model, thoughts } = r.data;
+      const prev = S.last[next];
+      S.last[next] = { stance, confidence }; S.thoughts[next] = thoughts;
+      castReaction(next, prev, { stance, confidence }, ask, turn, total);
+      (S.trail[next] ||= []).push({ turn, stance, confidence });
+      S.transcript.push({ role: next, speaker: S.agents[next].name, text: r.text, ask: ask || null });
+      logMsg({ id: next, text: r.text, ask, stance, confidence, thought: thoughts, raw: r.raw, model, turn });
+      renderTable("live", { id: next, text: r.text, phase, turn }); setSpeaking(next);
+      markCell(i, "done", next); m.cells[i] = next; refreshSeats(); drawMinds(); drawMood();
+      m.i = i + 1; saveSnapshot();
     }
-    if (!S.review) status("회의가 끝났어요. 검토결과를 확인해 보세요.");
   } catch (e) {
-    if (e.name === "AbortError") status("회의를 멈췄어요. 다시 시작하면 처음부터 진행해요.");
-    else if (e.code === -32001) { status(esc(e.message)); openSettings(e.message); }
-    else status(`회의를 이어 가지 못했어요. ${esc(e.message)}`);
+    pauseMeeting(i, e);
   } finally {
-    S.running = false; updateRunButton(); setSpeaking(null); moveCursor(null);
+    S.running = false; updateRunButton(); setSpeaking(null); moveCursor(null); updateComposer();
     document.querySelectorAll(".cell.now").forEach((c) => c.classList.remove("now"));
   }
 }
+function pauseMeeting(i, e) {
+  const m = S.meeting; m.status = "paused"; m.i = Math.min(i, m.plan.length - 1);
+  const byUser = e?.name === "AbortError";
+  const auth = /\b(401|402|403)\b|invalid|expired|unauthori|credit|insufficient|인증|만료|잔액/i.test(e?.message || "");
+  m.error = byUser ? "직접 멈췄어요." : isNetErr(e) ? "인터넷 연결이 끊겼어요." : auth ? "API 키가 만료됐거나 크레딧이 부족해 보여요." : "모델 응답을 받지 못했어요.";
+  m.detail = byUser ? "" : String(e?.message || "").slice(0, 200);
+  m.auth = auth;
+  showPaused();
+  saveSnapshot();
+}
+function showPaused(note) {
+  const m = S.meeting;
+  $(`#cell-${m.i}`)?.classList.add("fail");
+  logPane().insertAdjacentHTML("beforeend", `<div class="sysline"><b>${m.i + 1}번째 턴에서 멈췄어요.</b> ${esc(note || m.error)}${m.detail ? `<small>${esc(m.detail)}</small>` : ""}</div>`);
+  renderTable("paused", { auth: m.auth });
+  cast(`${m.i + 1}번째 턴에서 멈췄어요. '이어서 진행'을 누르면 여기서부터 다시 해요.`, null);
+  updateRunButton();
+}
+
+/* ───────────── 멈춘 회의 저장과 복구 (새로고침해도 이어서) ───────────── */
+const SNAP_KEY = "meetingroom.snapshot";
+function saveSnapshot() {
+  if (!S.meeting || !S.doc || S.meeting.status === "done") return;
+  try {
+    localStorage.setItem(SNAP_KEY, JSON.stringify({ v: 1, savedAt: Date.now(), doc: S.doc, meeting: S.meeting, transcript: S.transcript,
+      tokens: S.tokens, contexts: S.contexts, last: S.last, thoughts: S.thoughts, trail: S.trail, history: S.history }));
+  } catch {}
+}
+function clearSnapshot() { try { localStorage.removeItem(SNAP_KEY); } catch {} }
+function loadSnapshot() { try { return JSON.parse(localStorage.getItem(SNAP_KEY) || "null"); } catch { return null; } }
+function restoreSnapshot(snap) {
+  const m = snap.meeting;
+  saveSettings({ members: m.team, turns: m.plan.length });
+  S.doc = snap.doc; showDocChip(); updateRunButton();
+  newMeeting();
+  Object.assign(S, { transcript: snap.transcript || [], tokens: snap.tokens || {}, contexts: snap.contexts || {}, last: snap.last || {},
+    thoughts: snap.thoughts || {}, trail: snap.trail || {}, history: [], meeting: m });
+  for (const h of snap.history || []) h.t === "divider" ? logDivider(h.phase) : logMsg(h.a);
+  Object.entries(m.cells || {}).forEach(([i, who]) => markCell(+i, "done", who));
+  refreshSeats(); drawMinds(); drawMood(); setLogCount(S.transcript.length);
+  if (m.status === "running") { m.status = "paused"; m.error = "페이지가 닫혀서 멈춰 있었어요."; }
+  showPaused(`지난번 회의를 불러왔어요. ${m.error}`);
+  saveSnapshot();
+  toast("멈췄던 회의를 불러왔어요. '이어서 진행'을 누르면 계속해요.");
+}
+
 function newMeeting() {
   if (S.running && S.abort) S.abort.abort();
-  Object.assign(S, { transcript: [], tokens: {}, contexts: {}, last: {}, thoughts: {}, trail: {}, review: null });
+  Object.assign(S, { transcript: [], tokens: {}, contexts: {}, last: {}, thoughts: {}, trail: {}, review: null, meeting: null, history: [], followups: [] });
+  clearSnapshot();
   emptyLog();
   $("#pane-review").innerHTML = `<div class="empty"><img class="bust" src="${esc(S.agents.moderator?.bust || "")}" alt=""><strong>검토결과가 아직 없어요</strong>마지막 턴에서 사회자가 고칠 점과 잘된 점을 정리해 드려요.</div>`;
   setLogCount(0); $('.mnav [data-view="review"]').classList.remove("has-new");
   describeConfig(); drawSeats(); drawTracker(); drawMinds(); selectTab("log"); if (isMobile()) setView("board");
   status(S.doc ? "준비 끝! '회의 시작'을 누르면 사회자가 마이크를 잡아요." : "자료만 올려 주세요. 다들 자리에 앉아 기다리고 있어요.");
-  renderTable(S.doc ? "ready" : "idle"); moveCursor(null);
+  renderTable(S.doc ? "ready" : "idle"); moveCursor(null); drawComposerTargets(); updateComposer(); updateRunButton();
 }
 function updateRunButton() {
-  const b = $("#btn-run");
+  const b = $("#btn-run"), paused = S.meeting?.status === "paused";
   b.disabled = !S.doc && !S.running;
-  b.textContent = S.running ? "멈추기" : "회의 시작";
+  b.textContent = S.running ? "멈추기" : paused ? (isMobile() ? "이어하기" : "이어서 진행") : "회의 시작";
   b.className = `pill ${S.running ? "danger" : "dark"}`;
+}
+function confirmDiscard() {
+  if (S.running) return confirm("진행 중인 회의를 멈추고 새로 시작할까요?");
+  if (S.meeting?.status === "paused") return confirm("멈춘 회의가 있어요. 지우고 새로 시작할까요?");
+  return true;
+}
+
+/* ───────────── 회의 뒤 후속 질문 ───────────── */
+function drawComposerTargets() {
+  const box = $("#cp-to"); if (!box) return;
+  if (!S.fuTarget || !seatIds().includes(S.fuTarget)) S.fuTarget = "moderator";
+  box.innerHTML = seatIds().map((id) => `<button role="radio" aria-checked="${id === S.fuTarget}" data-id="${id}">${face(id)}${esc(S.agents[id]?.name || id)}</button>`).join("");
+  box.querySelectorAll("button").forEach((b) => (b.onclick = () => { S.fuTarget = b.dataset.id; drawComposerTargets(); $("#cp-text").focus(); }));
+  $("#cp-text").placeholder = `${S.agents[S.fuTarget]?.name || "사회자"}에게 회의 결과에 대해 물어보세요`;
+}
+function updateComposer() {
+  const show = S.meeting?.status === "done" && (S.tab || "log") === "log";
+  $("#composer").hidden = !show;
+}
+function addUserMsg(text, to) {
+  const el = document.createElement("article"); el.className = "cmt me";
+  el.innerHTML = `<span class="ava-fb" style="--t:#0A0A0A;--c:#FFFFFF">나</span><div><div class="meta"><b>나</b><span class="to">→ ${esc(S.agents[to].name)}</span><span class="eyebrow">Follow-up</span></div><div class="text">${esc(text)}</div></div>`;
+  logPane().appendChild(el); el.scrollIntoView({ block: "end", behavior: "smooth" });
+}
+async function askFollowup() {
+  const q = $("#cp-text").value.trim(); if (!q || S.fuBusy) return;
+  const to = S.fuTarget || "moderator", name = S.agents[to].name;
+  if (!S.followups.length) logPane().insertAdjacentHTML("beforeend", `<div class="divider"><span class="eyebrow">Follow-up</span><span style="font-size:13px">후속 질문</span></div>`);
+  addUserMsg(q, to); $("#cp-text").value = ""; growComposer();
+  S.fuBusy = true; $("#cp-send").disabled = true; S.abort = new AbortController();
+  cast(`${josa(`${name} 님`, "이/가")} 질문에 답하고 있어요…`, to);
+  try {
+    const r = await call(to, `[사용자→${name}] ${q}`, { type: "followup", document: docForAgents(), transcript: publicTranscript(), review: S.review, question: q,
+      thread: S.followups.map((f) => ({ to: S.agents[f.to].name, question: f.question, answer: f.answer })) });
+    if (r.failed) throw failErr(r.text);
+    S.followups.push({ to, question: q, answer: r.text });
+    if (r.data.thoughts) { S.thoughts[to] = r.data.thoughts; drawMinds(); }
+    addMsg({ id: to, text: r.text, thought: r.data.thoughts, raw: r.raw, model: r.data.model, label: "Answer" });
+    cast(`${josa(`${name} 님`, "이/가")} 답했어요. 이어서 더 물어봐도 돼요.`, to);
+  } catch (e) {
+    addMsg({ id: to, text: `답을 받지 못했어요. ${isNetErr(e) ? "인터넷 연결을 확인해 주세요." : String(e.message || "").slice(0, 160)}`, err: true });
+    $("#cp-text").value = q; growComposer();
+    toast("답을 받지 못했어요. 질문을 다시 보낼 수 있어요.");
+  } finally { S.fuBusy = false; $("#cp-send").disabled = false; setSpeaking(null); }
+}
+function growComposer() { const t = $("#cp-text"); t.style.height = "auto"; t.style.height = `${Math.min(t.scrollHeight, 140)}px`; }
+function openAsk(id) {
+  if (S.meeting?.status !== "done") return toast("회의가 끝나면 질문할 수 있어요.");
+  S.fuTarget = id; drawComposerTargets();
+  $("#dlg-card").close(); showTab("log"); updateComposer();
+  setTimeout(() => $("#cp-text").focus(), 50);
+}
+
+/* ───────────── 에이전트 카드 (포켓몬 카드처럼) ───────────── */
+function showCard(id) {
+  const a = S.agents[id], p = a.profile || {}, m = modelFor(id), isMod = id === "moderator";
+  const pips = (v) => [1, 2, 3, 4, 5].map((n) => `<b class="${n <= v ? "on" : ""}"></b>`).join("");
+  const stats = (p.stats || []).map(([k, v]) => `<div class="pc-stat"><span>${esc(k)}</span><i>${pips(v)}</i></div>`).join("");
+  const skills = (a.card.skills || []).filter((s) => s.id !== "followup").map((s) =>
+    `<div class="pc-move"><div class="pc-move-h"><span class="pc-energy"></span><b>${esc(s.name)}</b></div><p>${esc(s.description)}</p></div>`).join("");
+  const tr = S.trail[id] || [], last = S.last[id];
+  const today = isMod ? (S.transcript.length ? `진행 ${S.transcript.filter((t) => t.role === "moderator").length}번` : "아직 진행 전")
+    : tr.length ? `발언 ${tr.length}번, 지금 ${last.stance} ${last.confidence}` : "아직 발언 전";
+  $("#pc-wrap").innerHTML = `
+    <div class="pcard ${isMod ? "inverse" : ""}" id="pcard" style="${styleVars(id)}">
+      <div class="pc-inner">
+        <div class="pc-face pc-front">
+          <div class="pc-top"><span class="pc-stage">A2A Agent</span><span class="pc-hp"><small>Model</small>${esc(vendorOf(m))}</span></div>
+          <div class="pc-name"><b>${esc(a.name)}</b><span class="pc-type">${esc(p.type || "")}</span></div>
+          <div class="pc-art"><img src="${esc(a.bust)}" alt="${esc(a.name)}"><span class="pc-shine"></span></div>
+          <div class="pc-sub">No.${String(p.no || 0).padStart(3, "0")} · ${esc(a.title)} · ${esc((m.split("/")[1] || m))}</div>
+          ${skills}
+          <div class="pc-move"><div class="pc-move-h"><span class="pc-energy alt"></span><b>특기</b></div><p>${esc(p.special || "")}</p></div>
+          <div class="pc-stats">${stats}</div>
+          <div class="pc-foot"><div><small>약점</small><b>${esc(p.weakness || "-")}</b></div><div><small>오늘 회의</small><b>${esc(today)}</b></div></div>
+          <p class="pc-quote">“${esc(p.quote || "")}”</p>
+        </div>
+        <div class="pc-face pc-back">
+          <div class="pc-top"><span class="pc-stage">Agent Card · A2A 1.0</span><span class="pc-hp"><small>JSON</small></span></div>
+          <pre>${esc(JSON.stringify(a.card, null, 2))}</pre>
+        </div>
+      </div>
+    </div>`;
+  const done = S.meeting?.status === "done";
+  $("#pc-ask").disabled = !done; $("#pc-ask").onclick = () => openAsk(id);
+  $("#pc-hint").textContent = done ? "" : "회의가 끝나면 이 에이전트에게 직접 질문할 수 있어요.";
+  $("#pc-flip").textContent = "뒤집어서 명함 원본 보기";
+  $("#pc-flip").onclick = () => { const c = $("#pcard"); c.classList.toggle("flipped"); $("#pc-flip").textContent = c.classList.contains("flipped") ? "앞면 보기" : "뒤집어서 명함 원본 보기"; };
+  const card = $("#pcard");
+  if (matchMedia("(hover: hover) and (prefers-reduced-motion: no-preference)").matches) {
+    card.onpointermove = (e) => {
+      const r = card.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      card.style.setProperty("--ry", `${(x - 0.5) * 12}deg`); card.style.setProperty("--rx", `${(0.5 - y) * 10}deg`); card.style.setProperty("--sx", `${x * 100}%`);
+    };
+    card.onpointerleave = () => { card.style.setProperty("--rx", "0deg"); card.style.setProperty("--ry", "0deg"); };
+  }
+  $("#dlg-card").showModal();
 }
 
 /* ───────────── 검토결과 ───────────── */
@@ -993,7 +1264,8 @@ function reviewMarkdown(v) {
   const li = (a) => (a || []).map((s) => `- ${s}`).join("\n") || "- 없음";
   const log = S.transcript.map((t) => `- **${t.speaker}**: ${t.text}`).join("\n");
   const models = seatIds().map((id) => `${S.agents[id].name}=${modelFor(id)}`).join(", ");
-  return `# ${S.doc.name} 검토결과\n\n> ${v.verdict}: ${v.headline}\n\n## 꼭 고칠 것\n${it(v.must_fix, true)}\n\n## 검토하면 좋을 것\n${it(v.consider)}\n\n## 잘된 점\n${li(v.strengths)}\n\n## 결론 나지 않은 질문\n${li(v.open_questions)}\n\n## 회의록\n${log}\n\n---\n참석자 ${members().length}명, ${S.plan.length}턴. 모델: ${models}\n생성: ${new Date().toLocaleString("ko-KR")}\n`;
+  const fu = (S.followups || []).map((f) => `- **나 → ${S.agents[f.to].name}**: ${f.question}\n  - **${S.agents[f.to].name}**: ${f.answer}`).join("\n");
+  return `# ${S.doc.name} 검토결과\n\n> ${v.verdict}: ${v.headline}\n\n## 꼭 고칠 것\n${it(v.must_fix, true)}\n\n## 검토하면 좋을 것\n${it(v.consider)}\n\n## 잘된 점\n${li(v.strengths)}\n\n## 결론 나지 않은 질문\n${li(v.open_questions)}\n\n## 회의록\n${log}\n${fu ? `\n## 후속 질문\n${fu}\n` : ""}\n---\n참석자 ${members().length}명, ${S.plan.length}턴. 모델: ${models}\n생성: ${new Date().toLocaleString("ko-KR")}\n`;
 }
 function download(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 
@@ -1037,15 +1309,18 @@ async function readFile(file) {
 }
 async function acceptFile(file) {
   if (S.running) return toast("회의 중에는 자료를 바꿀 수 없어요.");
+  if (S.meeting?.status === "paused" && !confirm("멈춘 회의가 있어요. 새 자료로 바꾸면 지금 회의는 지워져요. 바꿀까요?")) return;
   status(`${esc(file.name)} 읽는 중…`);
   try { const { text, meta } = await readFile(file); setDoc(file.name, text, meta); } catch (e) { status(""); toast(e.message); }
 }
+function showDocChip() {
+  $("#docchip").hidden = false; $("#doc-name").textContent = S.doc.name;
+  $("#doc-meta").textContent = `${S.doc.meta} · ${S.doc.text.length.toLocaleString()} chars${S.doc.cut ? " · trimmed" : ""}`;
+}
 function setDoc(name, text, meta) {
   const clean = text.replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim(), cut = clean.length > MAX_CHARS;
-  S.doc = { name, text: cut ? clean.slice(0, MAX_CHARS) : clean, meta };
-  $("#docchip").hidden = false; $("#doc-name").textContent = name;
-  $("#doc-meta").textContent = `${meta} · ${S.doc.text.length.toLocaleString()} chars${cut ? " · trimmed" : ""}`;
-  newMeeting(); updateRunButton();
+  S.doc = { name, text: cut ? clean.slice(0, MAX_CHARS) : clean, meta, cut };
+  showDocChip(); newMeeting(); updateRunButton();
   status(cut ? `자료가 길어서 앞 ${MAX_CHARS.toLocaleString()}자만 검토해요. 준비 끝!` : `${esc(josa(`'${name}'`, "이/가"))} 도착했어요. 다들 눈이 반짝여요.`);
 }
 
@@ -1099,7 +1374,8 @@ function drawTurns() {
   $("#plan-preview").innerHTML = planGroups(buildPlan(n, t)).map((g) => `<span data-p="${g.phase}">${esc(phaseLabel(g.phase))} ${g.idx.length}</span>`).join("");
 }
 function setTurns(v) { saveSettings({ turns: v }); applyConfig(); }
-function applyConfig() { if (S.running) return toast("회의가 끝난 뒤에 바꿀 수 있어요."); drawTurns(); $("#members-count").textContent = `${members().length}/5 attending`; newMeeting(); }
+function applyConfig() { if (S.running) return toast("회의가 끝난 뒤에 바꿀 수 있어요.");
+  if (S.meeting?.status === "paused") return toast("멈춘 회의를 끝내거나 새로 시작한 뒤에 바꿀 수 있어요."); drawTurns(); $("#members-count").textContent = `${members().length}/5 attending`; newMeeting(); }
 async function testAgent(id) {
   const res = $(`#res-${id}`); res.className = "res"; res.textContent = "연결을 확인하는 중…";
   try {
@@ -1146,13 +1422,7 @@ function openSettings(warn) {
 }
 function openMembers() { openSettings(); setTimeout(() => $("#sec-members").scrollIntoView({ behavior: "smooth" }), 260); }
 function closeSettings() { $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); $("#drawer").setAttribute("aria-hidden", "true"); }
-function showCard(id) {
-  const a = S.agents[id];
-  $("#view-title").textContent = `${a.name}의 명함 · Agent Card`;
-  $("#view-head").innerHTML = `<div class="cardhead"><img src="${esc(a.bust)}" alt=""><div><b>${esc(a.name)}</b><span>${esc(a.title)} · ${esc(shortModel(modelFor(id)))}</span></div></div>`;
-  $("#view-body").textContent = JSON.stringify(a.card, null, 2) + `\n\n// 지금 쓰는 모델: ${modelFor(id)}`;
-  $("#dlg-view").showModal();
-}
+
 
 /* ───────────── 시작 ───────────── */
 /* ───────────── 모바일: 한 번에 한 화면 ───────────── */
@@ -1174,10 +1444,13 @@ function setLogCount(n) {
   if (n === 0) $('.mnav [data-view="log"]').classList.remove("has-new");
 }
 function selectTab(name) {
+  S.tab = name;
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
   document.querySelectorAll(".pane").forEach((p) => p.classList.toggle("on", p.id === `pane-${name}`));
+  if ($("#composer")) updateComposer();
 }
 async function boot() {
+  const snap = loadSnapshot();   // newMeeting()이 지우기 전에 먼저 꺼내 둬요
   emptyLog(); drawTracker(); describeConfig();
   try {
     S.registry = await (await fetch("api/registry", { headers: passHeader() })).json();
@@ -1185,16 +1458,20 @@ async function boot() {
       const card = await (await fetch(`${url}/.well-known/agent-card.json`)).json(), id = url.split("/").pop();
       const p = card.capabilities?.extensions?.find((e) => e.uri === "urn:a2a-meeting-room:persona")?.params || {};
       S.agents[id] = { url, card, name: p.shortName || card.name, title: p.title || "", color: p.color || "#737373", tint: p.tint || "#F1F1F1",
-        defaultModel: p.defaultModel, bust: card.iconUrl || `vendor/avatars/${id}.png`, face: p.avatarFace || `vendor/avatars/${id}-face.png` };
+        defaultModel: p.defaultModel, profile: p.profile || {}, bust: card.iconUrl || `vendor/avatars/${id}.png`, face: p.avatarFace || `vendor/avatars/${id}-face.png` };
     }
     newMeeting(); updateMode(); updateRunButton();
     status(`에이전트 ${Object.keys(S.agents).length}명이 자리에 앉았어요. 자료만 올려 주세요.`);
+    if (snap?.meeting && snap.doc && snap.meeting.status !== "done") { try { restoreSnapshot(snap); } catch (e) { console.error(e); clearSnapshot(); } }
   } catch (e) { status(`에이전트 명함을 받지 못했어요. ${esc(e.message)}`); }
   loadModels();
 }
 
-$("#btn-run").onclick = () => (S.running ? S.abort?.abort() : runMeeting());
-$("#btn-new").onclick = $("#btn-new-m").onclick = () => { if (!S.running || confirm("진행 중인 회의를 멈추고 새로 시작할까요?")) newMeeting(); };
+$("#btn-run").onclick = () => (S.running ? S.abort?.abort() : S.meeting?.status === "paused" ? resumeMeeting() : runMeeting());
+$("#btn-new").onclick = $("#btn-new-m").onclick = () => { if (confirmDiscard()) newMeeting(); };
+$("#cp-send").onclick = askFollowup;
+$("#cp-text").addEventListener("input", growComposer);
+$("#cp-text").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); askFollowup(); } });
 document.body.dataset.view = "board";
 document.querySelectorAll(".mnav button").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
 mq.addEventListener("change", () => { placeSeats(); if (!isMobile()) document.body.dataset.view = "board"; });
