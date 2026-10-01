@@ -234,7 +234,9 @@ export default async function handler(req, res) {
   }
   // 내 키: 고른 모델(없으면 기본 모델). 공용 키: 운영자가 정한 가벼운 모델.
   const model = userKey ? (wanted || defaultModelOf(persona)) : apiKey ? sharedModelOf(persona) : defaultModelOf(persona);
-  const llm = { apiKey, model, mock: !apiKey };
+  // 모델이 지원 종료되면 그 에이전트의 기본 모델 → FALLBACK_MODEL 순서로 대신 불러요
+  const fallbacks = [defaultModelOf(persona), process.env.FALLBACK_MODEL || "google/gemini-3-flash-preview"];
+  const llm = { apiKey, model, mock: !apiKey, fallbacks, onModel: (m) => { llm.model = m; } };
 
   const input = msg.parts.find((p) => p.data)?.data || {};
   // 공용 키로는 회의를 SHARED_MAX_TURNS턴까지만 (토큰 비용 보호)
