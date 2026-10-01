@@ -1538,7 +1538,7 @@ async function concludeMeeting(m, i, { early = false } = {}) {
     S.review = review; renderReview(review); renderTable("done", { review }); showTab("review");
     cast(early ? `여기서 마무리했어요. 판정은 '${esc(review.verdict)}'이에요. 이제 후속 질문도 할 수 있어요.`
                : `회의 끝! 판정은 '${esc(review.verdict)}'이에요. 이제 사회자나 참석자에게 후속 질문도 할 수 있어요.`, "moderator");
-    if (review.badges?.length) setTimeout(() => cast(`사회자가 오늘의 배지 ${review.badges.length}개를 나눠 줬어요. 카드를 뒤집어 확인해 보세요.`, "moderator"), 2500);
+    if (review.badges?.length) setTimeout(() => { if (S.meeting === m && m.status === "done" && S.review === review) cast(`사회자가 오늘의 배지 ${review.badges.length}개를 나눠 줬어요. 카드를 뒤집어 확인해 보세요.`, "moderator"); }, 2500);   // 그사이 추가 회의를 열었으면 띄우지 않아요
   }
 }
 const canWrapUp = () => !!S.meeting && S.meeting.status !== "done" && !S.wrapping && S.transcript.some((t) => t.role !== "moderator" && t.role !== "user");
@@ -1711,6 +1711,7 @@ function showMeCard() {
 // 보드 위 말풍선: 말하는 사람 자리 위에 띄워요 (생각 중이면 점 세 개)
 function showBubble(id, text) {
   hideBubbles();
+  return;   // 보드 말풍선은 쓰지 않아요 (발언은 탁자와 회의록에서 봐요)
   if (isMobile()) return;
   const seat = $(`#seat-${id}`), stage = $("#stage"); if (!seat) return;
   const r = seat.getBoundingClientRect(), sr = stage.getBoundingClientRect();
@@ -1865,7 +1866,12 @@ function submitMore() {
   m.sessionStart = m.plan.length; m.plan = m.plan.concat(extra); m.sessions = s;
   m.i = m.sessionStart; m.status = "running"; m.lastPhase = null; m.early = null;
   drawTracker(); Object.entries(m.cells || {}).forEach(([k, who]) => markCell(+k, "done", who));
-  showTab("log"); updateComposer(); runFrom();
+  // 화면을 바로 '진행 중'으로 바꿔요 (앞선 결론 화면이 남아 있거나 회의록이 맨 위로 튀지 않게)
+  hideBubbles(); setSpeaking("moderator", "thinking");
+  renderTable("live", { id: "moderator", text: `추가 회의를 시작할게요. ${prompt ? `"${prompt.length > 80 ? `${prompt.slice(0, 80)}…` : prompt}"을 중심으로 다시 이야기해 봐요.` : "새 자료를 함께 보며 다시 이야기해 봐요."}`, phase: extra[0], turn: m.sessionStart + 1 });
+  showTab("log"); updateComposer();
+  requestAnimationFrame(() => logPane().lastElementChild?.scrollIntoView({ block: "end" }));
+  runFrom();
 }
 // 확인 창: 브라우저 기본 confirm() 대신 페이지 안 대화상자 (차단돼도 동작하게)
 function askConfirm(title, body, okLabel = "확인") {
