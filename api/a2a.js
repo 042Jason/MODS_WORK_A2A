@@ -19,11 +19,23 @@ const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const clip = (s, n) => (s && s.length > n ? s.slice(0, n) + "\n…(이하 생략)" : s || "");
 
+// 2라운드부터는 라운드마다 성격을 바꿔요. 턴을 늘려도 반박만 되풀이하지 않게 (6라운드 다음은 다시 반박부터)
+const ROUND_GUIDE = [
+  "반박 타임: 앞선 발언에 반론하거나 보완하는 차례입니다. 누군가의 발언을 이름으로 짚으며 시작하고, 이미 합의된 이야기는 반복하지 마세요.",
+  "대안 타임: 문제를 지적하는 데서 그치지 말고, 지금까지 나온 걱정을 풀 구체적인 대안이나 개선안을 하나 내놓는 차례입니다. 가능하면 다른 참석자의 아이디어에 덧붙이세요.",
+  "입장 바꿔 보기: 나와 가장 다른 시각을 가진 참석자의 입장을 가장 설득력 있게 대신 말해 본 뒤, 그래도 내 입장에서 남는 점이나 바뀐 점을 말하는 차례입니다.",
+  "합의점 찾기: 지금까지 나온 의견 중 다 같이 동의할 수 있는 지점과 아직 갈리는 지점을 짚고, 갈리는 지점에 대해 내 생각을 분명히 하는 차례입니다.",
+  "실행 계획: 결론이 난다고 가정하고, 실제로 무엇부터 누가 어떻게 할지 구체적인 다음 단계를 말하는 차례입니다.",
+];
+// 사용자도 참석할 때 프롬프트에 넣는 소개
+const userLine = (u) => (u?.name ? `${u.name}(사용자${u.title ? `, ${u.title}` : ""})` : "");
+const userIntro = (u) => (u?.name ? `\n[사용자 참석] ${userLine(u)}도 이 회의에 함께합니다.${u.about ? ` 소개: ${String(u.about).slice(0, 300)}` : ""} 회의록에는 '${u.name}(사용자)'로 나옵니다.` : "");
 function phaseGuide(phase = "round1") {
   if (phase === "round1") return "1라운드: 각자 첫 의견을 말하는 차례입니다.";
   if (phase === "last_word") return "최종 반론: 결론 전에 아직 가장 걸리는 점을 한 번 더 말하는 차례입니다. 양보할 것은 양보하고, 끝까지 짚고 싶은 한 가지를 분명히 하세요.";
+  if (String(phase).startsWith("more")) return "추가 토론: 사용자가 회의 뒤에 새 요청이나 자료를 줬습니다. [토론 주제]의 [추가 요청]과 [앞선 결론]을 보고, 새 요청을 중심으로 무엇이 바뀌거나 더해지는지 말하세요. 앞선 회의에서 한 말은 반복하지 마세요.";
   const n = parseInt(String(phase).replace("round", ""), 10) || 2;
-  return `${n}라운드: 앞선 발언에 반론하거나 보완하는 차례입니다. 누군가의 발언을 이름으로 짚으며 시작하고, 이미 합의된 이야기는 반복하지 마세요.`;
+  return `${n}라운드 · ${ROUND_GUIDE[(n - 2) % ROUND_GUIDE.length]}`;
 }
 const attendeeLine = (ids = MEMBER_IDS) => ids.filter((id) => PERSONAS[id]).map((id) => `${PERSONAS[id].name}(${PERSONAS[id].title})`).join(", ");
 
@@ -49,11 +61,25 @@ const NOTE_LABEL = /^\s*(?:[\[(（【]\s*(?:속마음|속\s*마음|내\s*생각|
 export const cleanNote = (s) => String(s || "").replace(NOTE_LABEL, "").trim();
 
 // 토론 주제와 첨부 자료. 주제는 사용자가 적은 문장, 자료는 있을 때만.
+// 긴 자료를 앞부분만 자르면 뒤쪽 내용을 아예 못 봐요. 앞 절반 + 나머지에서 고르게 6군데를 뽑아 전체 흐름이 보이게 해요.
+function clipDoc(text, limit) {
+  if (!text || text.length <= limit) return { text: text || "", cut: false };
+  const head = Math.floor(limit * 0.5), k = 6, seg = Math.floor((limit - head) / k), tail = text.length - head;
+  const parts = [text.slice(0, head)];
+  for (let i = 0; i < k; i++) {
+    const start = head + Math.floor(((tail - seg) * (i + 1)) / k);
+    parts.push(`\n\n…(중략)…\n\n${text.slice(start, start + seg)}`);
+  }
+  return { text: parts.join(""), cut: true };
+}
+
 function agenda(input, limit) {
   const topic = String(input.topic || "").trim();
   const doc = input.document || {};
-  const files = doc.text ? `[첨부 자료${doc.name ? `: ${doc.name}` : ""}]\n${clip(doc.text, limit)}` : "[첨부 자료] (없음. 일반 지식으로 토론합니다.)";
-  if (!topic && doc.text && !input.topic) return `[검토 대상 문서: ${doc.name || "제목 없음"}]\n${clip(doc.text, limit)}`;   // 예전 회의실 호환
+  const d = clipDoc(doc.text, limit);
+  const note = d.cut ? `(자료가 ${doc.text.length.toLocaleString()}자로 길어서 앞부분과 뒤쪽 여러 군데를 발췌했어요. 발췌에 없는 내용은 추측하지 말고 확인이 필요하다고 말하세요.)\n` : "";
+  const files = doc.text ? `[첨부 자료${doc.name ? `: ${doc.name}` : ""}]\n${note}${d.text}` : "[첨부 자료] (없음. 일반 지식으로 토론합니다.)";
+  if (!topic && doc.text && !input.topic) return `[검토 대상 문서: ${doc.name || "제목 없음"}]\n${note}${d.text}`;   // 예전 회의실 호환
   return `[토론 주제]\n${topic || "(주제 문장 없음. 첨부 자료를 검토해 주세요.)"}\n\n${files}`;
 }
 
@@ -71,12 +97,12 @@ async function moderate(llm, persona, input, state) {
   const pool = eligible.filter((id) => MEMBER_IDS.includes(id));
   const out = llm.mock ? mockModerate({ transcript, phase, eligible: pool, hasDoc: !!document?.text }) : await chatJSON({
     ...llm, system: persona.system, temperature: 0.4, maxTokens: 1200,
-    user: `${agenda(input, 5000)}
+    user: `${agenda(input, 10000)}
 
 [지금까지 회의록]
 ${transcriptText(transcript)}
 
-[이번 회의 참석자] ${attendeeLine(attendees)}
+[이번 회의 참석자] ${attendeeLine(attendees)}${input.user?.name ? `, ${userLine(input.user)}` : ""}${userIntro(input.user)}
 [진행 상황] 전체 ${totalTurns}턴 중 ${turn}번째 발언 차례. ${phaseGuide(phase)}
 이번에 말할 수 있는 사람(eligible): ${pool.map((id) => `${id}(${PERSONAS[id].name})`).join(", ")}
 ${hint ? `참고: ${hint}` : ""}
@@ -84,7 +110,7 @@ ${transcript.length === 0 ? "첫 차례이니 say 앞에 짧은 개회 멘트를
 [지난 진행 메모(당신만 봄)] ${state.notes || "(없음)"}
 
 JSON 하나만 출력합니다.
-{"next": "eligible 중 하나의 id", "say": "다음 발언자 이름을 부르며 하는 말 (1~2문장)", "reason": "왜 이 사람인지 (메모용, 공개 안 됨)"}`,
+{"next": "eligible 중 하나의 id", "say": "다음 발언자 이름을 부르며 하는 말 (1~2문장)", "reason": "왜 이 사람인지 (메모용, 공개 안 됨)"${input.user?.name ? `, "ask_user": "사용자 ${input.user.name}의 경험·상황·선호를 알아야 판단할 수 있거나, 의견이 팽팽해서 사용자 생각을 들으면 좋을 때만 사용자에게 할 질문 한 문장. 아니면 빈 문자열. 라운드마다 많아야 한 번"` : ""}}`,
   });
   let next = pool.includes(out.next) ? out.next : pool.includes(ID_BY_NAME[out.next]) ? ID_BY_NAME[out.next] : null;
   const fixed = !next;
@@ -92,20 +118,29 @@ JSON 하나만 출력합니다.
   const name = PERSONAS[next].name;
   const say = !fixed && out.say ? String(out.say) : `${name} 님 의견 부탁드립니다.`;
   const newState = { ...state, turns: state.turns + 1, notes: clip(`${state.notes}\n${turn}: ${out.reason || ""}`.trim(), 1500) };
-  return { text: say, data: { next, nextName: name, phase, thoughts: cleanNote(out.reason) }, newState };
+  let askUser = input.user?.name ? String(out.ask_user || "").trim().slice(0, 200) : "";
+  // 모의 모드에서도 흐름을 볼 수 있게: 2라운드 첫 차례에 한 번 사용자에게 물어요
+  if (llm.mock && input.user?.name && phase === "round2" && !transcript.some((t) => t.role === "me")) askUser = `${input.user.name} 님은 이 주제를 직접 겪는 입장에서 어떻게 보세요?`;
+  return { text: say, data: { next, nextName: name, phase, askUser, thoughts: cleanNote(out.reason) }, newState };
 }
 
 // ── 사회자: 결론 ─────────────────────────────────────────────────────
 async function summarize(llm, persona, input, state) {
   const { document, transcript = [], totalTurns = 12 } = input;
+  const early = !!input.early, doneTurns = Number(input.doneTurns) || transcript.length;
+  const prev = input.previousReview;   // 추가 회의라면 앞선 결론
+  const prevNote = prev ? `\n[앞선 결론] ${prev.verdict || ""}: ${prev.headline || ""}\n이번은 그 뒤에 이어진 추가 회의입니다. 앞선 결론을 바탕으로, 추가 회의에서 바뀌거나 더해진 점을 반영해 결론을 새로 정리하세요. 달라진 점은 headline에 드러나게 쓰세요.` : "";
+  const when = early
+    ? `회의를 전체 ${totalTurns}턴 중 ${doneTurns}턴까지만 하고 여기서 일찍 마무리합니다. 지금까지 나온 의견만 담아 결론을 정리하세요. 아직 다루지 못한 쟁점은 open_questions에 남기세요.`
+    : `이제 마지막(${totalTurns}번째) 턴, 결론입니다. 회의에서 나온 의견만 담아 정리하세요.`;
   const review = llm.mock ? mockSummary({ document, topic: input.topic }) : await chatJSON({
     ...llm, system: persona.system, temperature: 0.3, maxTokens: 3500,
-    user: `${agenda(input, 16000)}
+    user: `${agenda(input, 30000)}
 
 [회의록]
 ${transcriptText(transcript)}
 
-이제 마지막(${totalTurns}번째) 턴, 결론입니다. 회의에서 나온 의견만 담아 정리하세요.
+${when}${prevNote}
 찬반 토론이면 모인 결론과 근거를, 아이디어 회의면 고른 아이디어와 실행 방법을, 자료 검토면 고칠 점과 제안을 key_points에 담습니다.
 의견이 갈린 부분은 concerns나 open_questions에 남기고, 누가 제기했는지 raised_by에 이름을 적습니다.
 JSON 하나만 출력합니다.
@@ -117,12 +152,16 @@ JSON 하나만 출력합니다.
   "concerns": [{"title": "우려나 반대 의견", "detail": "보완 방법", "raised_by": "이름"}],
   "agreements": ["모두 동의한 점"],
   "open_questions": ["결론 나지 않은 질문"],
-  "closing": "사회자 마무리 멘트 1~2문장"
+  "closing": "사회자 마무리 멘트 1~2문장",
+  "private_notes": "사회자로서 회의를 마치며 드는 솔직한 생각 1~2문장 (머리말 없이)"
 }`,
   });
   if (!["positive", "mixed", "negative"].includes(review.tone)) review.tone = String(review.tone || "").match(/positive|negative/)?.[0] || "mixed";
+  const thoughts = cleanNote(review.private_notes); delete review.private_notes;
+  if (early) review.early = { doneTurns, totalTurns };
   return {
     text: review.closing || "오늘 토론의 결론을 정리했습니다.",
+    data: { thoughts },
     artifacts: [{ artifactId: uid(), name: "결론", parts: [{ data: review }] }],
     newState: { ...state, turns: state.turns + 1 },
   };
@@ -134,7 +173,7 @@ async function reviewTurn(llm, persona, input, state) {
   const myTurn = (state.turns || 0) + 1;
   const out = llm.mock ? mockMember(persona.id, { document, myTurn, phase, topic: input.topic }) : await chatJSON({
     ...llm, system: persona.system, temperature: 0.8, maxTokens: 2500,
-    user: `${agenda(input, 24000)}
+    user: `${agenda(input, 36000)}
 
 [지금까지 회의록]
 ${transcriptText(transcript)}
@@ -142,7 +181,7 @@ ${transcriptText(transcript)}
 [당신의 지난 속마음 (다른 참석자에게는 전달되지 않음)]
 ${state.notes || "(아직 없음)"}
 
-[이번 회의 참석자] ${attendeeLine(attendees)}
+[이번 회의 참석자] ${attendeeLine(attendees)}${input.user?.name ? `, ${userLine(input.user)}` : ""}${userIntro(input.user)}${input.user?.name ? `\n사용자에게 꼭 묻고 싶은 게 있으면 ask.to에 '${input.user.name}'을 적어도 됩니다.` : ""}
 [지금 차례] 전체 ${totalTurns}턴 중 ${turn}번째. ${phaseGuide(phase)}
 사회자가 당신에게: "${request?.text || "의견 부탁드립니다."}"
 ${myTurn === 1 ? "주제와 자료를 보고 당신 관점에서 가장 중요한 한 가지부터 말하세요." : "지난 메모와 다른 사람 발언을 참고해, 이미 한 말은 반복하지 마세요."}`,
@@ -150,16 +189,19 @@ ${myTurn === 1 ? "주제와 자료를 보고 당신 관점에서 가장 중요�
   const utterance = String(out.utterance || "").trim() || "잠시 생각을 정리해 볼게요.";
   const stance = ["동의", "우려", "보류"].includes(out.stance) ? out.stance : "보류";
   const confidence = Math.max(0, Math.min(100, parseInt(out.confidence, 10) || 50));
+  const position = String(out.position || "").replace(/^["'“‘]|["'”’]$/g, "").trim().slice(0, 30);
   const names = attendees.map((id) => PERSONAS[id]?.name).filter(Boolean);
-  const ask = out.ask?.to && MEMBER_NAMES.includes(out.ask.to) && names.includes(out.ask.to) && out.ask.to !== persona.name
+  const toUser = !!input.user?.name && out.ask?.to === input.user.name;
+  const ask = toUser ? { to: input.user.name, question: String(out.ask.question || ""), toUser: true }
+    : out.ask?.to && MEMBER_NAMES.includes(out.ask.to) && names.includes(out.ask.to) && out.ask.to !== persona.name
     ? { to: out.ask.to, question: String(out.ask.question || "") } : null;
   const newState = {
     ...state, turns: myTurn,
     notes: clip(cleanNote(out.private_notes) || state.notes || "", 1200),
     said: [...(state.said || []), utterance].slice(-6),
-    stances: [...(state.stances || []), { turn, stance, confidence }],
+    stances: [...(state.stances || []), { turn, stance, confidence, position }],
   };
-  return { text: utterance, data: { stance, confidence, ask, phase, thoughts: newState.notes }, newState };
+  return { text: utterance, data: { stance, confidence, position, ask, phase, thoughts: newState.notes }, newState };
 }
 
 // ── 회의 뒤 후속 질문 (사회자, 참석자 모두) ───────────────────────────────
@@ -175,7 +217,7 @@ async function followup(llm, persona, input, state) {
   const isMod = persona.id === "moderator";
   const out = llm.mock ? mockFollowup(persona.id, { question, review }) : await chatJSON({
     ...llm, system: persona.system, temperature: 0.6, maxTokens: 1800,
-    user: `${agenda(input, 16000)}
+    user: `${agenda(input, 30000)}
 
 [회의록]
 ${transcriptText(transcript)}
