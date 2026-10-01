@@ -44,6 +44,10 @@ function taskResult(ctx, { state = "TASK_STATE_COMPLETED", text, data, artifacts
   } };
 }
 
+// 속마음·이유 앞에 모델이 붙이는 머리말("속마음:", "이유 -", "[Inner]" 등)을 떼어 내요
+const NOTE_LABEL = /^\s*(?:[\[(（【]\s*(?:속마음|속\s*마음|내\s*생각|생각|이유|판단\s*이유|메모|private[_ ]?notes?|inner(?:\s*notes?)?|thoughts?|why|reason)\s*[\])）】]\s*[:：\-–—]?|(?:속마음|속\s*마음|내\s*생각|생각|이유|판단\s*이유|메모|private[_ ]?notes?|inner(?:\s*notes?)?|thoughts?|why|reason)\s*[:：\-–—])\s*/i;
+export const cleanNote = (s) => String(s || "").replace(NOTE_LABEL, "").trim();
+
 // 토론 주제와 첨부 자료. 주제는 사용자가 적은 문장, 자료는 있을 때만.
 function agenda(input, limit) {
   const topic = String(input.topic || "").trim();
@@ -88,7 +92,7 @@ JSON 하나만 출력합니다.
   const name = PERSONAS[next].name;
   const say = !fixed && out.say ? String(out.say) : `${name} 님 의견 부탁드립니다.`;
   const newState = { ...state, turns: state.turns + 1, notes: clip(`${state.notes}\n${turn}: ${out.reason || ""}`.trim(), 1500) };
-  return { text: say, data: { next, nextName: name, phase, thoughts: String(out.reason || "") }, newState };
+  return { text: say, data: { next, nextName: name, phase, thoughts: cleanNote(out.reason) }, newState };
 }
 
 // ── 사회자: 결론 ─────────────────────────────────────────────────────
@@ -151,7 +155,7 @@ ${myTurn === 1 ? "주제와 자료를 보고 당신 관점에서 가장 중요�
     ? { to: out.ask.to, question: String(out.ask.question || "") } : null;
   const newState = {
     ...state, turns: myTurn,
-    notes: clip(String(out.private_notes || state.notes || ""), 1200),
+    notes: clip(cleanNote(out.private_notes) || state.notes || "", 1200),
     said: [...(state.said || []), utterance].slice(-6),
     stances: [...(state.stances || []), { turn, stance, confidence }],
   };
@@ -192,8 +196,8 @@ ${isMod ? "사회자로서 회의 전체 의견을 종합해 답하세요. 누�
 JSON 하나만 출력합니다: {"answer": "질문에 대한 답", "private_notes": "속마음 (1~2문장)"}`,
   });
   const answer = String(out.answer || out.utterance || "").trim() || "잠시 생각을 정리해 볼게요.";
-  const notes = clip(String(out.private_notes || state.notes || ""), 1200);
-  return { text: answer, data: { thoughts: String(out.private_notes || "") }, newState: { ...state, notes } };
+  const notes = clip(cleanNote(out.private_notes) || state.notes || "", 1200);
+  return { text: answer, data: { thoughts: cleanNote(out.private_notes) }, newState: { ...state, notes } };
 }
 
 // ── 연결 확인 ────────────────────────────────────────────────────────
