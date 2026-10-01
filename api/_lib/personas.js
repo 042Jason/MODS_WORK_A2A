@@ -25,6 +25,8 @@ const member = (p) => ({ ...p, system: `${p.system}\n${COMMON_MEMBER_RULES}` });
 export const PERSONAS = {
   moderator: {
     id: "moderator",
+  profile: { no: 1, type: "진행", stats: [["공정함", 5], ["정리력", 5], ["수다", 2]],
+    quote: "좋습니다, 다음 분 의견 들어 볼게요.", special: "쟁점을 한 줄로 정리하기", weakness: "결론 없이 끝나는 회의" },
     name: "사회자",
     title: "회의 진행",
     color: "#111111",
@@ -48,6 +50,8 @@ export const PERSONAS = {
 
   critic: member({
     id: "critic",
+  profile: { no: 2, type: "검증", stats: [["꼼꼼함", 5], ["직설", 5], ["유연함", 2]],
+    quote: "근거가 뭐죠? 숫자부터 다시 보죠.", special: "%와 %p 구분, 증감률 재계산", weakness: "숫자 없는 큰 그림 이야기" },
     name: "한결",
     title: "깐깐한 검증가",
     color: "#B4431B",
@@ -65,6 +69,8 @@ export const PERSONAS = {
 
   strategist: member({
     id: "strategist",
+  profile: { no: 3, type: "전략", stats: [["큰 그림", 5], ["설득력", 4], ["디테일", 2]],
+    quote: "그래서 이 자료가 하려는 말이 뭔데요?", special: "헤드라인 다시 쓰기", weakness: "사소한 표기 논쟁" },
     name: "나래",
     title: "큰 그림 전략가",
     color: "#5A3FC0",
@@ -81,6 +87,8 @@ export const PERSONAS = {
 
   reader: member({
     id: "reader",
+  profile: { no: 4, type: "독자", stats: [["공감", 5], ["질문력", 5], ["전문용어 내성", 1]],
+    quote: "솔직히 저는 이 문장 두 번 읽었어요.", special: "기사로 잘못 옮겨질 문장 찾기", weakness: "설명 없는 전문용어" },
     name: "보람",
     title: "독자 대변인",
     color: "#1F7A43",
@@ -97,6 +105,8 @@ export const PERSONAS = {
 
   method: member({
     id: "method",
+  profile: { no: 5, type: "방법론", stats: [["논리", 5], ["신중함", 5], ["속도", 2]],
+    quote: "그 비교는 조건이 하나 붙어야 해요.", special: "기준 시점과 정의 맞추기", weakness: "표본조사를 확정적으로 쓴 문장" },
     name: "서진",
     title: "방법론 전문가",
     color: "#587311",
@@ -113,6 +123,8 @@ export const PERSONAS = {
 
   policy: member({
     id: "policy",
+  profile: { no: 6, type: "리스크", stats: [["직감", 5], ["대담함", 5], ["인내심", 2]],
+    quote: "이거 내일 기사 제목 뭐로 나올 것 같아요?", special: "반발을 부를 문장 찾기", weakness: "지역 순위처럼 읽히는 표" },
     name: "하율",
     title: "정책·리스크 담당",
     color: "#B8325E",
@@ -142,12 +154,14 @@ export function defaultModelOf(persona) {
   return process.env[persona.modelEnv] || persona.defaultModel;
 }
 
+const FOLLOWUP_SKILL = { id: "followup", name: "후속 질문 답변", description: "회의가 끝난 뒤 사용자의 질문에 자기 관점으로 답합니다." };
+
 export function agentCard(persona, baseUrl) {
   return {
     name: `${persona.name} (${persona.title})`,
     description: persona.description,
     version: "1.1.0",
-    provider: { organization: "충청지방데이터연구회 시연", url: baseUrl },
+    provider: { organization: "Ensembly", url: baseUrl },
     iconUrl: `${baseUrl}/vendor/avatars/${persona.id}.png`,
     supportedInterfaces: [
       { url: `${baseUrl}/agents/${persona.id}`, protocolBinding: "JSONRPC", protocolVersion: "1.0" },
@@ -160,11 +174,11 @@ export function agentCard(persona, baseUrl) {
         required: false,
         params: { shortName: persona.name, title: persona.title, color: persona.color, tint: persona.tint,
                   avatarFace: `${baseUrl}/vendor/avatars/${persona.id}-face.png`,
-                  vendor: persona.vendor, defaultModel: defaultModelOf(persona) },
+                  vendor: persona.vendor, defaultModel: defaultModelOf(persona), profile: persona.profile },
       }],
     },
     defaultInputModes: ["text/plain", "application/json"],
     defaultOutputModes: ["text/plain", "application/json"],
-    skills: persona.skills.map((s) => ({ ...s, tags: ["검토", "통계"] })),
+    skills: [...persona.skills, FOLLOWUP_SKILL].map((s) => ({ ...s, tags: ["검토", "통계"] })),
   };
 }

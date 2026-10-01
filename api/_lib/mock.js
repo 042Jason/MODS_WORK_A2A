@@ -91,3 +91,16 @@ export function mockSummary({ document }) {
     closing: "(모의 모드) 수정사항 반영해서 다시 공유해 주세요.",
   };
 }
+
+export function mockFollowup(personaId, { question, review }) {
+  const q = cut(String(question || ""), 40);
+  const lines = {
+    moderator: `좋은 질문이에요. "${q}"에 대해서는, 회의에서 한결 님은 수치 표기를, 하율 님은 표현의 파장을 가장 걱정했어요. 판정이 '${review?.verdict || "수정 후 배포"}'인 이유도 거기 있어요. 꼭 고칠 것 첫 항목부터 보시길 권해요.`,
+    critic: `"${q}" 질문이요? 저는 여전히 숫자부터 맞추는 게 먼저라고 봐요. 본문과 표의 증감 표기를 다시 계산해 보면 답이 보일 거예요.`,
+    strategist: `"${q}"라면, 저는 제목부터 다시 보겠어요. 독자가 가장 먼저 기억할 한 문장을 정하면 나머지 수정 순서도 자연스럽게 정해져요.`,
+    reader: `솔직히 "${q}" 부분은 처음 읽는 사람 입장에서 헷갈릴 수 있어요. 용어에 한 줄 설명만 붙여도 훨씬 나아져요.`,
+    method: `"${q}"는 조건을 하나 붙여서 답해야 해요. 지표마다 기준 시점이 달라서, 주석으로 그 차이를 밝혀 두는 게 안전해요.`,
+    policy: `"${q}"요? 이게 내일 기사 제목으로 어떻게 나올지부터 생각해 보세요. 순위처럼 읽히는 문장만 피해도 반발은 크게 줄어요.`,
+  };
+  return { answer: `${lines[personaId] || lines.moderator} (모의 모드)`, private_notes: `후속 질문 "${q}"에 답함.` };
+}
