@@ -54,7 +54,7 @@ const MOCK_BADGE = { critic: ["magnifier", "근거부터 따지자는 말로 논
 const userLine = (u) => (u?.name ? `${u.name}(사용자${u.title ? `, ${u.title}` : ""})` : "");
 const userIntro = (u) => (u?.name ? `\n[사용자 참석] ${userLine(u)}도 이 회의에 함께합니다.${u.about ? ` 소개: ${String(u.about).slice(0, 300)}` : ""} 회의록에는 '${u.name}(사용자)'로 나옵니다.` : "");
 function phaseGuide(phase = "round1") {
-  if (phase === "round1") return "1라운드: 각자 첫 의견을 말하는 차례입니다.";
+  if (phase === "round1") return "1라운드: 사회자 개입 없이 한 사람씩 첫 의견을 말하는 차례입니다. 앞사람 이야기는 참고만 하고, 자기 관점의 핵심을 말하세요. 반박은 2라운드부터 합니다.";
   if (phase === "last_word") return "최종 반론: 결론 전에 아직 가장 걸리는 점을 한 번 더 말하는 차례입니다. 양보할 것은 양보하고, 끝까지 짚고 싶은 한 가지를 분명히 하세요.";
   if (String(phase).startsWith("more")) return "추가 토론: 사용자가 회의 뒤에 새 요청이나 자료를 줬습니다. [토론 주제]의 [추가 요청]과 [앞선 결론]을 보고, 새 요청을 중심으로 무엇이 바뀌거나 더해지는지 말하세요. 앞선 회의에서 한 말은 반복하지 마세요.";
   const n = parseInt(String(phase).replace("round", ""), 10) || 2;
