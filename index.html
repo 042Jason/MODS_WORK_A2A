@@ -101,8 +101,6 @@ main{display:grid;grid-template-columns:minmax(600px,1fr) minmax(460px,40%);min-
 .t-crew .ava{width:30px;height:30px;box-shadow:0 0 0 2px var(--navy);margin-right:-7px}
 .t-say{font-size:17px;line-height:1.55;letter-spacing:-.015em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical}
 .verdict-tag{display:inline-block;align-self:flex-start;font-weight:700;font-size:13px;padding:4px 12px 5px;border-radius:var(--pill);background:var(--cream);color:var(--ink);margin-bottom:10px}
-.verdict-tag[data-v="배포 가능"]{background:var(--lime)}
-.verdict-tag[data-v="재검토 필요"]{background:var(--pink)}
 
 /* 참석자 스티커 */
 .note{position:absolute;width:132px;transform:translate(-50%,-50%) rotate(var(--rot,0deg));background:var(--t);color:var(--ink);border:0;
@@ -229,8 +227,6 @@ pre.json.open{display:block}
 
 /* 결론 */
 .vblock{border-radius:var(--r-lg);padding:24px 26px;background:var(--cream);margin-bottom:22px}
-.vblock[data-v="배포 가능"]{background:var(--lime)}
-.vblock[data-v="재검토 필요"]{background:var(--pink)}
 .vblock .eyebrow{color:rgba(0,0,0,.55)}
 .vblock h2{margin:6px 0 8px;font-size:28px;font-weight:600;letter-spacing:-.04em;line-height:1.15}
 .vblock p{margin:0;font-size:16px;line-height:1.55;color:var(--ink-2)}
@@ -377,18 +373,36 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .pc-face{border:9px solid #FFFDF7;border-radius:22px;padding:12px 14px 12px;backface-visibility:hidden;-webkit-backface-visibility:hidden;
   background:linear-gradient(165deg,var(--t) 0%,color-mix(in srgb,var(--t) 55%,#fff) 100%);box-shadow:0 30px 70px rgba(0,0,0,.45),inset 0 0 0 1px rgba(0,0,0,.06);
   display:flex;flex-direction:column;gap:8px;color:var(--ink)}
-.pc-back{position:absolute;inset:0;transform:rotateY(180deg);background:#0B0B0B;color:#E4E4E4;border-color:#1C1C1C}
-.pc-back pre{flex:1;margin:0;overflow:auto;font:10.5px/1.5 var(--mono);white-space:pre-wrap;word-break:break-all;color:#D6D6D6}
+.pc-back{position:absolute;inset:0;transform:rotateY(180deg);background:#F9F1E0 url("vendor/brand/card-back.webp") center/cover no-repeat;padding:14px}
+.pc-bubble{position:relative;background:#fff;border:2px solid var(--ink);border-radius:18px;padding:10px 13px 11px;box-shadow:0 3px 0 rgba(0,0,0,.08)}
+.pc-bubble::after{content:"";position:absolute;left:50%;bottom:-10px;width:16px;height:16px;background:#fff;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:translateX(-50%) rotate(45deg)}
+.pc-bubble b{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+.pc-bubble p{margin:0;font-size:13px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.pc-spacer{flex:1;min-height:150px}
+.pc-strip{background:rgba(255,255,255,.88);border:2px solid var(--ink);border-radius:16px;padding:8px 10px 10px;backdrop-filter:blur(4px)}
+.pc-strip-h{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:7px;text-align:center}
+.pc-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 10px}
+.pc-badge{display:flex;flex-direction:column;align-items:center;gap:3px;width:62px}
+.pc-badge img{width:44px;height:44px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.12))}
+.pc-badge span{font-size:10.5px;font-weight:700;text-align:center;line-height:1.2}
+.pc-none{margin:2px 0;font-size:12px;color:var(--ink-2);text-align:center}
+.pc-dev{margin:8px 0 0;text-align:center}
+.pc-dev button{border:0;background:none;color:rgba(255,255,255,.7);font-size:12px;text-decoration:underline;text-underline-offset:3px}
+.pc-dev button:hover{color:#fff}
 .pc-top{display:flex;justify-content:space-between;align-items:center}
 .pc-stage{font:500 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;opacity:.7}
 .pc-hp{display:inline-flex;align-items:baseline;gap:5px;font-weight:800;font-size:15px;letter-spacing:-.01em}
 .pc-hp small{font:500 9px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;opacity:.65}
-.pc-name{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:-2px}
+.pc-name{display:flex;align-items:center;gap:8px;margin-top:-2px}
 .pc-name b{font-size:26px;font-weight:800;letter-spacing:-.04em}
 .pc-type{font-size:12px;font-weight:700;padding:3px 10px 4px;border-radius:999px;background:var(--ink);color:#fff}
-.pc-art{position:relative;height:clamp(120px,21vh,178px);border-radius:12px;overflow:hidden;border:3px solid #fff;box-shadow:0 2px 0 rgba(0,0,0,.08),inset 0 0 0 1px rgba(0,0,0,.06);
+.pc-mbti{display:inline-flex;align-items:baseline;gap:4px;padding:2px 9px 3px;border-radius:999px;border:1.5px solid var(--ink);background:rgba(255,255,255,.55);
+  font:600 11.5px/1.2 var(--mono);letter-spacing:.04em;white-space:nowrap}
+.pc-mbti small{font:600 10.5px/1.2 var(--sans);letter-spacing:0;opacity:.75}
+.pcard.inverse .pc-front .pc-mbti{border-color:#fff;background:rgba(255,255,255,.12)}
+.pc-art{position:relative;height:clamp(130px,22vh,186px);border-radius:12px;overflow:hidden;border:3px solid #fff;box-shadow:0 2px 0 rgba(0,0,0,.08),inset 0 0 0 1px rgba(0,0,0,.06);
   background:radial-gradient(circle at 50% 35%,#fff 0%,var(--t) 70%)}
-.pc-art img{width:100%;height:100%;object-fit:cover;object-position:50% 22%;display:block}
+.pc-art img{width:100%;height:100%;object-fit:contain;object-position:50% 100%;display:block}
 .pc-shine{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;
   background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.75) 45%,rgba(255,255,255,0) 60%);background-size:250% 100%;background-position:var(--sx,50%) 0}
 .pc-sub{font-size:10.5px;text-align:center;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.65);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -646,7 +660,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
     <section class="sec" id="sec-members">
       <div class="sec-h"><h3>참석자와 모델</h3><span class="eyebrow" id="members-count"></span></div>
       <p class="desc" id="models-desc">최대 5명, 최소 2명이에요. 모델 칸을 비우면 기본 모델을 써요.</p>
-      <div class="lockbox" id="models-lock" hidden><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 10V8a6 6 0 1 1 12 0v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1h1Zm2 0h8V8a4 4 0 1 0-8 0v2Z"/></svg><span>공용 키로 회의할 때는 운영자가 정한 모델로만 진행돼요. 모델을 바꾸려면 위에 내 API 키를 넣어 주세요.</span></div>
+      <div class="lockbox" id="models-lock" hidden><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 10V8a6 6 0 1 1 12 0v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1h1Zm2 0h8V8a4 4 0 1 0-8 0v2Z"/></svg><span>공용 키로 회의할 때는 운영자가 정한 가벼운 모델로 진행돼요. 모델을 고르려면 위에 내 API 키를 넣어 주세요.</span></div>
       <div id="model-rows"></div>
       <datalist id="model-list"></datalist>
       <div class="row" style="margin-top:12px"><button class="pill sm" id="test-all">모두 연결 확인</button><button class="pill sm ghost" id="reset-models">모델 기본값으로</button></div>
@@ -665,7 +679,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
   <div class="dh"><h2>무엇을 토론할까요?</h2><button class="pill sm" data-close>닫기</button></div>
   <div class="db">
     <label class="tp-label" for="tp-text">토론 주제와 요청</label>
-    <textarea id="tp-text" maxlength="4000" placeholder="주제를 자유롭게 적어 주세요. 찬반 토론, 아이디어 회의, 자료 검토 모두 돼요.&#10;&#10;예) 공공기관에 주 4일제를 도입해야 할까요?&#10;예) 첨부한 보도자료를 공표해도 될지 검토해 주세요. 특히 제목이 과장되지 않았는지 봐 주세요."></textarea>
+    <textarea id="tp-text" maxlength="4000" placeholder="주제를 자유롭게 적어 주세요. 찬반 토론, 아이디어 회의, 의사결정, 자료 검토 모두 돼요.&#10;&#10;예) 공공기관에 주 4일제를 도입해야 할까요?&#10;예) 첨부한 제안서 초안에서 보완할 점을 찾아 주세요. 특히 설득력이 약한 부분을 봐 주세요."></textarea>
     <div class="tp-ex" id="tp-ex"></div>
     <div class="tp-files" id="tp-drop">
       <div class="tp-files-h"><div><b>자료 첨부</b><span>선택</span></div><button class="pill sm" id="tp-add">파일 추가</button></div>
@@ -678,8 +692,9 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 <dialog id="dlg-card" class="carddlg" aria-label="에이전트 카드">
   <button class="pc-close" data-close aria-label="카드 닫기"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
   <div class="pc-wrap" id="pc-wrap"></div>
-  <div class="pc-actions"><button class="pill light" id="pc-ask">이 에이전트에게 질문하기</button><button class="pill on-dark" id="pc-flip">뒤집어서 명함 원본 보기</button><button class="pill on-dark" data-close>닫기</button></div>
+  <div class="pc-actions"><button class="pill light" id="pc-ask">이 에이전트에게 질문하기</button><button class="pill on-dark" id="pc-flip">뒤집어 보기</button><button class="pill on-dark" data-close>닫기</button></div>
   <p class="pc-hint" id="pc-hint"></p>
+  <p class="pc-dev"><button id="pc-json">A2A 명함 원본(JSON) 보기</button></p>
 </dialog>
 <dialog id="dlg-view"><div class="dh"><h2 id="view-title">보기</h2><button class="pill sm" data-close>닫기</button></div><div class="db"><div id="view-head"></div><pre id="view-body"></pre></div></dialog>
 <div class="toast" id="toast" role="status"></div>
@@ -721,14 +736,17 @@ function passHeader() { const p = getPass(); return p ? { "x-meeting-passcode": 
 async function refreshRegistry() { S.registry = await (await fetch("api/registry", { headers: passHeader() })).json(); updateMode(); return S.registry; }
 // 공용 키(운영자 키)로 회의할 때는 운영자가 정한 모델로 고정해요. 모델을 바꾸려면 내 API 키가 필요해요.
 const sharedMode = () => !getKey() && Boolean(S.registry?.serverKey);
-const modelFor = (id) => (sharedMode() ? S.agents[id]?.defaultModel : (loadSettings().models || {})[id] || S.agents[id]?.defaultModel) || "";
+const modelFor = (id) => (sharedMode() ? S.agents[id]?.sharedModel || S.agents[id]?.defaultModel : (loadSettings().models || {})[id] || S.agents[id]?.defaultModel) || "";
 function members() {
   const saved = loadSettings().members;
   const list = Array.isArray(saved) ? ALL_MEMBERS.filter((id) => saved.includes(id)) : ALL_MEMBERS.slice();
   return list.length >= MIN_MEMBERS ? list : ALL_MEMBERS.slice();
 }
 const recommendedTurns = (n) => 2 * n + 2;
-function turns() { const n = members().length, t = loadSettings().turns; return Math.max(n + 1, Math.min(MAX_TURNS, Number.isFinite(t) ? t : recommendedTurns(n))); }
+// 공용 키(운영자 키)로 회의할 때는 턴 수 상한이 낮아요(기본 12). 내 API 키를 넣으면 최대 30턴.
+const usingSharedKey = () => !getKey() && Boolean(S.registry?.serverKey && S.registry?.passcodeOk);
+const maxTurns = () => (usingSharedKey() ? Math.min(MAX_TURNS, S.registry?.sharedMaxTurns || 12) : MAX_TURNS);
+function turns() { const n = members().length, t = loadSettings().turns, cap = maxTurns(); return Math.max(Math.min(n + 1, cap), Math.min(cap, Number.isFinite(t) ? t : recommendedTurns(n))); }
 
 /* ───────────── 회의 계획 ───────────── */
 function buildPlan(n, t) {
@@ -848,7 +866,7 @@ function renderTable(state, info = {}) {
   if (state === "idle") {
     t.innerHTML = `<div class="t-crew">${crew()}</div><div class="eyebrow">Step 1 · 주제 정하기</div>
       <div class="t-head">무엇을 함께 토론할까요?</div>
-      <div class="t-sub">주제만 적어도 돼요. 검토할 자료가 있으면 함께 첨부하세요.</div>
+      <div class="t-sub">주제만 적어도 돼요. 참고할 자료가 있으면 함께 첨부하세요.</div>
       <div class="t-actions"><button class="pill light sm" id="tb-topic">주제 입력하기</button><button class="pill on-dark sm" id="tb-file">자료 첨부</button></div>
       <div class="t-meta">참석자 ${n}명, ${T}턴<button id="tb-cfg">구성 바꾸기</button></div>`;
     $("#tb-topic").onclick = openTopic; $("#tb-file").onclick = () => $("#file").click(); $("#tb-cfg").onclick = openMembers;
@@ -917,9 +935,9 @@ const FLAVOR = {
   moderator: ["사회자가 흐름을 정리하고 있어요", "사회자가 누구에게 마이크를 줄지 고민 중이에요"],
   critic: ["한결 님이 빨간펜 뚜껑을 열었어요", "한결 님이 근거를 하나하나 확인하고 있어요"],
   strategist: ["나래 님이 큰 그림을 그리는 중이에요", "나래 님이 핵심을 한 문장으로 줄여 보고 있어요"],
-  reader: ["보람 님이 보통 사람 눈으로 다시 보고 있어요", "보람 님이 어려운 말에 밑줄을 긋고 있어요"],
+  reader: ["보람 님이 듣는 사람 입장이 되어 보고 있어요", "보람 님이 어려운 말에 밑줄을 긋고 있어요"],
   method: ["서진 님이 숨은 전제를 찾고 있어요", "서진 님이 용어 정의부터 따져 보고 있어요"],
-  policy: ["하율 님이 내일 기사 제목을 상상하고 있어요", "하율 님이 반대편이 할 말을 떠올리고 있어요"],
+  policy: ["하율 님이 반대편 입장이 되어 보고 있어요", "하율 님이 반대편이 할 말을 떠올리고 있어요"],
 };
 function castPhase(phase) {
   const n = parseInt(phase.replace("round", ""), 10);
@@ -964,7 +982,7 @@ function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("o
 
 /* ───────────── 회의록 ───────────── */
 function emptyLog() {
-  $("#pane-log").innerHTML = `<div class="empty"><div class="crew">${crew()}</div><strong>아직 회의 전이에요</strong>자료를 올리고 회의를 시작하면 발언이 여기에 차곡차곡 쌓여요.</div>`;
+  $("#pane-log").innerHTML = `<div class="empty"><div class="crew">${crew()}</div><strong>아직 회의 전이에요</strong>주제를 정하고 회의를 시작하면 발언이 여기에 차곡차곡 쌓여요.</div>`;
 }
 function logPane() { const p = $("#pane-log"); if (p.querySelector(".empty")) p.innerHTML = ""; return p; }
 function addDivider(phase) { logPane().insertAdjacentHTML("beforeend", `<div class="divider"><span class="eyebrow">${esc(phaseEyebrow(phase))}</span><span style="font-size:13px">${esc(phaseLabel(phase))}</span></div>`); }
@@ -1032,7 +1050,7 @@ function voidMsg(histIndex) {   // 끊긴 턴의 사회자 지목은 기록에�
 function freshMeeting() { return { plan: S.plan.slice(), team: members(), i: 0, spoken: {}, lastPhase: null, status: "running", error: "", detail: "", cells: {} }; }
 
 async function runMeeting() {   // 처음부터 시작
-  if (!S.doc) return toast("먼저 검토할 자료를 올려 주세요.");
+  if (!S.doc) return toast("먼저 토론 주제를 정해 주세요.");
   newMeeting();
   S.meeting = freshMeeting();
   await runFrom();
@@ -1238,6 +1256,56 @@ function openAsk(id) {
   setTimeout(() => $("#cp-text").focus(), 50);
 }
 
+/* ───────────── 오늘의 배지 (회의 기록으로 자동으로 정해져요) ───────────── */
+const BADGES = {
+  question:  { name: "질문왕",        desc: "질문을 가장 많이 던졌어요" },
+  persuaded: { name: "설득당함",      desc: "우려에서 동의로 마음을 바꿨어요" },
+  shield:    { name: "소신파",        desc: "끝까지 우려를 굽히지 않았어요" },
+  mic:       { name: "마지막 한마디", desc: "결론 직전 최종 반론을 맡았어요" },
+  talk:      { name: "수다왕",        desc: "가장 길게 이야기했어요" },
+  magnifier: { name: "날카로운 지적", desc: "우려와 반대 의견에 이름이 가장 많이 올랐어요" },
+  handshake: { name: "합의 도우미",   desc: "가장 높은 동의로 회의를 마쳤어요" },
+  bulb:      { name: "아이디어 뱅크", desc: "핵심 결론과 제안에 이름이 가장 많이 올랐어요" },
+};
+function earnedBadges() {
+  const out = {}, team = S.meeting?.team || members(), give = (id, key) => (out[id] ||= []).push(key);
+  const most = (score, key) => {   // 가장 많은 사람(동점이면 모두)에게
+    const vals = team.map((id) => score(id)), top = Math.max(...vals);
+    if (top > 0) team.forEach((id, i) => vals[i] === top && give(id, key));
+  };
+  const said = (id) => S.transcript.filter((t) => t.role === id);
+  most((id) => said(id).filter((t) => t.ask).length, "question");
+  team.forEach((id) => {
+    const tr = S.trail[id] || [];
+    if (tr.some((s, i) => i > 0 && tr[i - 1].stance === "우려" && s.stance === "동의")) give(id, "persuaded");
+    if (tr.length >= 2 && tr.every((s) => s.stance === "우려")) give(id, "shield");
+    if (tr.some((s) => S.meeting?.plan?.[s.turn - 1] === "last_word")) give(id, "mic");
+  });
+  most((id) => said(id).reduce((n, t) => n + t.text.length, 0), "talk");
+  const v = S.review ? reviewParts(S.review) : null, by = (arr, id) => (arr || []).filter((x) => x?.raised_by === S.agents[id].name).length;
+  if (v) { most((id) => by(v.worries, id), "magnifier"); most((id) => by(v.keys, id), "bulb"); }
+  most((id) => { const l = S.last[id]; return l?.stance === "동의" ? l.confidence : 0; }, "handshake");
+  return out;
+}
+function backHtml(id, a) {
+  const isMod = id === "moderator", done = S.meeting?.status === "done";
+  const thought = S.thoughts[id];
+  const bubble = thought ? esc(thought) : S.meeting ? "아직 생각을 정리하는 중이에요." : "아직 회의 전이라 속마음이 없어요.";
+  let strip;
+  if (isMod) strip = `<p class="pc-none">사회자는 배지를 나눠 주는 쪽이에요.</p>`;
+  else if (!done) strip = `<p class="pc-none">회의가 끝나면 오늘의 배지를 받아요.</p>`;
+  else {
+    const mine = earnedBadges()[id] || [];
+    strip = mine.length ? mine.map((k) => `<div class="pc-badge" title="${esc(BADGES[k].desc)}"><img src="vendor/badges/${k}.webp" alt=""><span>${esc(BADGES[k].name)}</span></div>`).join("")
+      : `<p class="pc-none">이번 회의에서는 받은 배지가 없어요.</p>`;
+  }
+  return `<div class="pc-face pc-back">
+      <div class="pc-bubble"><b>${esc(a.name)}의 속마음</b><p>${bubble}</p></div>
+      <div class="pc-spacer"></div>
+      <div class="pc-strip"><span class="pc-strip-h">오늘의 배지</span><div class="pc-badges">${strip}</div></div>
+    </div>`;
+}
+
 /* ───────────── 에이전트 카드 (포켓몬 카드처럼) ───────────── */
 function showCard(id) {
   const a = S.agents[id], p = a.profile || {}, m = modelFor(id), isMod = id === "moderator";
@@ -1253,7 +1321,7 @@ function showCard(id) {
       <div class="pc-inner">
         <div class="pc-face pc-front">
           <div class="pc-top"><span class="pc-stage">A2A Agent</span><span class="pc-hp"><small>Model</small>${esc(vendorOf(m))}</span></div>
-          <div class="pc-name"><b>${esc(a.name)}</b><span class="pc-type">${esc(p.type || "")}</span></div>
+          <div class="pc-name"><b>${esc(a.name)}</b>${p.mbti ? `<span class="pc-mbti" title="${esc(p.mbtiName || "")}">${esc(p.mbti)}<small>${esc(p.mbtiName || "")}</small></span>` : ""}<span class="spacer"></span><span class="pc-type">${esc(p.type || "")}</span></div>
           <div class="pc-art"><img src="${esc(a.bust)}" alt="${esc(a.name)}"><span class="pc-shine"></span></div>
           <div class="pc-sub">No.${String(p.no || 0).padStart(3, "0")} · ${esc(a.title)} · ${esc((m.split("/")[1] || m))}</div>
           ${skills}
@@ -1262,17 +1330,25 @@ function showCard(id) {
           <div class="pc-foot"><div><small>약점</small><b>${esc(p.weakness || "-")}</b></div><div><small>오늘 회의</small><b>${esc(today)}</b></div></div>
           <p class="pc-quote">“${esc(p.quote || "")}”</p>
         </div>
-        <div class="pc-face pc-back">
-          <div class="pc-top"><span class="pc-stage">Agent Card · A2A 1.0</span><span class="pc-hp"><small>JSON</small></span></div>
-          <pre>${esc(JSON.stringify(a.card, null, 2))}</pre>
-        </div>
+        ${backHtml(id, a)}
       </div>
     </div>`;
+  // 그림 배경색을 읽어 그림 칸의 남는 양옆을 같은 색으로 채워요
+  const art = $("#pcard .pc-art"), img = art.querySelector("img");
+  const paint = () => { try { const c = document.createElement("canvas"); c.width = c.height = 1; const g = c.getContext("2d");
+    g.drawImage(img, 4, 4, 1, 1, 0, 0, 1, 1); const [r, gg, b] = g.getImageData(0, 0, 1, 1).data; art.style.background = `rgb(${r},${gg},${b})`; } catch {} };
+  img.complete && img.naturalWidth ? paint() : img.addEventListener("load", paint, { once: true });
   const done = S.meeting?.status === "done";
   $("#pc-ask").disabled = !done; $("#pc-ask").onclick = () => openAsk(id);
   $("#pc-hint").textContent = done ? "" : "회의가 끝나면 이 에이전트에게 직접 질문할 수 있어요.";
-  $("#pc-flip").textContent = "뒤집어서 명함 원본 보기";
-  $("#pc-flip").onclick = () => { const c = $("#pcard"); c.classList.toggle("flipped"); $("#pc-flip").textContent = c.classList.contains("flipped") ? "앞면 보기" : "뒤집어서 명함 원본 보기"; };
+  $("#pc-flip").textContent = "뒤집어 보기";
+  $("#pc-flip").onclick = () => { const c = $("#pcard"); c.classList.toggle("flipped"); $("#pc-flip").textContent = c.classList.contains("flipped") ? "앞면 보기" : "뒤집어 보기"; };
+  $("#pc-json").onclick = () => {   // A2A 명함 원본은 개발자용으로 따로
+    $("#dlg-card").close();
+    $("#view-head").innerHTML = ""; $("#view-title").textContent = `${a.name}의 A2A 명함 (Agent Card)`;
+    $("#view-body").textContent = JSON.stringify(a.card, null, 2) + `\n\n// 지금 쓰는 모델: ${modelFor(id)}`;
+    $("#dlg-view").showModal();
+  };
   const card = $("#pcard");
   if (matchMedia("(hover: hover) and (prefers-reduced-motion: no-preference)").matches) {
     card.onpointermove = (e) => {
@@ -1375,8 +1451,8 @@ const MAX_PROMPT = 4000;
 const EXAMPLES = [
   "공공기관에 주 4일제를 도입해야 할까요?",
   "AI가 쓴 보고서를 사람 검토 없이 써도 될까요?",
-  "첨부한 보도자료를 공표해도 될지 검토해 주세요. 제목이 과장되지 않았는지도 봐 주세요.",
   "우리 팀 정기 회의를 주 1회로 줄여도 괜찮을까요?",
+  "첨부한 제안서 초안에서 보완할 점을 찾아 주세요.",
 ];
 const copyDraft = () => (S.doc ? { prompt: S.doc.prompt ?? "", files: (S.doc.files || []).map((f) => ({ ...f })) } : S.draft || { prompt: "", files: [] });
 function ensureDraft() { if (!$("#dlg-topic").open) S.draft = copyDraft(); }
@@ -1393,7 +1469,7 @@ function drawDraftFiles() {
       <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="#0A0A0A" d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm7 1.5V9h5.5L13 3.5Z"/></svg></span>
       <div style="min-width:0"><div class="nm">${esc(f.name)}</div><div class="mt">${f.loading ? "읽는 중…" : `${esc(f.meta || "")} · ${f.text.length.toLocaleString()}자`}</div></div>
       <button class="x" data-i="${i}" aria-label="${esc(f.name)} 빼기"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
-      <input class="fnote" data-i="${i}" value="${esc(f.note || "")}" placeholder="이 자료에 대한 설명 (선택). 예) 9월 공표 예정인 보도자료 초안" ${f.loading ? "disabled" : ""}>
+      <input class="fnote" data-i="${i}" value="${esc(f.note || "")}" placeholder="이 자료에 대한 설명 (선택). 예) 다음 주 발표할 제안서 초안" ${f.loading ? "disabled" : ""}>
     </div>`).join("");
   box.querySelectorAll(".x").forEach((b) => (b.onclick = () => { S.draft.files.splice(+b.dataset.i, 1); drawDraftFiles(); }));
   box.querySelectorAll(".fnote").forEach((n) => (n.oninput = () => { S.draft.files[+n.dataset.i].note = n.value; }));
@@ -1470,7 +1546,7 @@ function drawModelRows() {
     const row = document.createElement("div"); row.className = `mrow ${isMod ? "mod" : ""} ${active ? "" : "off"}`; row.setAttribute("style", styleVars(id));
     row.innerHTML = `${isMod ? `<span class="fixed eyebrow">Host</span>` : `<label class="tg"><input type="checkbox" ${active ? "checked" : ""} aria-label="${esc(a.name)} 참석"><span></span></label>`}
       ${face(id)}<div class="who">${esc(a.name)}<small>${esc(a.title)}</small></div>
-      <input class="inp" list="model-list" value="${esc(locked ? a.defaultModel : saved[id] || "")}" placeholder="${esc(a.defaultModel)}" aria-label="${esc(a.name)} 모델" ${locked ? 'disabled title="공용 키에서는 모델을 바꿀 수 없어요"' : ""}>
+      <input class="inp" list="model-list" value="${esc(locked ? modelFor(id) : saved[id] || "")}" placeholder="${esc(a.defaultModel)}" aria-label="${esc(a.name)} 모델" ${locked ? 'disabled title="공용 키에서는 모델을 바꿀 수 없어요"' : ""}>
       <button class="pill sm">확인</button><div class="res" id="res-${id}"></div>`;
     const inp = row.querySelector("input.inp");
     inp.onchange = () => {
@@ -1496,9 +1572,11 @@ function drawModelRows() {
 }
 function drawTurns() {
   const n = members().length, t = turns(), rec = recommendedTurns(n);
-  $("#t-val").textContent = t; $("#t-minus").disabled = t <= n + 1; $("#t-plus").disabled = t >= MAX_TURNS;
+  const cap = maxTurns();
+  $("#t-val").textContent = t; $("#t-minus").disabled = t <= n + 1; $("#t-plus").disabled = t >= cap;
   $("#turns-eyebrow").textContent = t === rec ? "Recommended" : "Custom";
-  $("#turns-desc").textContent = `참석자 ${n}명이면 ${rec}턴을 권해요. 각자 두 번 말하고, 최종 반론과 결론이 한 번씩 붙어요. 최소 ${n + 1}턴, 최대 ${MAX_TURNS}턴까지 정할 수 있어요.`;
+  $("#turns-desc").textContent = `참석자 ${n}명이면 ${rec}턴을 권해요. 각자 두 번 말하고, 최종 반론과 결론이 한 번씩 붙어요. 최소 ${n + 1}턴, 최대 ${cap}턴까지 정할 수 있어요.`
+    + (cap < MAX_TURNS ? ` 공용 키로는 ${cap}턴까지예요. 더 길게 하려면 내 API 키를 넣어 주세요.` : "");
   $("#plan-preview").innerHTML = planGroups(buildPlan(n, t)).map((g) => `<span data-p="${g.phase}">${esc(phaseLabel(g.phase))} ${g.idx.length}</span>`).join("");
 }
 function setTurns(v) { saveSettings({ turns: v }); applyConfig(); }
@@ -1524,7 +1602,8 @@ function updateMode() {
   $("#pass-field").hidden = !(r.serverKey && r.requiresPasscode);
   $("#btn-settings").classList.toggle("nudge", m === "mock" || m === "locked");
   refreshSeats();
-  if ($("#drawer").classList.contains("on")) drawModelRows();
+  if ($("#drawer").classList.contains("on")) { drawModelRows(); drawTurns(); }
+  if (S.agents.moderator && !S.running && !S.meeting) { describeConfig(); drawTracker(); if (S.table === "idle" || S.table === "ready") renderTable(S.table); }   // 키 종류가 바뀌면 턴 상한도 다시 반영
 }
 async function checkPass() {
   const v = $("#pass").value.trim(), res = $("#pass-res");
@@ -1586,7 +1665,7 @@ async function boot() {
       const card = await (await fetch(`${url}/.well-known/agent-card.json`)).json(), id = url.split("/").pop();
       const p = card.capabilities?.extensions?.find((e) => e.uri === "urn:a2a-meeting-room:persona")?.params || {};
       S.agents[id] = { url, card, name: p.shortName || card.name, title: p.title || "", color: p.color || "#737373", tint: p.tint || "#F1F1F1",
-        defaultModel: p.defaultModel, profile: p.profile || {}, bust: card.iconUrl || `vendor/avatars/${id}.png`, face: p.avatarFace || `vendor/avatars/${id}-face.png` };
+        defaultModel: p.defaultModel, sharedModel: p.sharedModel, profile: p.profile || {}, bust: card.iconUrl || `vendor/avatars/${id}.png`, face: p.avatarFace || `vendor/avatars/${id}-face.png` };
     }
     newMeeting(); updateMode(); updateRunButton();
     status(`에이전트 ${Object.keys(S.agents).length}명이 자리에 앉았어요. 토론 주제만 정해 주세요.`);
