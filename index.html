@@ -366,7 +366,8 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 @keyframes pop{from{opacity:0;scale:.85}to{opacity:1;scale:1}}
 /* 상황판: 내가 말한 칸에 작은 표시 */
 .cell{position:relative}
-.cell .me-dot{position:absolute;right:-5px;top:-7px;width:15px;height:15px;border-radius:50%;background:#0A0A0A;color:#fff;font-size:8.5px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 1.5px #fff}
+.cell.me-cell{background:#0A0A0A;border-color:#0A0A0A}
+.cell.me-cell .ava-fb{width:15px;height:15px;font-size:8.5px}
 #mood .m.me{background:#0A0A0A;color:#fff}
 /* 회의록: 내 말은 오른쪽 말풍선 (메신저처럼) */
 .cmt.meme,.cmt.me.note{grid-template-columns:32px 1fr!important;direction:rtl}   /* 오른쪽부터: 얼굴 → 말풍선 */
@@ -1387,6 +1388,7 @@ async function runFrom() {
       let next, say, modRaw, modModel, modThought, askUser = "", issue = "";
       const handUp = S.hand && meOn();
       if (handUp) hint = `${hint ? `${hint} / ` : ""}사용자 ${meProfile().name} 님이 손을 들었어요. 이번 차례에 ask_user로 먼저 발언 기회를 주세요.`;
+      if (S.userQ && meOn()) { hint = `${hint ? `${hint} / ` : ""}${S.agents[S.userQ.from]?.name} 님이 사용자에게 이걸 듣고 싶어 해요: "${S.userQ.q}". 필요하다고 보면 ask_user로 사회자가 대신 물어 주세요.`; S.userQ = null; }
       try {
         const mm = await call("moderator", `[회의실→사회자] ${turn}번째 턴 진행 요청`, { type: "moderate", document: docForAgents(), transcript: publicTranscript(), phase, eligible, roundStart, standing: S.last, hint: hint || moreHint(phase), ...base(i) });
         if (mm.failed) throw failErr(mm.text);
@@ -1438,7 +1440,7 @@ async function runFrom() {
       markCell(i, "done", next); m.cells[i] = next; refreshSeats(); drawMinds(); drawMood();
       m.i = i + 1; saveSnapshot();
       // 참석자가 나에게 질문했으면 (라운드마다 한 번까지) 답을 받고 넘어가요
-      if (ask?.toUser && meOn() && !(m.askedBy ||= {})[phase]) { m.askedBy[phase] = true; await askUserQuestion(next, ask.question); }
+      if (r.data.wantsUser && meOn()) S.userQ = { from: next, q: r.data.wantsUser };   // 사용자에게 묻는 건 사회자 몫이에요
     }
   } catch (e) {
     if (S.meeting === m && S.wrapAfterStop) wrap = true;     // '여기서 마무리'로 멈춘 거면 쉬지 않고 결론으로
@@ -1671,9 +1673,13 @@ function markMeCell(i) {
   (m.meCells ||= {})[k] = (m.meCells[k] || 0) + 1;
   paintMeCells(); drawMood();
 }
-function paintMeCells() {
-  document.querySelectorAll(".cell .me-dot").forEach((d) => d.remove());
-  Object.keys(S.meeting?.meCells || {}).forEach((k) => $(`#cell-${k}`)?.insertAdjacentHTML("beforeend", `<span class="me-dot" title="${esc(meProfile().name)} 님 발언">${esc(meProfile().name.slice(0, 1))}</span>`));
+function paintMeCells() {   // 내가 말한 만큼 그 턴 앞에 내 칸을 끼워 넣어요 (사회자가 묻고 → 내가 답하고 → 다음 사람)
+  document.querySelectorAll(".cell.me-cell").forEach((c) => c.remove());
+  const p = meProfile();
+  Object.entries(S.meeting?.meCells || {}).forEach(([k, n]) => {
+    const ref = $(`#cell-${k}`); if (!ref) return;
+    for (let j = 0; j < n; j++) ref.insertAdjacentHTML("beforebegin", `<div class="cell me-cell done" title="${esc(p.name)} 님 발언"><span class="ava-fb" style="--t:#FFFFFF;--c:#0A0A0A">${esc(p.name.slice(0, 1))}</span></div>`);
+  });
 }
 let pendingAsk = null;
 function updateLive() {
@@ -1705,7 +1711,7 @@ function askUserQuestion(fromId, question) {   // 답하거나 넘길 때까지 
     showBubble(fromId, question);
     if (isMobile()) setView("log");
     showTab("log"); updateLive(); setTimeout(() => $("#live-text").focus(), 60);
-    cast(`${who} 님이 ${meProfile().name} 님께 물었어요. 답을 기다리는 중이에요.`, fromId);
+    cast(`${fromId === "moderator" ? "사회자가" : `${who} 님이`} ${meProfile().name} 님께 물었어요. 답을 기다리는 중이에요.`, fromId);
     sig?.addEventListener("abort", () => { if (pendingAsk) { endAsk(); reject(new DOMException("회의를 멈췄어요.", "AbortError")); } }, { once: true });
   });
 }
