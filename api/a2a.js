@@ -11,7 +11,7 @@
 import crypto from "node:crypto";
 import { ID_BY_NAME, MEMBER_IDS, MEMBER_NAMES, PERSONAS, agentCard, defaultModelOf, isAllowedModel } from "./_lib/personas.js";
 import { chatJSON, resolveKey } from "./_lib/llm.js";
-import { mockMember, mockModerate, mockSummary } from "./_lib/mock.js";
+import { mockFollowup, mockMember, mockModerate, mockSummary } from "./_lib/mock.js";
 import { openState, sealState } from "./_lib/state.js";
 import { passcodeOk } from "./_lib/auth.js";
 
@@ -149,6 +149,43 @@ ${myTurn === 1 ? "문서를 읽고 당신 관점에서 가장 중요한 한 가�
   return { text: utterance, data: { stance, confidence, ask, phase, thoughts: newState.notes }, newState };
 }
 
+// ── 회의 뒤 후속 질문 (사회자, 참석자 모두) ───────────────────────────────
+function reviewText(review) {
+  if (!review) return "(결론 없음)";
+  const fix = (review.must_fix || []).map((x) => `- ${x.issue}${x.raised_by ? ` (${x.raised_by})` : ""}`).join("\n");
+  return `판정: ${review.verdict}\n총평: ${review.headline}\n꼭 고칠 것:\n${fix || "- 없음"}`;
+}
+async function followup(llm, persona, input, state) {
+  const { document, transcript = [], review, question = "", thread = [] } = input;
+  const isMod = persona.id === "moderator";
+  const out = llm.mock ? mockFollowup(persona.id, { question, review }) : await chatJSON({
+    ...llm, system: persona.system, temperature: 0.6, maxTokens: 1800,
+    user: `[검토 대상 문서: ${document?.name || "제목 없음"}]
+${clip(document?.text, 16000)}
+
+[회의록]
+${transcriptText(transcript)}
+
+[회의 결론]
+${reviewText(review)}
+
+[지금까지의 후속 질문과 답]
+${thread.length ? thread.slice(-8).map((t) => `사용자 → ${t.to}: ${t.question}\n${t.to}: ${t.answer}`).join("\n") : "(없음)"}
+
+[당신의 지난 속마음]
+${state.notes || "(없음)"}
+
+[지금 할 일]
+회의가 끝났고, 사용자가 ${isMod ? "사회자인 당신" : `${persona.name} 님(당신)`}에게 직접 질문했습니다: "${String(question).slice(0, 1000)}"
+${isMod ? "사회자로서 회의 전체 의견을 종합해 답하세요. 누가 어떤 의견이었는지 이름을 들어 설명해도 좋습니다." : "당신의 역할과 관점, 말투를 유지하세요."}
+회의 발언 형식은 잊고 질문에 바로 답하세요. 3~6문장, 필요하면 근거가 된 문서 위치를 짚고, 모르는 것은 모른다고 말하세요.
+JSON 하나만 출력합니다: {"answer": "질문에 대한 답", "private_notes": "속마음 (1~2문장)"}`,
+  });
+  const answer = String(out.answer || out.utterance || "").trim() || "잠시 생각을 정리해 볼게요.";
+  const notes = clip(String(out.private_notes || state.notes || ""), 1200);
+  return { text: answer, data: { thoughts: String(out.private_notes || "") }, newState: { ...state, notes } };
+}
+
 // ── 연결 확인 ────────────────────────────────────────────────────────
 async function ping(llm, persona) {
   if (llm.mock) return { text: "모의 모드라 실제 모델은 부르지 않았어요.", data: { ok: true, mock: true, model: llm.model } };
@@ -207,6 +244,7 @@ export default async function handler(req, res) {
     else if (isMod && input.type === "moderate") r = await moderate(llm, persona, input, state);
     else if (isMod && input.type === "summarize") r = await summarize(llm, persona, input, state);
     else if (!isMod && input.type === "review_turn") r = await reviewTurn(llm, persona, input, state);
+    else if (input.type === "followup") r = await followup(llm, persona, input, state);
     else return rpcError(res, body.id, -32602, `${persona.name}은(는) '${input.type}' 요청을 처리하지 않아요.`);
 
     const result = taskResult(ctx, {
