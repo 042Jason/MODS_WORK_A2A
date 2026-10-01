@@ -107,7 +107,10 @@
 | 나래 | GPT-5 mini | GPT-5.5 |
 | 보람 | Solar Pro 4 | Solar Pro 4 |
 | 서진 | Gemini 3 Flash | Gemini 3 Flash |
-| 하율 | Grok 4.1 Fast | Grok 4.20 |
+| 하율 | Grok 4.3 | Grok 4.20 |
+
+모델 회사가 어떤 모델의 지원을 끝내면(OpenRouter가 404를 돌려주면) 회의가 멈추지 않도록 그 에이전트의 기본 모델로,
+그것도 안 되면 `FALLBACK_MODEL`(기본 `google/gemini-3-flash-preview`)로 자동으로 바꿔 부릅니다. 실제로 쓴 모델은 응답에 함께 적힙니다.
 
 공용 키 모델은 `SHARED_MODEL_*` 환경변수(`.env.example` 참고)로 바꿀 수 있고,
 화면의 모델 칸은 잠깁니다. 화면을 우회해 모델을 지정해 보내도 서버가 무시합니다. 모델을 고르려면 내 API 키를 넣어야 합니다.
