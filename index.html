@@ -196,10 +196,30 @@ main{display:grid;grid-template-columns:minmax(600px,1fr) minmax(460px,40%);min-
 .cmt .row2{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .tag{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;padding:2px 9px 3px;border-radius:var(--pill);background:var(--soft);color:var(--ink-2)}
 .tag.st[data-s="우려"]{background:#FEE4E2;color:#B42318}.tag.st[data-s="동의"]{background:#DCFAE6;color:#067647}.tag.st[data-s="보류"]{background:#FEF0C7;color:#93370D}
-.inner{margin-top:8px;border-radius:var(--r-md);background:color-mix(in srgb,var(--t) 38%,white);padding:8px 11px;font-size:13.5px;color:var(--ink-2);line-height:1.55}
-.cmt.mod .inner{background:var(--soft)}
-.inner .eyebrow{color:var(--c);margin-right:6px}
-.cmt.mod .inner .eyebrow{color:var(--muted)}
+/* 한글 라벨: 모노 대문자 대신 본문 글꼴 */
+.ko{font-family:var(--sans)!important;letter-spacing:0!important;text-transform:none!important;font-weight:650}
+/* 속마음·이유는 접어 두고 눌러서 열기 */
+.inner{margin-top:8px}
+.inner summary{list-style:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;user-select:none;font-size:12.5px;font-weight:650;color:var(--c);
+  padding:3px 10px 4px;border-radius:var(--pill);background:color-mix(in srgb,var(--t) 45%,white)}
+.inner summary::-webkit-details-marker{display:none}
+.inner summary::after{content:"보기";font-weight:500;opacity:.75}
+.inner[open] summary::after{content:"접기"}
+.inner summary svg{transition:transform .15s}
+.inner[open] summary svg{transform:rotate(180deg)}
+.cmt.mod .inner summary{color:var(--ink-2);background:var(--soft)}
+.inner .ibody{margin-top:6px;border-radius:var(--r-md);background:color-mix(in srgb,var(--t) 38%,white);padding:8px 11px;font-size:13.5px;color:var(--ink-2);line-height:1.55}
+.cmt.mod .inner .ibody{background:var(--soft)}
+/* 입장 칩: 말로 된 입장 + 동의 정도 막대 */
+.stance-chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;padding:3px 10px 4px;border-radius:var(--pill);background:var(--soft);color:var(--ink-2)}
+.stance-chip b{font-weight:700}
+.stance-chip .agree{position:relative;width:46px;height:6px;border-radius:3px;background:rgba(0,0,0,.1);overflow:hidden}
+.stance-chip .agree i{position:absolute;inset:0 auto 0 0;background:currentColor;border-radius:3px}
+.stance-chip .pct{font-size:11.5px;opacity:.85}
+.stance-chip[data-s="동의"]{background:#DCFAE6;color:#067647}
+.stance-chip[data-s="우려"]{background:#FEE4E2;color:#B42318}
+.stance-chip[data-s="보류"]{background:#FEF0C7;color:#93370D}
+.cmt .meta .phase{font-size:12px;color:var(--muted);font-weight:500}
 .jsonbtn{border:0;background:none;padding:0;margin-left:auto;color:var(--muted)}
 .jsonbtn:hover{color:var(--ink)}
 pre.json{display:none;margin:8px 0 0;max-height:300px;overflow:auto;background:#0B0B0B;color:#E4E4E4;font:12px/1.5 var(--mono);padding:12px;border-radius:var(--r-md);white-space:pre-wrap;word-break:break-all}
@@ -222,8 +242,14 @@ pre.json.open{display:block}
 .mind .h .eyebrow{opacity:.7}
 .mind .body{font-size:14px;line-height:1.55;flex:1}
 .mind .body.none{opacity:.6}
-.mind .trail{display:flex;gap:4px;margin-top:10px;flex-wrap:wrap}
-.mind .trail span{font:500 10.5px/1 var(--mono);background:rgba(255,255,255,.6);color:var(--ink);padding:3px 6px;border-radius:4px}
+.mind .trail{margin-top:10px}
+.mind .trail-h{display:block;font-size:11.5px;font-weight:650;opacity:.7;margin-bottom:5px}
+.mind .steps{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.mind .step{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;line-height:1.2;background:rgba(255,255,255,.75);color:var(--ink);padding:3px 7px 4px;border-radius:999px}
+.mind .step em{font-style:normal;opacity:.6}
+.mind .step b{font-weight:700}
+.mind .step[data-s="동의"] b{color:#067647}.mind .step[data-s="우려"] b{color:#B42318}.mind .step[data-s="보류"] b{color:#93370D}
+.mind .arrow{font-size:11px;opacity:.55}
 
 /* 결론 */
 .vblock{border-radius:var(--r-lg);padding:24px 26px;background:var(--cream);margin-bottom:22px}
@@ -378,6 +404,19 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .pc-bubble::after{content:"";position:absolute;left:50%;bottom:-10px;width:16px;height:16px;background:#fff;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:translateX(-50%) rotate(45deg)}
 .pc-bubble b{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
 .pc-bubble p{margin:0;font-size:13px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+/* 길어서 잘린 글은 눌러서 펼치기 */
+.xp{cursor:pointer}
+.xp.expanded{display:block!important;-webkit-line-clamp:unset!important;max-height:none!important;overflow:visible!important}
+.pc-bubble p.xp.expanded{max-height:min(46vh,320px)!important;overflow-y:auto!important;overscroll-behavior:contain;padding-right:4px}
+.t-topic.xp.expanded{max-height:min(40vh,260px)!important;overflow-y:auto!important;overscroll-behavior:contain;white-space:pre-line}
+.t-topic.xp:not(.expanded){white-space:normal}
+.t-say.xp.expanded{max-height:min(46vh,300px)!important;overflow-y:auto!important;overscroll-behavior:contain}
+.table:has(.xp){height:auto;min-height:250px}
+.table:has(.xp.expanded){z-index:5}
+.table .xp{flex-shrink:0}
+.xp-more{display:inline-flex;align-items:center;gap:3px;margin-top:4px;border:0;background:none;padding:2px 0;font:inherit;font-size:12px;font-weight:650;color:var(--c,var(--ink-2));text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.pc-bubble .xp-more{color:var(--ink-2)}
+.table .xp-more{color:rgba(255,255,255,.85)}
 .pc-spacer{flex:1;min-height:150px}
 .pc-strip{background:rgba(255,255,255,.88);border:2px solid var(--ink);border-radius:16px;padding:8px 10px 10px;backdrop-filter:blur(4px)}
 .pc-strip-h{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:7px;text-align:center}
@@ -613,7 +652,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
     </div>
     <div class="pane on" id="pane-log"></div>
     <div class="pane" id="pane-minds">
-      <div class="minds-head"><span class="eyebrow">Inner notes</span><p>발언할 때 함께 적는 생각이에요. 화면에만 보이고, 다른 참석자에게는 전달되지 않아요.</p></div>
+      <div class="minds-head"><span class="eyebrow ko">속마음</span><p>발언할 때 함께 적는 생각이에요. 화면에만 보이고, 다른 참석자에게는 전달되지 않아요.</p></div>
       <div class="minds" id="minds"></div>
     </div>
     <div class="pane" id="pane-review"></div>
@@ -705,7 +744,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const ALL_MEMBERS = ["critic", "strategist", "reader", "method", "policy"];   // 기본이자 최대 인원
 const MIN_MEMBERS = 2, MAX_TURNS = 30, MAX_CHARS = 60000;
-// 보드 자리 순서: 로고의 색 점 배치와 같게 (위 사회자부터 시계 방향으로 나래, 보람, 서진, 하율, 한결)
+// 보드 자리 순서: 로고의 색 점 배치와 같게 (위 사회자부터 시계 방향으로 나래, 도윤, 현우, 하율, 민서)
 const SEAT_ORDER = ["strategist", "reader", "method", "policy", "critic"];
 const ROT = { moderator: -1.2, critic: 1.4, strategist: -1.6, reader: 1.1, method: -0.9, policy: 1.7 };
 
@@ -756,6 +795,20 @@ function buildPlan(n, t) {
   plan.push("conclusion");
   return plan;
 }
+// 입장과 단계를 사람이 읽기 쉬운 말로
+// 속마음·이유 앞의 머리말("속마음:", "이유 -" 등)은 떼고 내용만 보여요
+const cleanNote = (t) => String(t || "").replace(/^\s*(?:[\[(（【]\s*(?:속마음|속\s*마음|내\s*생각|생각|이유|판단\s*이유|메모|private[_ ]?notes?|inner(?:\s*notes?)?|thoughts?|why|reason)\s*[\])）】]\s*[:：\-–—]?|(?:속마음|속\s*마음|내\s*생각|생각|이유|판단\s*이유|메모|private[_ ]?notes?|inner(?:\s*notes?)?|thoughts?|why|reason)\s*[:：\-–—])\s*/i, "").trim();
+const stanceWord = (st) => ({ 동의: "동의해요", 우려: "걱정돼요", 보류: "판단 보류" }[st] || st || "");
+function shortPhase(p) {
+  if (!p) return "";
+  if (p === "round1") return "첫 의견";
+  if (p === "last_word") return "마지막 한마디";
+  if (p === "conclusion") return "결론";
+  const n = Number(String(p).replace("round", ""));
+  return n === 2 ? "반박" : `${n - 1}번째 반박`;
+}
+const phaseOfTurn = (turn) => (S.meeting?.plan || S.plan || [])[turn - 1];
+const stanceChip = (st, conf) => `<span class="stance-chip" data-s="${esc(st)}" title="이 주제에 동의하는 정도예요 (0~100%)"><b>${esc(stanceWord(st))}</b><span class="agree"><i style="width:${Math.max(0, Math.min(100, Number(conf) || 0))}%"></i></span><span class="pct">동의 ${Number(conf) || 0}%</span></span>`;
 function phaseLabel(p) {
   if (p === "round1") return "첫인상 토크";
   if (p === "round2") return "반박 타임";
@@ -764,9 +817,9 @@ function phaseLabel(p) {
   return `${p.replace("round", "")}라운드 반박 타임`;
 }
 function phaseEyebrow(p) {
-  if (p === "last_word") return "Last word";
-  if (p === "conclusion") return "Conclusion";
-  return `Round ${p.replace("round", "")}`;
+  if (p === "last_word") return "마무리";
+  if (p === "conclusion") return "마무리";
+  return `${p.replace("round", "")}라운드`;
 }
 function groupLabel(p) { return p === "last_word" ? "한마디" : p === "conclusion" ? "결론" : p === "round1" ? "1R 첫인상 토크" : `${p.replace("round", "")}R 반박 타임`; }
 function planGroups(plan) { const g = []; plan.forEach((p, i) => { if (!g.length || g.at(-1).phase !== p) g.push({ phase: p, idx: [] }); g.at(-1).idx.push(i); }); return g; }
@@ -829,8 +882,13 @@ function placeSeats() {
   const ids = ["moderator", ...SEAT_ORDER.filter((id) => members().includes(id))];
   const rx = Math.min(W * 0.4, 310), ry = H / 2 - 80, HALF_W = 64, HALF_H = 78, GAP = 14, B = 125;
   let a = Math.min(230, W * 0.36);
+  // 자리가 5개(사회자+4명)면 원 둘레에 고르게 앉힐 때 아래 두 자리가 탁자 쪽으로 붙어서 탁자가 좁아져요.
+  // 그래서 사회자는 위, 나머지 넷은 탁자 양옆에 위아래로 두 명씩 앉혀요.
+  const PRESET = { 5: [[0, -1], [1, -0.32], [1, 0.8], [-1, 0.8], [-1, -0.32]] };
   ids.forEach((id, k) => {
-    const ang = (-90 + (360 / n) * k) * Math.PI / 180, dx = rx * Math.cos(ang), dy = ry * Math.sin(ang);
+    const ang = (-90 + (360 / n) * k) * Math.PI / 180;
+    const [fx, fy] = PRESET[n]?.[k] || [Math.cos(ang), Math.sin(ang)];
+    const dx = rx * fx, dy = ry * fy;
     const el = $(`#seat-${id}`); if (el) { el.style.left = `${W / 2 + dx}px`; el.style.top = `${H / 2 + dy}px`; }
     const yNear = Math.max(0, Math.abs(dy) - HALF_H);
     if (yNear < B) a = Math.min(a, (Math.abs(dx) - HALF_W - GAP) / Math.sqrt(1 - (yNear / B) ** 2));
@@ -842,7 +900,7 @@ function refreshSeats() {
     if (!$(`#md-${id}`)) continue;
     const m = modelFor(id); $(`#md-${id}`).textContent = shortModel(m); $(`#md-${id}`).title = m;
     const l = S.last[id];
-    $(`#st-${id}`).innerHTML = l ? `<span class="stance" data-s="${esc(l.stance)}">${esc(l.stance)}</span><span class="meter" title="지금 방향에 동의하는 정도 ${l.confidence}"><i style="width:${l.confidence}%"></i></span>` : "";
+    $(`#st-${id}`).innerHTML = l ? `<span class="stance" data-s="${esc(l.stance)}">${esc(stanceWord(l.stance))}</span><span class="meter" title="동의 정도 ${l.confidence}%"><i style="width:${l.confidence}%"></i></span>` : "";
   }
 }
 function setSpeaking(id, mode) {
@@ -860,11 +918,29 @@ function moveCursor(id) {   // 사회자가 다음 발언자를 가리켜요
 }
 
 /* ───────────── 탁자 ───────────── */
+// 글이 잘렸으면 '더 보기' 버튼을 붙이고, 누르면 펼치고 접어요
+function makeExpandable(el) {
+  if (!el || el.dataset.xp) return;
+  el.dataset.xp = "1";
+  requestAnimationFrame(() => {
+    if (el.scrollHeight <= el.clientHeight + 2) return;   // 잘리지 않았으면 그대로
+    el.classList.add("xp");
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "xp-more"; btn.textContent = "더 보기";
+    const toggle = (e) => { e?.stopPropagation(); const on = el.classList.toggle("expanded"); btn.textContent = on ? "접기" : "더 보기"; };
+    btn.onclick = toggle; el.onclick = toggle;
+    el.after(btn);
+  });
+}
 function renderTable(state, info = {}) {
+  renderTableInner(state, info);
+  $("#table").querySelectorAll(".t-say, .t-topic").forEach(makeExpandable);
+}
+function renderTableInner(state, info = {}) {
   S.table = state;
   const t = $("#table"), n = members().length, T = turns();
   if (state === "idle") {
-    t.innerHTML = `<div class="t-crew">${crew()}</div><div class="eyebrow">Step 1 · 주제 정하기</div>
+    t.innerHTML = `<div class="t-crew">${crew()}</div><div class="eyebrow ko">1단계 · 주제 정하기</div>
       <div class="t-head">무엇을 함께 토론할까요?</div>
       <div class="t-sub">주제만 적어도 돼요. 참고할 자료가 있으면 함께 첨부하세요.</div>
       <div class="t-actions"><button class="pill light sm" id="tb-topic">주제 입력하기</button><button class="pill on-dark sm" id="tb-file">자료 첨부</button></div>
@@ -872,18 +948,18 @@ function renderTable(state, info = {}) {
     $("#tb-topic").onclick = openTopic; $("#tb-file").onclick = () => $("#file").click(); $("#tb-cfg").onclick = openMembers;
   } else if (state === "ready") {
     const nf = S.doc.files?.length || 0;
-    t.innerHTML = `<div class="t-crew">${crew()}</div><div class="eyebrow">Step 2 · 회의 시작</div>
-      <div class="t-head t-topic">${esc(S.doc.name)}</div>
+    t.innerHTML = `<div class="t-crew">${crew()}</div><div class="eyebrow ko">2단계 · 회의 시작</div>
+      <div class="t-head t-topic">${esc(S.doc.prompt?.trim() || S.doc.name)}</div>
       <div class="t-sub">${nf ? `자료 ${nf}개와 함께 ` : ""}참석자 ${n}명이 ${T}턴 동안 토론해요</div>
       <div class="t-actions"><button class="pill light sm" id="tb-run">회의 시작</button><button class="pill on-dark sm" id="tb-edit">주제 고치기</button><button class="pill on-dark sm" id="tb-cfg2">구성 바꾸기</button></div>`;
     $("#tb-run").onclick = runMeeting; $("#tb-edit").onclick = openTopic; $("#tb-cfg2").onclick = openMembers;
   } else if (state === "live") {
     const a = S.agents[info.id];
-    t.innerHTML = `<div class="eyebrow"><span class="live">Live</span><span>${esc(phaseLabel(info.phase))}</span><span>${String(info.turn).padStart(2, "0")}/${String(S.plan.length).padStart(2, "0")}</span></div>
+    t.innerHTML = `<div class="eyebrow"><span class="live ko">진행 중</span><span class="ko">${esc(phaseLabel(info.phase))}</span><span class="ko">전체 ${S.plan.length}턴 중 ${info.turn}번째</span></div>
       <div class="t-who">${face(info.id)}${esc(a.name)}</div><div class="t-say">${esc(info.text)}</div>`;
   } else if (state === "paused") {
     const m = S.meeting;
-    t.innerHTML = `<div class="eyebrow"><span class="paused">Paused</span><span>${String(m.i + 1).padStart(2, "0")}/${String(m.plan.length).padStart(2, "0")}</span></div>
+    t.innerHTML = `<div class="eyebrow"><span class="paused ko">잠시 멈춤</span><span class="ko">전체 ${m.plan.length}턴 중 ${m.i + 1}번째에서</span></div>
       <div class="t-head">회의가 잠시 멈췄어요</div>
       <div class="t-sub">${esc(m.error)} 지금까지 ${m.i}턴의 내용은 그대로 남아 있어요. 이어서 진행하면 ${m.i + 1}번째 턴부터 다시 해요.</div>
       <div class="t-actions"><button class="pill light sm" id="tb-resume">이어서 진행</button>${info.auth ? `<button class="pill on-dark sm" id="tb-set">설정 열기</button>` : ""}<button class="pill on-dark sm" id="tb-restart">처음부터</button></div>`;
@@ -892,7 +968,7 @@ function renderTable(state, info = {}) {
     $("#tb-restart").onclick = () => { if (confirm("지금까지의 내용을 지우고 처음부터 다시 할까요?")) runMeeting(); };
   } else if (state === "done") {
     const v = info.review;
-    t.innerHTML = `<div class="eyebrow">Conclusion · ${S.plan.length}턴 완료</div>
+    t.innerHTML = `<div class="eyebrow ko">결론 · ${S.plan.length}턴 모두 끝났어요</div>
       <span class="verdict-tag" data-tone="${toneOf(v)}">${esc(v.verdict)}</span>
       <div class="t-say" style="-webkit-line-clamp:4">${esc(v.headline)}</div>
       <div class="t-actions"><button class="pill light sm" id="tb-review">결론 보기</button></div>`;
@@ -933,10 +1009,10 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const nm = (id) => S.agents[id]?.name || "";
 const FLAVOR = {
   moderator: ["사회자가 흐름을 정리하고 있어요", "사회자가 누구에게 마이크를 줄지 고민 중이에요"],
-  critic: ["한결 님이 빨간펜 뚜껑을 열었어요", "한결 님이 근거를 하나하나 확인하고 있어요"],
+  critic: ["민서 님이 빨간펜 뚜껑을 열었어요", "민서 님이 근거를 하나하나 확인하고 있어요"],
   strategist: ["나래 님이 큰 그림을 그리는 중이에요", "나래 님이 핵심을 한 문장으로 줄여 보고 있어요"],
-  reader: ["보람 님이 듣는 사람 입장이 되어 보고 있어요", "보람 님이 어려운 말에 밑줄을 긋고 있어요"],
-  method: ["서진 님이 숨은 전제를 찾고 있어요", "서진 님이 용어 정의부터 따져 보고 있어요"],
+  reader: ["도윤 님이 듣는 사람 입장이 되어 보고 있어요", "도윤 님이 어려운 말에 밑줄을 긋고 있어요"],
+  method: ["현우 님이 숨은 전제를 찾고 있어요", "현우 님이 용어 정의부터 따져 보고 있어요"],
   policy: ["하율 님이 반대편 입장이 되어 보고 있어요", "하율 님이 반대편이 할 말을 떠올리고 있어요"],
 };
 function castPhase(phase) {
@@ -985,19 +1061,19 @@ function emptyLog() {
   $("#pane-log").innerHTML = `<div class="empty"><div class="crew">${crew()}</div><strong>아직 회의 전이에요</strong>주제를 정하고 회의를 시작하면 발언이 여기에 차곡차곡 쌓여요.</div>`;
 }
 function logPane() { const p = $("#pane-log"); if (p.querySelector(".empty")) p.innerHTML = ""; return p; }
-function addDivider(phase) { logPane().insertAdjacentHTML("beforeend", `<div class="divider"><span class="eyebrow">${esc(phaseEyebrow(phase))}</span><span style="font-size:13px">${esc(phaseLabel(phase))}</span></div>`); }
+function addDivider(phase) { logPane().insertAdjacentHTML("beforeend", `<div class="divider"><span class="eyebrow ko">${esc(phaseEyebrow(phase))}</span><span style="font-size:13px">${esc(phaseLabel(phase))}</span></div>`); }
 function addMsg({ id, to, text, ask, stance, confidence, thought, raw, model, err, turn, label }) {
   const a = S.agents[id], isMod = id === "moderator";
   const el = document.createElement("article");
   el.className = `cmt ${isMod ? "mod" : ""} ${err ? "err" : ""}`; el.setAttribute("style", styleVars(id));
   el.innerHTML = `${face(id)}<div>
     <div class="meta"><b>${esc(a.name)}</b>${to ? `<span class="to">→ ${esc(S.agents[to]?.name)}</span>` : ""}
-      ${turn ? `<span class="eyebrow">T${String(turn).padStart(2, "0")}</span>` : ""}${label ? `<span class="eyebrow">${esc(label)}</span>` : ""}
-      ${model ? `<span class="eyebrow">${esc(model === "mock" ? "Mock" : shortModel(model))}</span>` : ""}
-      ${raw ? `<button class="jsonbtn eyebrow">JSON</button>` : ""}</div>
+      ${turn && !isMod ? `<span class="phase">${esc(shortPhase(phaseOfTurn(turn)))}</span>` : ""}${label ? `<span class="phase">${esc(label === "Answer" ? "후속 답변" : label)}</span>` : ""}
+      ${model ? `<span class="eyebrow">${esc(model === "mock" ? "모의" : shortModel(model))}</span>` : ""}
+      ${raw ? `<button class="jsonbtn eyebrow ko">원본</button>` : ""}</div>
     <div class="text">${esc(text)}</div>
-    ${stance || ask ? `<div class="row2">${stance ? `<span class="tag st" data-s="${esc(stance)}">${esc(stance)} · ${confidence}</span>` : ""}${ask ? `<span class="tag">${esc(ask.to)} 님께 질문 · ${esc(ask.question)}</span>` : ""}</div>` : ""}
-    ${thought ? `<div class="inner"><span class="eyebrow">${isMod ? "Why" : "Inner"}</span>${esc(thought)}</div>` : ""}
+    ${stance || ask ? `<div class="row2">${stance ? stanceChip(stance, confidence) : ""}${ask ? `<span class="tag">${esc(ask.to)} 님께 질문 · ${esc(ask.question)}</span>` : ""}</div>` : ""}
+    ${thought ? `<details class="inner"><summary><svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>${isMod ? "이렇게 정한 이유" : "속마음"}</summary><div class="ibody">${esc(cleanNote(thought))}</div></details>` : ""}
     ${raw ? `<pre class="json">${esc(JSON.stringify(raw, null, 2))}</pre>` : ""}</div>`;
   const jb = el.querySelector(".jsonbtn"); if (jb) jb.onclick = () => el.querySelector("pre.json").classList.toggle("open");
   logPane().appendChild(el); el.scrollIntoView({ block: "end", behavior: "smooth" });
@@ -1015,9 +1091,11 @@ function drawMinds() {
   const box = $("#minds"); box.innerHTML = "";
   for (const id of seatIds()) {
     const a = S.agents[id]; if (!a) continue;
-    const t = S.thoughts[id], trail = (S.trail[id] || []).map((s) => `<span>T${String(s.turn).padStart(2, "0")} ${esc(s.stance)} ${s.confidence}</span>`).join("");
+    const t = cleanNote(S.thoughts[id]);
+    const steps = (S.trail[id] || []).map((s) => `<span class="step" data-s="${esc(s.stance)}"><em>${esc(shortPhase(phaseOfTurn(s.turn)))}</em><b>${esc(stanceWord(s.stance))}</b>${s.confidence}%</span>`).join(`<span class="arrow">→</span>`);
+    const trail = steps ? `<span class="trail-h">입장 변화 (동의 정도)</span><div class="steps">${steps}</div>` : "";
     box.insertAdjacentHTML("beforeend", `<div class="mind ${id === "moderator" ? "inverse" : ""}" style="${styleVars(id)}">
-      <div class="h"><img src="${esc(a.bust)}" alt=""><div><b>${esc(a.name)}</b><span class="eyebrow" style="opacity:.7">${esc(id === "moderator" ? "Host" : a.title)}</span></div></div>
+      <div class="h"><img src="${esc(a.bust)}" alt=""><div><b>${esc(a.name)}</b><span class="eyebrow ko" style="opacity:.7">${esc(id === "moderator" ? "진행" : a.title)}</span></div></div>
       <div class="body ${t ? "" : "none"}">${t ? esc(t) : "아직 발언 전이에요."}</div>${trail ? `<div class="trail">${trail}</div>` : ""}</div>`);
   }
 }
@@ -1289,7 +1367,7 @@ function earnedBadges() {
 }
 function backHtml(id, a) {
   const isMod = id === "moderator", done = S.meeting?.status === "done";
-  const thought = S.thoughts[id];
+  const thought = cleanNote(S.thoughts[id]);
   const bubble = thought ? esc(thought) : S.meeting ? "아직 생각을 정리하는 중이에요." : "아직 회의 전이라 속마음이 없어요.";
   let strip;
   if (isMod) strip = `<p class="pc-none">사회자는 배지를 나눠 주는 쪽이에요.</p>`;
@@ -1315,7 +1393,7 @@ function showCard(id) {
     `<div class="pc-move"><div class="pc-move-h"><span class="pc-energy"></span><b>${esc(s.name)}</b></div><p>${esc(s.description)}</p></div>`).join("");
   const tr = S.trail[id] || [], last = S.last[id];
   const today = isMod ? (S.transcript.length ? `진행 ${S.transcript.filter((t) => t.role === "moderator").length}번` : "아직 진행 전")
-    : tr.length ? `발언 ${tr.length}번, 지금 ${last.stance} ${last.confidence}` : "아직 발언 전";
+    : tr.length ? `발언 ${tr.length}번 · 지금 ${stanceWord(last.stance)} (동의 ${last.confidence}%)` : "아직 발언 전";
   $("#pc-wrap").innerHTML = `
     <div class="pcard ${isMod ? "inverse" : ""}" id="pcard" style="${styleVars(id)}">
       <div class="pc-inner">
@@ -1338,6 +1416,7 @@ function showCard(id) {
   const paint = () => { try { const c = document.createElement("canvas"); c.width = c.height = 1; const g = c.getContext("2d");
     g.drawImage(img, 4, 4, 1, 1, 0, 0, 1, 1); const [r, gg, b] = g.getImageData(0, 0, 1, 1).data; art.style.background = `rgb(${r},${gg},${b})`; } catch {} };
   img.complete && img.naturalWidth ? paint() : img.addEventListener("load", paint, { once: true });
+  makeExpandable($("#pcard .pc-bubble p"));
   const done = S.meeting?.status === "done";
   $("#pc-ask").disabled = !done; $("#pc-ask").onclick = () => openAsk(id);
   $("#pc-hint").textContent = done ? "" : "회의가 끝나면 이 에이전트에게 직접 질문할 수 있어요.";
@@ -1385,9 +1464,9 @@ function renderReview(v) {
       <div class="issue">${esc(x.title || x.issue || "")}</div>${x.raised_by ? `<span class="by" style="--t:${tint(x.raised_by)}">${esc(x.raised_by)}</span>` : "<span></span>"}
       ${x.detail ? `<div class="fix">${esc(x.detail)}</div>` : ""}</div>`).join("") || `<p class="help">없어요.</p>`;
   const list = (arr) => (arr?.length ? `<ul>${arr.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>` : `<p class="help">없어요.</p>`);
-  const cnt = (a) => `<span class="eyebrow">${String((a || []).length).padStart(2, "0")}</span>`;
+  const cnt = (a) => `<span class="eyebrow ko">${(a || []).length}개</span>`;
   $("#pane-review").innerHTML = `
-    <div class="vblock" data-tone="${toneOf(v)}"><span class="eyebrow">Verdict</span><h2>${esc(v.verdict)}</h2><p>${esc(v.headline)}</p></div>
+    <div class="vblock" data-tone="${toneOf(v)}"><span class="eyebrow ko">판정</span><h2>${esc(v.verdict)}</h2><p>${esc(v.headline)}</p></div>
     <div class="rsec"><h3>핵심 결론과 제안 ${cnt(keys)}</h3>${items(keys)}</div>
     <div class="rsec"><h3>우려와 반대 의견 ${cnt(worries)}</h3>${items(worries)}</div>
     <div class="rsec"><h3>합의된 점</h3>${list(agree)}</div>
@@ -1668,7 +1747,7 @@ async function boot() {
         defaultModel: p.defaultModel, sharedModel: p.sharedModel, profile: p.profile || {}, bust: card.iconUrl || `vendor/avatars/${id}.png`, face: p.avatarFace || `vendor/avatars/${id}-face.png` };
     }
     newMeeting(); updateMode(); updateRunButton();
-    status(`에이전트 ${Object.keys(S.agents).length}명이 자리에 앉았어요. 토론 주제만 정해 주세요.`);
+    status(`에이전트 ${seatIds().length}명이 자리에 앉았어요. 토론 주제만 정해 주세요.`);
     if (snap?.meeting && snap.doc && snap.meeting.status !== "done") { try { restoreSnapshot(snap); } catch (e) { console.error(e); clearSnapshot(); } }
   } catch (e) { status(`에이전트 명함을 받지 못했어요. ${esc(e.message)}`); }
   loadModels();

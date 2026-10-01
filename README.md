@@ -10,10 +10,10 @@
 | 에이전트 | 역할 | 기본 모델 |
 |---|---|---|
 | 사회자 | 발언 순서를 정하고 결론을 정리 | Gemini (`google/gemini-3-flash-preview`) |
-| 한결 | 깐깐한 검증가: 주장의 근거, 사실관계, 숫자와 계산 | Claude (`anthropic/claude-sonnet-5`) |
+| 민서 | 깐깐한 검증가: 주장의 근거, 사실관계, 숫자와 계산 | Claude (`anthropic/claude-sonnet-5`) |
 | 나래 | 큰 그림 전략가: 목표, 핵심 쟁점, 우선순위, 대안 | GPT (`openai/gpt-5.5`) |
-| 보람 | 공감 대변인: 실제로 영향을 받는 사람의 이해와 체감, 오해 소지 | Solar (`upstage/solar-pro4`) |
-| 서진 | 논리 점검가: 정의, 숨은 전제, 비교의 공정성, 인과 비약 | Gemini (`google/gemini-3-flash-preview`) |
+| 도윤 | 공감 대변인: 실제로 영향을 받는 사람의 이해와 체감, 오해 소지 | Solar (`upstage/solar-pro4`) |
+| 현우 | 논리 점검가: 정의, 숨은 전제, 비교의 공정성, 인과 비약 | Gemini (`google/gemini-3-flash-preview`) |
 | 하율 | 리스크 담당: 실행 리스크, 반발과 이해관계, 반대편 시각 | Grok (`x-ai/grok-4.20`) |
 
 모델은 웹 화면의 설정에서 바꿀 수 있고, 고를 수 있는 회사는 OpenAI, Anthropic, Google, xAI, Upstage로 제한되어 있습니다.
@@ -48,7 +48,7 @@
 - **오늘의 배지**: 회의 기록으로 자동으로 정해집니다. 질문왕(질문 최다), 설득당함(우려→동의), 소신파(끝까지 우려), 마지막 한마디(최종 반론),
   수다왕(발언 분량 최다), 날카로운 지적(우려·반대 의견에 이름 최다), 아이디어 뱅크(핵심 결론·제안에 이름 최다), 합의 도우미(가장 높은 동의로 마무리).
   배지 그림은 `vendor/badges/`, 카드 뒷면 그림은 `vendor/brand/card-back.webp`입니다.
-  카드에는 페르소나에 맞춘 MBTI도 붙어 있습니다: 사회자 ENFJ(선도자), 한결 ISTJ(현실주의자), 나래 ENTJ(통솔자), 보람 ENFP(활동가), 서진 INTP(논리술사), 하율 ENTP(변론가).
+  카드에는 페르소나에 맞춘 MBTI도 붙어 있습니다: 사회자 ENFJ(선도자), 민서 ISTJ(현실주의자), 나래 ENTJ(통솔자), 도윤 ENFP(활동가), 현우 INTP(논리술사), 하율 ENTP(변론가).
   카드 내용은 `api/_lib/personas.js`의 `profile`에서 고칩니다.
 
 ## 화면 디자인
@@ -65,7 +65,7 @@
 ### 로고
 
 - 여섯 친구가 꽃잎처럼 모여 가운데에 하나의 말풍선(합의한 결론)을 만든 그림이에요. Ensembly의 '모여서 하나로'를 담았어요.
-- 친구들 색은 참석자 색과 같고, 회의 보드의 자리 배치도 로고와 같은 순서(위 사회자부터 시계 방향으로 나래, 보람, 서진, 하율, 한결)예요.
+- 친구들 색은 참석자 색과 같고, 회의 보드의 자리 배치도 로고와 같은 순서(위 사회자부터 시계 방향으로 나래, 도윤, 현우, 하율, 민서)예요.
 - `vendor/brand/logo.png`: 헤더용(투명 배경). `logo-1024.png`: 원본 크기.
 - `favicon-16/32/48.png`, 루트의 `favicon.ico`: 브라우저 탭 아이콘. `apple-touch-icon.png`: 아이폰 홈 화면(흰 바탕). `icon-512.png`: 큰 아이콘.
 - 로고를 바꾸려면 같은 파일명으로 덮어쓰면 돼요.
@@ -103,10 +103,10 @@
 | 에이전트 | 공용 키 모델 | 내 키 기본 모델 |
 |---|---|---|
 | 사회자 | Gemini 3 Flash | Gemini 3 Flash |
-| 한결 | Claude Haiku 4.5 | Claude Sonnet 5 |
+| 민서 | Claude Haiku 4.5 | Claude Sonnet 5 |
 | 나래 | GPT-5 mini | GPT-5.5 |
-| 보람 | Solar Pro 4 | Solar Pro 4 |
-| 서진 | Gemini 3 Flash | Gemini 3 Flash |
+| 도윤 | Solar Pro 4 | Solar Pro 4 |
+| 현우 | Gemini 3 Flash | Gemini 3 Flash |
 | 하율 | Grok 4.3 | Grok 4.20 |
 
 모델 회사가 어떤 모델의 지원을 끝내면(OpenRouter가 404를 돌려주면) 회의가 멈추지 않도록 그 에이전트의 기본 모델로,
