@@ -1407,6 +1407,39 @@ async function runFrom() {
         eligible.sort((a, b) => talks(a) - talks(b));
       }
 
+      // 1라운드는 사회자가 차례마다 끼어들지 않아요. 여는 말 한 번 하고, 모두 차례로 첫 의견을 말해요
+      if (phase === "round1") {
+        if (!m.r1order) m.r1order = team.slice().sort(() => Math.random() - 0.5);
+        const next = m.r1order.find((id) => eligible.includes(id)) || eligible[0];
+        if (!m.opened) {
+          const p = S.doc?.prompt?.trim() || S.doc?.name || "오늘 주제";
+          const opening = `회의를 시작할게요. 오늘 주제는 "${p.length > 60 ? `${p.slice(0, 60)}…` : p}"예요. 먼저 한 분씩 첫 의견을 들어 볼게요. ${m.r1order.map((id) => S.agents[id].name).join(" → ")} 순서로 이야기해 주세요.`;
+          S.transcript.push({ role: "moderator", speaker: "사회자", text: opening });
+          logMsg({ id: "moderator", text: opening, label: "여는 말" });
+          renderTable("live", { id: "moderator", text: opening, phase, turn }); setSpeaking("moderator"); showBubble("moderator", opening);
+          m.opened = true; saveSnapshot();
+          await new Promise((res) => setTimeout(res, 900));
+          if (S.abort?.signal.aborted) throw new DOMException("회의를 멈췄어요.", "AbortError");
+        }
+        moveCursor(next);
+        cast(`${josa(`${nm(next)} 님`, "이/가")} 첫 의견을 말하는 중이에요. ${pick(FLAVOR[next] || ["생각하는 중이에요"])}…`, next);
+        const r = await call(next, `[회의실→${S.agents[next].name}] 1라운드 첫 의견`, { type: "review_turn", document: docForAgents(), transcript: publicTranscript(),
+          request: { from: "사회자", text: "1라운드는 사회자 개입 없이 한 사람씩 첫 의견을 말해요. 주제에 대한 당신의 첫 의견을 말해 주세요. 반박은 2라운드부터 해요." }, phase, ...base(i) });
+        if (r.failed) throw failErr(r.text);
+        await afterMemberTurn(m, i, phase, turn, total, next, r);
+        continue;
+      }
+      // 1라운드가 끝나고 2라운드로 넘어갈 때: 나도 참여 중이면 내 첫 생각도 먼저 들어요
+      if (roundStart && meOn() && !m.meOpening && m.plan[i - 1] === "round1") {
+        m.meOpening = true;
+        const q = `${meProfile().name} 님 생각도 들어 볼게요. 지금까지 첫 의견들을 들어 보니 어떠세요?`;
+        const qEntry = { role: "moderator", speaker: "사회자", text: q };
+        S.transcript.push(qEntry);
+        const qHist = logMsg({ id: "moderator", to: "me", text: q, label: "질문" });
+        try { await askUserQuestion("moderator", q); }
+        catch (e) { m.meOpening = false; const k = S.transcript.lastIndexOf(qEntry); if (k >= 0) S.transcript.splice(k, 1); voidMsg(qHist); throw e; }
+      }
+
       let next, say, modRaw, modModel, modThought, askUser = "", issue = "";
       const handUp = S.hand && meOn();
       if (handUp) hint = `${hint ? `${hint} / ` : ""}사용자 ${meProfile().name} 님이 손을 들었어요. 이번 차례에 ask_user로 먼저 발언 기회를 주세요.`;
@@ -1450,19 +1483,7 @@ async function runFrom() {
 
       // 이 턴이 끝까지 성공했을 때만 기록을 확정해요
       if (modThought) S.thoughts.moderator = modThought;
-      (m.spoken[phase] ||= []).push(next);
-      const { stance, confidence, position, ask, model, thoughts } = r.data;
-      const prev = S.last[next];
-      S.last[next] = { stance, confidence, position }; S.thoughts[next] = thoughts;
-      castReaction(next, prev, { stance, confidence, position }, ask, turn, total);
-      (S.trail[next] ||= []).push({ turn, stance, confidence, position });
-      S.transcript.push({ role: next, speaker: S.agents[next].name, text: r.text, ask: ask || null });
-      logMsg({ id: next, text: r.text, ask, stance, confidence, position, thought: thoughts, raw: r.raw, model, turn });
-      renderTable("live", { id: next, text: r.text, phase, turn, issue: m.issue }); setSpeaking(next); showBubble(next, r.text);
-      markCell(i, "done", next); m.cells[i] = next; refreshSeats(); drawMinds(); drawMood();
-      m.i = i + 1; saveSnapshot();
-      // 참석자가 나에게 질문했으면 (라운드마다 한 번까지) 답을 받고 넘어가요
-      if (r.data.wantsUser && meOn()) S.userQ = { from: next, q: r.data.wantsUser };   // 사용자에게 묻는 건 사회자 몫이에요
+      await afterMemberTurn(m, i, phase, turn, total, next, r);
     }
   } catch (e) {
     if (S.meeting === m && S.wrapAfterStop) wrap = true;     // '여기서 마무리'로 멈춘 거면 쉬지 않고 결론으로
@@ -1474,6 +1495,22 @@ async function runFrom() {
     }
   }
   if (wrap) { S.wrapAfterStop = false; await finishEarly(); }
+}
+
+// 참석자 발언 하나를 기록으로 확정해요 (회의록, 입장, 상황판, 보드)
+async function afterMemberTurn(m, i, phase, turn, total, next, r) {
+  (m.spoken[phase] ||= []).push(next);
+  const { stance, confidence, position, ask, model, thoughts } = r.data;
+  const prev = S.last[next];
+  S.last[next] = { stance, confidence, position }; S.thoughts[next] = thoughts;
+  castReaction(next, prev, { stance, confidence, position }, ask, turn, total);
+  (S.trail[next] ||= []).push({ turn, stance, confidence, position });
+  S.transcript.push({ role: next, speaker: S.agents[next].name, text: r.text, ask: ask || null });
+  logMsg({ id: next, text: r.text, ask, stance, confidence, position, thought: thoughts, raw: r.raw, model, turn });
+  renderTable("live", { id: next, text: r.text, phase, turn, issue: m.issue }); setSpeaking(next); showBubble(next, r.text);
+  markCell(i, "done", next); m.cells[i] = next; refreshSeats(); drawMinds(); drawMood();
+  m.i = i + 1; saveSnapshot();
+  if (r.data.wantsUser && meOn()) S.userQ = { from: next, q: r.data.wantsUser };   // 사용자에게 묻는 건 사회자 몫이에요
 }
 
 // 결론 정리 (정해진 마지막 턴이든, 중간에 '여기서 마무리'든 같은 길로)
