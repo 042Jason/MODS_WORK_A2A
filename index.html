@@ -99,7 +99,8 @@ main{display:grid;grid-template-columns:minmax(600px,1fr) minmax(460px,40%);min-
 .t-who .ava{width:24px;height:24px;box-shadow:0 0 0 2px rgba(255,255,255,.85)}
 .t-crew{display:flex;margin-bottom:14px}
 .t-crew .ava{width:30px;height:30px;box-shadow:0 0 0 2px var(--navy);margin-right:-7px}
-.t-say{font-size:17px;line-height:1.55;letter-spacing:-.015em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical}
+.t-say{font-size:17px;line-height:1.55;letter-spacing:-.015em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.table{z-index:4}
 .verdict-tag{display:inline-block;align-self:flex-start;font-weight:700;font-size:13px;padding:4px 12px 5px;border-radius:var(--pill);background:var(--cream);color:var(--ink);margin-bottom:10px}
 
 /* 참석자 스티커 */
@@ -491,7 +492,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .xp-more{display:inline-flex;align-items:center;gap:3px;margin-top:4px;border:0;background:none;padding:2px 0;font:inherit;font-size:12px;font-weight:650;color:var(--c,var(--ink-2));text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .pc-bubble .xp-more{color:var(--ink-2)}
 .table .xp-more{color:rgba(255,255,255,.85)}
-.t-issue{display:inline-flex;align-items:center;gap:7px;align-self:flex-start;margin:-2px 0 8px;padding:3px 11px 4px 4px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:650}
+.t-issue{display:inline-flex;align-items:center;gap:7px;margin:0 0 0 auto;max-width:62%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:3px 11px 4px 4px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:650}
 .t-issue span{background:#FFD43B;color:#0A0A0A;font-size:11px;font-weight:750;padding:2px 8px 3px;border-radius:999px}
 .pc-spacer{flex:1;min-height:150px}
 .pc-strip{background:rgba(255,255,255,.88);border:2px solid var(--ink);border-radius:16px;padding:8px 10px 10px;backdrop-filter:blur(4px)}
@@ -1147,8 +1148,8 @@ function renderTableInner(state, info = {}) {
   } else if (state === "live") {
     const a = S.agents[info.id];
     t.innerHTML = `<div class="eyebrow"><span class="live ko">진행 중</span><span class="ko">${esc(phaseLabel(info.phase))}</span><span class="ko">전체 ${S.plan.length}턴 중 ${info.turn}번째</span></div>
-      ${info.issue ? `<div class="t-issue"><span>쟁점</span>${esc(info.issue)}</div>` : ""}
-      <div class="t-who">${face(info.id)}${esc(a.name)}</div><div class="t-say">${esc(info.text)}</div>
+
+      <div class="t-who">${face(info.id)}${esc(a.name)}${info.issue ? `<span class="t-issue"><span>쟁점</span>${esc(info.issue)}</span>` : ""}</div><div class="t-say">${esc(info.text)}</div>
       <div class="t-actions"><button class="pill on-dark sm" id="tb-add">자료·요청 추가</button>${canWrapUp() ? `<button class="pill on-dark sm" id="tb-wrap">여기서 마무리</button>` : ""}</div>`;
     $("#tb-add").onclick = () => openMore();
     $("#tb-wrap")?.addEventListener("click", wrapUpMeeting);
