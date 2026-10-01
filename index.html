@@ -1287,11 +1287,11 @@ function addMsg({ id, to, text, ask, stance, confidence, position, thought, raw,
   setLogCount(S.transcript.length);
   return el;
 }
-function addThinking(id) {
+function addThinking(id, label) {
   const a = S.agents[id];
   showBubble(id, null);
   const el = document.createElement("div"); el.className = `cmt ${id === "moderator" ? "mod" : ""}`; el.setAttribute("style", styleVars(id));
-  el.innerHTML = `${face(id)}<div><div class="meta"><b>${esc(a.name)}</b><span class="to">${id === "moderator" ? "순서를 정하는 중" : "생각하는 중"}<span class="typing"><i></i><i></i><i></i></span></span><span class="eyebrow sec">0s</span></div></div>`;
+  el.innerHTML = `${face(id)}<div><div class="meta"><b>${esc(a.name)}</b><span class="to">${esc(label || (id === "moderator" ? "순서를 정하는 중" : "생각하는 중"))}<span class="typing"><i></i><i></i><i></i></span></span><span class="eyebrow sec">0s</span></div></div>`;
   logPane().appendChild(el); el.scrollIntoView({ block: "end", behavior: "smooth" });
   const t0 = Date.now(); const timer = setInterval(() => { const s = el.querySelector(".sec"); if (s) s.textContent = `${Math.round((Date.now() - t0) / 1000)}s`; }, 1000);
   return () => { clearInterval(timer); el.remove(); document.querySelectorAll(".say-bubble .typing").forEach((t) => t.closest(".say-bubble")?.remove()); };
@@ -1312,9 +1312,12 @@ function drawMinds() {
 /* ───────────── 회의 진행 ───────────── */
 /* ───────────── 회의 진행: 끊겨도 멈춘 턴부터 이어서 ───────────── */
 const publicTranscript = () => S.transcript.map(({ role, speaker, text, ask }) => ({ role, speaker, text, ask }));
+// 지금 무엇을 하는 중인지 (회의록 '…하는 중', 자리 위 이름표)
+const busyLabel = (id, type) => type === "summarize" ? ["회의를 마무리하는 중", "마무리 중"] : id === "moderator" ? ["순서를 정하는 중", "진행 중"] : ["생각하는 중", "생각 중"];
 async function call(id, text, data) {
-  setSpeaking(id, "thinking");
-  const done = addThinking(id), sig = S.abort?.signal;
+  const [logLabel, tag] = busyLabel(id, data?.type);
+  setSpeaking(id, "thinking"); const tg = $(`#seat-${id} .sel span`); if (tg) tg.textContent = tag;
+  const done = addThinking(id, logLabel), sig = S.abort?.signal;
   try {
     let r;
     for (let attempt = 0; attempt < 2; attempt++) {
