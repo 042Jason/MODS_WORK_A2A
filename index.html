@@ -119,7 +119,9 @@ main{display:grid;grid-template-columns:minmax(600px,1fr) minmax(460px,40%);min-
 .note .n-name{font-weight:700;font-size:15px;letter-spacing:-.02em;line-height:1.2}
 .note .n-title{font-size:12px;opacity:.72;margin-top:1px}
 .note .n-model{margin-top:9px;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.03em}
-.note .n-state{display:flex;align-items:center;gap:6px;margin-top:8px}
+.note .n-state{display:grid;gap:5px;margin-top:8px}   /* 입장 칩 한 줄 + 아래에 확신 막대 (막대가 눌려 삐져나와 보이지 않게) */
+.note .n-state .stance{justify-self:start}
+.note .n-state .meter{flex:none;width:100%}
 .note .n-state:empty{display:none}
 .stance{font-size:11.5px;font-weight:700;padding:1px 8px 2px;border-radius:var(--pill);background:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;min-width:0}
 .stance[data-s="우려"]{color:#B42318}.stance[data-s="동의"]{color:#067647}.stance[data-s="보류"]{color:#93370D}
@@ -1049,6 +1051,9 @@ const vendorOf = (m) => ({ openai: "GPT", anthropic: "Claude", google: "Gemini",
   "meta-llama": "Llama", moonshotai: "Kimi", "z-ai": "GLM", cohere: "Cohere", amazon: "Nova", minimax: "MiniMax", microsoft: "Phi", nvidia: "Nemotron", baidu: "ERNIE", tencent: "Hunyuan" }[(m || "").split("/")[0]] || (m || "").split("/")[0]);
 const shortModel = (m) => `${vendorOf(m)} ${((m || "").split("/")[1] || "").replace(/^(claude|gpt|gemini|grok|solar|deepseek|mistral|qwen|llama|kimi|glm|command|nova|minimax|phi|nemotron|ernie|hunyuan)-?/i, "").replace(/-preview$/, "")}`.trim();
 const seatIds = () => ["moderator", ...members()];
+// 참석자 수: 에이전트 + (참여 중이면) 나
+const heads = () => members().length + (meOn() ? 1 : 0);
+const headsLabel = () => `참석자 ${heads()}명${meOn() ? "(나 포함)" : ""}`;
 function face(id, cls = "") {   // 캐릭터 얼굴 (이미지를 못 불러오면 이름 첫 글자)
   if (id === "me") return meFace(cls);
   const a = S.agents[id]; if (!a) return "";
@@ -1098,7 +1103,8 @@ function placeSeats() {
     const ang = (-90 + (360 / n) * k) * Math.PI / 180;
     const [fx, fy] = PRESET[n]?.[k] || [Math.cos(ang), Math.sin(ang)];
     const dx = rx * fx, dy = ry * fy;
-    const el = $(`#seat-${id}`); if (el) { el.style.left = `${W / 2 + dx}px`; el.style.top = `${H / 2 + dy}px`; }
+    const x = Math.max(HALF_W + 12, Math.min(W - HALF_W - 12, W / 2 + dx)), y = Math.max(HALF_H + 10, Math.min(H - HALF_H - 10, H / 2 + dy));   // 보드 밖으로 삐져나가지 않게
+    const el = $(`#seat-${id}`); if (el) { el.style.left = `${x}px`; el.style.top = `${y}px`; }
     const yNear = Math.max(0, Math.abs(dy) - HALF_H);
     if (yNear < B) a = Math.min(a, (Math.abs(dx) - HALF_W - GAP) / Math.sqrt(1 - (yNear / B) ** 2));
   });
@@ -1153,14 +1159,14 @@ function renderTableInner(state, info = {}) {
       <div class="t-head">무엇을 함께 토론할까요?</div>
       <div class="t-sub">주제만 적어도 돼요. 참고할 자료가 있으면 함께 첨부하세요.</div>
       <div class="t-actions"><button class="pill light sm" id="tb-topic">주제 입력하기</button><button class="pill on-dark sm" id="tb-file">자료 첨부</button></div>
-      <div class="t-meta">참석자 ${n}명, ${T}턴<button id="tb-cfg">구성 바꾸기</button></div>`;
+      <div class="t-meta">${headsLabel()}, ${T}턴<button id="tb-cfg">구성 바꾸기</button></div>`;
     $("#tb-topic").onclick = openTopic; $("#tb-file").onclick = () => $("#file").click(); $("#tb-cfg").onclick = openMembers;
   } else if (state === "ready") {
     const nf = S.doc.files?.length || 0;
     t.innerHTML = `<div class="t-crew">${crew()}</div><div class="eyebrow ko">2단계 · 회의 시작</div>
       <div class="t-head t-topic">${esc(S.doc.prompt?.trim() || S.doc.name)}</div>
       <div class="t-actions"><button class="pill light sm" id="tb-run">회의 시작</button><button class="pill on-dark sm" id="tb-edit">주제 고치기</button></div>
-      <div class="t-meta">참석자 ${n}명 · ${T}턴${nf ? ` · 자료 ${nf}개` : ""}<button id="tb-cfg2">구성 바꾸기</button><button id="tb-me" class="${meOn() ? "on" : ""}">${meOn() ? "나도 참여 중 ✓" : "나도 참여하기"}</button></div>`;
+      <div class="t-meta">${headsLabel()} · ${T}턴${nf ? ` · 자료 ${nf}개` : ""}<button id="tb-cfg2">구성 바꾸기</button><button id="tb-me" class="${meOn() ? "on" : ""}">${meOn() ? "나도 참여 중 ✓" : "나도 참여하기"}</button></div>`;
     $("#tb-me").onclick = () => { const on = !meOn(); setMe({ on }); toast(on ? "사회자가 필요할 때 나에게도 물어볼게요. 프로필은 설정에서 적을 수 있어요." : "에이전트끼리만 토론해요."); };
     $("#tb-run").onclick = runMeeting; $("#tb-edit").onclick = openTopic; $("#tb-cfg2").onclick = openMembers;
   } else if (state === "live") {
@@ -1194,7 +1200,7 @@ function renderTableInner(state, info = {}) {
 }
 function describeConfig() {
   const n = members().length, T = turns();
-  $("#subtitle").innerHTML = `AI 에이전트들이 A2A로 모여 어떤 주제든 토론해요<button class="cfg-chip" id="cfg-chip" title="참석자와 턴 수는 설정에서 바꿀 수 있어요">참석자 ${n}명${meOn() ? " + 나" : ""} · ${T}턴<svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 17.3V20h2.7L17.8 8.9l-2.7-2.7L4 17.3Zm16.7-11.4a1 1 0 0 0 0-1.4l-1.2-1.2a1 1 0 0 0-1.4 0l-1.1 1.1 2.6 2.6 1.1-1.1Z"/></svg></button>`;
+  $("#subtitle").innerHTML = `AI 에이전트들이 A2A로 모여 어떤 주제든 토론해요<button class="cfg-chip" id="cfg-chip" title="참석자와 턴 수는 설정에서 바꿀 수 있어요">${headsLabel()} · ${T}턴<svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 17.3V20h2.7L17.8 8.9l-2.7-2.7L4 17.3Zm16.7-11.4a1 1 0 0 0 0-1.4l-1.2-1.2a1 1 0 0 0-1.4 0l-1.1 1.1 2.6 2.6 1.1-1.1Z"/></svg></button>`;
   $("#cfg-chip").onclick = openMembers;
   $("#frame-meta").textContent = `${n + 1} agents${meOn() ? " + you" : ""} · ${T} turns`;
 }
@@ -1798,7 +1804,7 @@ function openMore() {
     : "다음 발언부터 모든 참석자가 이 요청과 자료를 함께 보고 토론해요. 지금 발언은 끊지 않아요.";
   $("#more-laps").hidden = !after;
   const n = S.meeting.team.length;
-  $("#more-l1").textContent = `(${n + 1}턴: 참석자 ${n}명이 한 번씩 + 결론)`; $("#more-l2").textContent = `(${n * 2 + 1}턴)`;
+  $("#more-l1").textContent = `(${n + 1}턴: 에이전트 ${n}명이 한 번씩 + 결론)`; $("#more-l2").textContent = `(${n * 2 + 1}턴)`;
   $("#more-go").textContent = after ? "추가 회의 시작" : "추가하기";
   updateMoreCount(); $("#dlg-more").showModal(); setTimeout(() => $("#more-text").focus(), 60);
 }
@@ -2324,7 +2330,7 @@ function drawTurns() {
   const cap = maxTurns();
   $("#t-val").textContent = t; $("#t-minus").disabled = t <= n + 1; $("#t-plus").disabled = t >= cap;
   $("#turns-eyebrow").textContent = t === rec ? "Recommended" : "Custom";
-  $("#turns-desc").textContent = `참석자 ${n}명이면 ${rec}턴을 권해요. 1라운드는 모두 한 번씩 말하고, 그다음부터는 사회자가 흐름을 보고 발언권을 줘요. 최소 ${n + 1}턴, 최대 ${cap}턴까지 정할 수 있어요.`
+  $("#turns-desc").textContent = `에이전트 ${n}명이면 ${rec}턴을 권해요. 1라운드는 모두 한 번씩 말하고, 그다음부터는 사회자가 흐름을 보고 발언권을 줘요. 최소 ${n + 1}턴, 최대 ${cap}턴까지 정할 수 있어요.`
     + (cap < MAX_TURNS ? ` 공용 키로는 ${cap}턴까지예요. 더 길게 하려면 내 API 키를 넣어 주세요.` : "");
   $("#plan-preview").innerHTML = planGroups(buildPlan(n, t)).map((g) => `<span data-p="${g.phase}">${esc(phaseLabel(g.phase))} ${g.idx.length}</span>`).join("");
 }
@@ -2417,7 +2423,7 @@ async function boot() {
         defaultModel: p.defaultModel, sharedModel: p.sharedModel, profile: p.profile || {}, bust: card.iconUrl || `vendor/avatars/${id}.png`, face: p.avatarFace || `vendor/avatars/${id}-face.png` };
     }
     newMeeting(); updateMode(); updateRunButton();
-    status(`에이전트 ${seatIds().length}명이 자리에 앉았어요. 토론 주제만 정해 주세요.`);
+    status(`에이전트 ${seatIds().length}명${meOn() ? `과 ${meProfile().name} 님` : ""}이 자리에 앉았어요. 토론 주제만 정해 주세요.`);
     if (snap?.meeting && snap.doc && snap.meeting.status !== "done") { try { restoreSnapshot(snap); } catch (e) { console.error(e); clearSnapshot(); } }
   } catch (e) { status(`에이전트 명함을 받지 못했어요. ${esc(e.message)}`); }
   loadModels();
