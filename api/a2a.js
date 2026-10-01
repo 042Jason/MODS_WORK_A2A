@@ -27,6 +27,29 @@ const ROUND_GUIDE = [
   "합의점 찾기: 지금까지 나온 의견 중 다 같이 동의할 수 있는 지점과 아직 갈리는 지점을 짚고, 갈리는 지점에 대해 내 생각을 분명히 하는 차례입니다.",
   "실행 계획: 결론이 난다고 가정하고, 실제로 무엇부터 누가 어떻게 할지 구체적인 다음 단계를 말하는 차례입니다.",
 ];
+// 오늘의 배지: 사회자가 결론을 정리하며 회의에서 실제로 한 일을 보고 나눠 줘요
+const BADGE_GUIDE = {
+  question: "질문왕: 날카로운 질문을 가장 많이 던짐",
+  persuaded: "생각 전환: 토론하며 생각을 바꿈",
+  shield: "소신파: 끝까지 자기 시각을 지킴",
+  mic: "마지막 한마디: 결론 직전에 중요한 반론을 냄",
+  talk: "수다왕: 가장 많이, 가장 길게 이야기함",
+  magnifier: "날카로운 지적: 다들 놓친 문제를 짚음",
+  handshake: "합의 도우미: 의견을 모으는 데 기여함",
+  bulb: "아이디어 뱅크: 좋은 제안이나 대안을 냄",
+};
+function pickBadges(raw, names) {   // 이름·배지 키 검증, 한 사람에 2개까지
+  const out = [], count = {};
+  for (const b of Array.isArray(raw) ? raw : []) {
+    const to = String(b?.to || "").replace(/\s*님$/, "").trim(), key = String(b?.badge || "").trim();
+    if (!names.includes(to) || !BADGE_GUIDE[key] || (count[to] || 0) >= 2 || out.some((x) => x.to === to && x.badge === key)) continue;
+    count[to] = (count[to] || 0) + 1;
+    out.push({ to, badge: key, reason: String(b.reason || "").trim().slice(0, 120) });
+  }
+  return out;
+}
+const MOCK_BADGE = { critic: ["magnifier", "근거부터 따지자는 말로 논의의 기준을 세웠어요."], strategist: ["bulb", "작게 시작해 넓히자는 방향을 제일 먼저 내놨어요."],
+  reader: ["handshake", "쉬운 말로 풀어 주면서 의견이 모이게 도왔어요."], method: ["question", "성공 기준을 먼저 정하자고 계속 물었어요."], policy: ["shield", "반발 대책이 먼저라는 시각을 끝까지 지켰어요."] };
 // 사용자도 참석할 때 프롬프트에 넣는 소개
 const userLine = (u) => (u?.name ? `${u.name}(사용자${u.title ? `, ${u.title}` : ""})` : "");
 const userIntro = (u) => (u?.name ? `\n[사용자 참석] ${userLine(u)}도 이 회의에 함께합니다.${u.about ? ` 소개: ${String(u.about).slice(0, 300)}` : ""} 회의록에는 '${u.name}(사용자)'로 나옵니다.` : "");
@@ -95,7 +118,17 @@ function transcriptText(transcript = []) {
 async function moderate(llm, persona, input, state) {
   const { document, transcript = [], phase = "round1", turn = 1, totalTurns = 12, eligible = MEMBER_IDS, attendees = MEMBER_IDS, hint = "" } = input;
   const pool = eligible.filter((id) => MEMBER_IDS.includes(id));
-  const out = llm.mock ? mockModerate({ transcript, phase, eligible: pool, hasDoc: !!document?.text }) : await chatJSON({
+  // 흐름을 읽을 재료: 누가 몇 번 말했는지, 직전 발언자와 질문, 각자 지금 입장, 지금까지 다룬 쟁점
+  const said = (id) => transcript.filter((t) => t.role === id).length;
+  const lastTalk = [...transcript].reverse().find((t) => t.role !== "moderator");
+  const standing = input.standing || {};
+  const flow = [
+    `[발언 현황] ${attendees.filter((id) => PERSONAS[id]).map((id) => `${PERSONAS[id].name} ${said(id)}번${standing[id]?.position ? ` · 지금 입장 '${standing[id].position}'(${({ 동의: "모이는 의견과 같은 방향", 우려: "다른 시각", 보류: "고민 중" })[standing[id].stance] || "?"})` : ""}`).join(" / ")}`,
+    lastTalk ? `[직전 발언] ${lastTalk.speaker}${lastTalk.ask?.to ? ` (→ ${lastTalk.ask.to}에게 질문: ${lastTalk.ask.question})` : ""}` : "",
+    (state.issues || []).length ? `[지금까지 다룬 쟁점] ${state.issues.slice(-6).join(" → ")}` : "",
+    input.roundStart && transcript.length ? "이번이 이 라운드의 첫 차례입니다. say에서 지금까지 흐름을 한 문장으로 짚고, 이번 라운드에 무엇을 할지 소개한 뒤 첫 사람을 부르세요." : "",
+  ].filter(Boolean).join("\n");
+  const out = llm.mock ? mockModerate({ transcript, phase, eligible: pool, hasDoc: !!document?.text, roundStart: input.roundStart, standing: input.standing || {} }) : await chatJSON({
     ...llm, system: persona.system, temperature: 0.4, maxTokens: 1200,
     user: `${agenda(input, 10000)}
 
@@ -104,24 +137,27 @@ ${transcriptText(transcript)}
 
 [이번 회의 참석자] ${attendeeLine(attendees)}${input.user?.name ? `, ${userLine(input.user)}` : ""}${userIntro(input.user)}
 [진행 상황] 전체 ${totalTurns}턴 중 ${turn}번째 발언 차례. ${phaseGuide(phase)}
+${flow}
 이번에 말할 수 있는 사람(eligible): ${pool.map((id) => `${id}(${PERSONAS[id].name})`).join(", ")}
 ${hint ? `참고: ${hint}` : ""}
 ${transcript.length === 0 ? "첫 차례이니 say 앞에 짧은 개회 멘트를 붙이세요." : ""}
 [지난 진행 메모(당신만 봄)] ${state.notes || "(없음)"}
 
 JSON 하나만 출력합니다.
-{"next": "eligible 중 하나의 id", "say": "다음 발언자 이름을 부르며 하는 말 (1~2문장)", "reason": "왜 이 사람인지 (메모용, 공개 안 됨)"${input.user?.name ? `, "ask_user": "사용자 ${input.user.name}의 경험·상황·선호를 알아야 판단할 수 있거나, 의견이 팽팽해서 사용자 생각을 들으면 좋을 때만 사용자에게 할 질문 한 문장. 아니면 빈 문자열. 라운드마다 많아야 한 번"` : ""}}`,
+{"next": "eligible 중 하나의 id", "issue": "이번 차례에 다룰 쟁점 (15자 이내)", "say": "다음 발언자 이름을 부르며 하는 말 (1~2문장, 라운드 첫 차례는 최대 3문장)", "reason": "왜 이 사람에게 지금 발언권을 주는지 (메모용, 공개 안 됨)"${input.user?.name ? `, "ask_user": "사용자 ${input.user.name}의 경험·상황·선호를 알아야 판단할 수 있거나, 의견이 팽팽해서 사용자 생각을 들으면 좋을 때만, next보다 먼저 사용자에게 따로 묻는 질문 한 문장('${input.user.name} 님,'으로 시작). say는 그대로 next에게 하는 말로 씁니다. 필요 없으면 빈 문자열. 라운드마다 많아야 한 번"` : ""}}`,
   });
   let next = pool.includes(out.next) ? out.next : pool.includes(ID_BY_NAME[out.next]) ? ID_BY_NAME[out.next] : null;
   const fixed = !next;
   if (!next) next = pool[0];
   const name = PERSONAS[next].name;
   const say = !fixed && out.say ? String(out.say) : `${name} 님 의견 부탁드립니다.`;
-  const newState = { ...state, turns: state.turns + 1, notes: clip(`${state.notes}\n${turn}: ${out.reason || ""}`.trim(), 1500) };
+  const issue = String(out.issue || "").replace(/^쟁점\s*[:：]\s*/, "").trim().slice(0, 24);
+  const issues = issue && (state.issues || []).at(-1) !== issue ? [...(state.issues || []), issue].slice(-12) : state.issues || [];
+  const newState = { ...state, turns: state.turns + 1, issues, notes: clip(`${state.notes}\n${turn}: ${out.reason || ""}`.trim(), 1500) };
   let askUser = input.user?.name ? String(out.ask_user || "").trim().slice(0, 200) : "";
   // 모의 모드에서도 흐름을 볼 수 있게: 2라운드 첫 차례에 한 번 사용자에게 물어요
   if (llm.mock && input.user?.name && phase === "round2" && !transcript.some((t) => t.role === "me")) askUser = `${input.user.name} 님은 이 주제를 직접 겪는 입장에서 어떻게 보세요?`;
-  return { text: say, data: { next, nextName: name, phase, askUser, thoughts: cleanNote(out.reason) }, newState };
+  return { text: say, data: { next, nextName: name, phase, issue, askUser, thoughts: cleanNote(out.reason) }, newState };
 }
 
 // ── 사회자: 결론 ─────────────────────────────────────────────────────
@@ -153,11 +189,20 @@ JSON 하나만 출력합니다.
   "agreements": ["모두 동의한 점"],
   "open_questions": ["결론 나지 않은 질문"],
   "closing": "사회자 마무리 멘트 1~2문장",
-  "private_notes": "사회자로서 회의를 마치며 드는 솔직한 생각 1~2문장 (머리말 없이)"
-}`,
+  "private_notes": "사회자로서 회의를 마치며 드는 솔직한 생각 1~2문장 (머리말 없이)",
+  "badges": [{"to": "받는 사람 이름", "badge": "배지 키", "reason": "왜 이 배지인지 사회자가 건네는 한 문장 (~해요 체)"}]
+}
+[오늘의 배지] 사회자로서 참석자마다 회의에서 실제로 한 일에 맞는 배지를 1~2개 주세요. 근거 없이 주지 말고, 같은 배지를 여러 명에게 줘도 됩니다. 사회자 자신은 받지 않습니다.
+참석자: ${(input.attendees || []).map((id) => PERSONAS[id]?.name).filter(Boolean).join(", ")}${input.user?.name && transcript.some((t) => t.role === "me") ? `, ${input.user.name}(사용자, 발언했다면 1개)` : ""}
+배지 키: ${Object.entries(BADGE_GUIDE).map(([k, v]) => `${k}(${v})`).join(", ")}`,
   });
   if (!["positive", "mixed", "negative"].includes(review.tone)) review.tone = String(review.tone || "").match(/positive|negative/)?.[0] || "mixed";
   const thoughts = cleanNote(review.private_notes); delete review.private_notes;
+  const names = [...(input.attendees || []).map((id) => PERSONAS[id]?.name).filter(Boolean), ...(input.user?.name && transcript.some((t) => t.role === "me") ? [input.user.name] : [])];
+  review.badges = llm.mock
+    ? [...(input.attendees || []).filter((id) => MOCK_BADGE[id]).map((id) => ({ to: PERSONAS[id].name, badge: MOCK_BADGE[id][0], reason: MOCK_BADGE[id][1] })),
+       ...(names.includes(input.user?.name) ? [{ to: input.user.name, badge: "talk", reason: "현장 이야기를 직접 들려줘서 토론이 훨씬 구체적이 됐어요." }] : [])]
+    : pickBadges(review.badges, names);
   if (early) review.early = { doneTurns, totalTurns };
   return {
     text: review.closing || "오늘 토론의 결론을 정리했습니다.",
