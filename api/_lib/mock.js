@@ -13,12 +13,21 @@ function facts(text) {
 const cut = (s, n = 36) => (s.length > n ? s.slice(0, n) + "…" : s);
 const NAME = (id) => PERSONAS[id].name;
 
-export function mockModerate({ transcript, phase, eligible, hasDoc = true }) {
+const MOCK_ISSUES = { round1: "첫 의견", round2: "근거와 반론", round3: "대안", round4: "입장 바꿔 보기", round5: "합의점", round6: "실행 순서", last_word: "남은 걱정" };
+export function mockModerate({ transcript, phase, eligible, hasDoc = true, roundStart = false, standing = {} }) {
   const last = [...transcript].reverse().find((t) => t.role !== "moderator");
-  let next = eligible[0];
+  // 모의 모드도 순서를 돌리지 않게: 덜 말한 사람 중에서 직전 발언자와 시각이 다른 사람을 먼저
+  const talks = (id) => transcript.filter((t) => t.role === id).length;
+  const least = Math.min(...eligible.map(talks));
+  const pool = eligible.filter((id) => talks(id) <= least + (phase === "round1" ? 0 : 1));
+  const differ = pool.filter((id) => standing[id]?.stance && standing[id].stance !== standing[last?.role]?.stance);
+  const from = differ.length ? differ : pool.length ? pool : eligible;
+  let next = from[Math.floor(Math.random() * from.length)];
+  const issue = MOCK_ISSUES[phase] || "추가 쟁점";
   const asked = last?.ask?.to && Object.values(PERSONAS).find((p) => p.name === last.ask.to)?.id;
   if (asked && eligible.includes(asked)) next = asked;
-  const say = phase === "last_word"
+  const intro = roundStart && transcript.length && phase !== "round1" ? `지금까지 근거와 걱정이 함께 나왔어요. 이번엔 '${issue}'을 중심으로 이야기해 볼게요. ` : "";
+  const say = intro + (phase === "last_word"
     ? `결론 내기 전에, ${NAME(next)} 님이 아직 가장 걸리는 부분을 한 번 더 말씀해 주세요.`
     : transcript.length === 0
       ? `${hasDoc ? "자료" : "주제"} 잘 받았습니다. ${NAME(next)} 님부터 첫 의견 부탁드려요.`
@@ -26,8 +35,8 @@ export function mockModerate({ transcript, phase, eligible, hasDoc = true }) {
         ? `${NAME(next)} 님, 방금 질문에 답해 주시겠어요?`
         : phase !== "round1"
           ? `${NAME(next)} 님, 앞선 의견 중 동의하기 어려운 게 있으면 짚어 주세요.`
-          : `${NAME(next)} 님은 어떻게 보셨어요?`;
-  return { next, say, reason: asked === next ? `${NAME(next)} 님이 질문을 받았으니 바로 답하게 함` : `아직 이번 라운드에 말하지 않은 ${NAME(next)} 님 차례` };
+          : `${NAME(next)} 님은 어떻게 보셨어요?`);
+  return { next, say, issue, reason: asked === next ? `${NAME(next)} 님이 질문을 받았으니 바로 답하게 함` : `아직 이번 라운드에 말하지 않은 ${NAME(next)} 님 차례` };
 }
 
 const LINES = {   // 첨부 자료가 있을 때의 대사 (자료 속 문장 a, b를 인용)
