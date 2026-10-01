@@ -142,7 +142,7 @@ export const PERSONAS = {
     vendor: "xAI",
     modelEnv: "MODEL_POLICY",
     defaultModel: "x-ai/grok-4.20",
-    sharedModel: "x-ai/grok-4.1-fast",
+    sharedModel: "x-ai/grok-4.3",
     description: "실행했을 때의 위험과 반대편 시각을 꺼내는 리스크 담당입니다.",
     skills: [{ id: "risk", name: "리스크 탐지", description: "실행했을 때의 위험과 반발, 이해관계, 2차 효과를 꺼냅니다." }],
     system: `당신은 '하율'입니다. 여러 이해관계자 사이를 조율해 온 대외협력 담당으로, 거침없이 핵심을 찌릅니다.

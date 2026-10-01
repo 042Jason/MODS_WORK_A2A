@@ -61,7 +61,27 @@ async function callOnce({ apiKey, model, system, user, temperature, maxTokens, j
   }
 }
 
-export async function chatJSON({ apiKey, model, system, user, temperature = 0.7, maxTokens = 2500 }) {
+// 모델이 지원 종료되었거나 없어졌다는 응답인지 (이때만 다른 모델로 바꿔 다시 불러요)
+const modelGone = (e) => e?.status === 404 || (e?.status === 400 && /deprecat|not a valid model|no endpoints|not found|is not available/i.test(e.message || ""));
+
+// model을 먼저 부르고, 지원 종료로 실패하면 fallbacks를 차례로 불러요. 실제로 쓴 모델은 onModel로 알려 줘요.
+export async function chatJSON({ apiKey, model, fallbacks = [], onModel, ...rest }) {
+  const chain = [model, ...fallbacks].filter((m, i, a) => m && a.indexOf(m) === i);
+  let lastErr;
+  for (const m of chain) {
+    try {
+      const out = await chatWithModel({ apiKey, model: m, ...rest });
+      onModel?.(m);
+      return out;
+    } catch (e) {
+      lastErr = e;
+      if (!modelGone(e)) throw e;
+    }
+  }
+  throw lastErr;
+}
+
+async function chatWithModel({ apiKey, model, system, user, temperature = 0.7, maxTokens = 2500 }) {
   const base = { apiKey, model, system, user, temperature, maxTokens };
   let content;
   try {
