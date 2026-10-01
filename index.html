@@ -753,12 +753,12 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
         <button type="button" data-say="다른 관점도 한번 들어 보고 싶어요.">🔄 다른 관점도</button>
         <button type="button" id="live-hand">✋ 발언 신청</button>
       </div>
-      <div class="cp-row"><textarea id="live-text" rows="1" placeholder="회의에 한마디 하기 (다음 발언부터 모두 함께 들어요)"></textarea><button class="pill dark" id="live-send">말하기</button></div>
+      <div class="cp-row"><textarea id="live-text" rows="1" enterkeyhint="send" placeholder="회의에 한마디 하기"></textarea><button class="pill dark" id="live-send">말하기</button></div>
       <button class="cp-more" id="live-skip" type="button" hidden>이번엔 넘기기</button>
     </div>
     <div class="composer" id="composer" hidden>
       <div class="cp-to" id="cp-to" role="radiogroup" aria-label="질문할 에이전트"></div>
-      <div class="cp-row"><textarea id="cp-text" rows="1" placeholder="회의 결과에 대해 물어보세요"></textarea><button class="pill dark" id="cp-send">질문하기</button></div>
+      <div class="cp-row"><textarea id="cp-text" rows="1" enterkeyhint="send" placeholder="회의 결과에 대해 물어보세요"></textarea><button class="pill dark" id="cp-send">질문하기</button></div>
       <button class="cp-more" id="cp-more" type="button">＋ 자료나 요청을 더해 추가 회의 열기</button>
     </div>
   </section>
@@ -1688,7 +1688,7 @@ function updateLive() {
   $("#live-cp").hidden = !(pendingAsk || (meOn() && running && (S.tab || "log") === "log"));
   $("#live-q").hidden = !pendingAsk; $("#live-skip").hidden = !pendingAsk; $("#live-quick").hidden = !!pendingAsk;
   $("#live-send").textContent = pendingAsk ? "답하기" : "말하기";
-  $("#live-text").placeholder = pendingAsk ? "답을 적어 주세요 (⌘/Ctrl + Enter로 보내기)" : "회의에 한마디 하기 (다음 발언부터 모두 함께 들어요)";
+  $("#live-text").placeholder = pendingAsk ? "답을 적어 주세요" : "회의에 한마디 하기";
 }
 function addMeMsg({ text, label, to }) {
   const p = meProfile(), el = document.createElement("article"); el.className = "cmt me meme";
@@ -2376,7 +2376,9 @@ $("#live-send").onclick = liveSend;
 $("#live-quick").querySelectorAll("[data-say]").forEach((b) => (b.onclick = () => { if (!pendingAsk) meSays(b.dataset.say, "한마디"); }));
 $("#live-hand").onclick = () => raiseHand();
 $("#live-skip").onclick = () => { if (!pendingAsk) return; const p = pendingAsk; endAsk(); cast("이번 질문은 넘겼어요.", p.fromId); p.resolve(null); };
-$("#live-text").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); liveSend(); } });
+// Enter로 바로 보내요 (줄바꿈은 Shift+Enter). 한글 조합 중에는 보내지 않아요
+$("#live-text").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); liveSend(); } });
+$("#live-text").addEventListener("input", () => { const t = $("#live-text"); t.style.height = "auto"; t.style.height = `${Math.min(t.scrollHeight, 120)}px`; });
 drawMe();
 $("#more-add").onclick = () => $("#more-file").click();
 $("#more-file").onchange = (e) => { const fs = [...e.target.files]; e.target.value = ""; if (fs.length) addMoreFiles(fs); };
@@ -2393,7 +2395,7 @@ $("#nm-same").onclick = () => { $("#dlg-new").close(); if (S.doc) S.doc.addenda 
 $("#nm-fresh").onclick = () => { $("#dlg-new").close(); S.doc = null; S.draft = null; $("#docchip").hidden = true; newMeeting(); openTopic(); };
 $("#cp-send").onclick = askFollowup;
 $("#cp-text").addEventListener("input", growComposer);
-$("#cp-text").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); askFollowup(); } });
+$("#cp-text").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); askFollowup(); } });
 document.body.dataset.view = "board";
 document.querySelectorAll(".mnav button").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
 mq.addEventListener("change", () => { placeSeats(); if (!isMobile()) document.body.dataset.view = "board"; });
