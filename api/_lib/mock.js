@@ -1,4 +1,4 @@
-// API 키 없이 흐름을 연습할 수 있는 모의 응답. 문서에서 숫자가 들어간 문장을 뽑아 그럴듯하게 말합니다.
+// API 키 없이 흐름을 연습할 수 있는 모의 응답. 첨부 자료가 있으면 자료 속 문장을, 없으면 토론 주제를 인용해 그럴듯하게 말합니다.
 import { MEMBER_IDS, PERSONAS } from "./personas.js";
 
 function facts(text) {
@@ -6,8 +6,9 @@ function facts(text) {
     .replace(/\s+/g, " ")
     .split(/(?<=[.다음함])\s+|[□○▪■※]/)
     .map((s) => s.trim())
-    .filter((s) => /\d/.test(s) && s.length > 15 && s.length < 160);
-  return parts.length ? parts : ["문서 첫 부분의 수치"];
+    .filter((s) => s.length > 15 && s.length < 160);
+  const withNum = parts.filter((s) => /\d/.test(s));
+  return withNum.length ? withNum : parts.length ? parts : ["자료 첫 부분"];
 }
 const cut = (s, n = 36) => (s.length > n ? s.slice(0, n) + "…" : s);
 const NAME = (id) => PERSONAS[id].name;
@@ -29,26 +30,26 @@ export function mockModerate({ transcript, phase, eligible, hasDoc = true }) {
   return { next, say, reason: asked === next ? `${NAME(next)} 님이 질문을 받았으니 바로 답하게 함` : `아직 이번 라운드에 말하지 않은 ${NAME(next)} 님 차례` };
 }
 
-const LINES = {
+const LINES = {   // 첨부 자료가 있을 때의 대사 (자료 속 문장 a, b를 인용)
   critic: [
-    (a) => `"${a}" 여기부터 걸려요. 본문 수치랑 표 수치가 맞는지, %와 %p가 섞이지 않았는지 다시 봐야 합니다.`,
-    (a, b) => `나래 님 말씀은 알겠는데, 숫자부터 맞추고요. "${b}" 부분 증감률 재계산하면 반올림 차이가 날 수 있어요.`,
+    (a) => `"${a}" 여기부터 걸려요. 이 주장의 근거가 자료 어디에 있는지, 숫자라면 계산이 맞는지 다시 봐야 합니다.`,
+    (a, b) => `나래 님 말씀은 알겠는데, 사실관계부터 맞추고요. "${b}" 부분은 출처와 기준을 한 번 더 확인해야 해요.`,
   ],
   strategist: [
-    (a) => `한결 님이 숫자는 잘 보실 테니, 저는 메시지를 볼게요. 이 자료의 핵심은 "${a}" 쪽인데 제목이 그걸 못 살리고 있어요.`,
-    (a, b) => `정리하면 수치 보정은 한결 님 의견대로 하고, 제목은 독자가 체감하는 변화 중심으로 바꾸는 게 좋겠어요.`,
+    (a) => `한결 님이 근거는 잘 보실 테니, 저는 핵심을 볼게요. 이 자료가 말하려는 건 "${a}" 쪽인데 그게 잘 안 드러나요.`,
+    (a, b) => `정리하면 사실 확인은 한결 님 의견대로 하고, 핵심 메시지는 맨 앞으로 끌어올리는 게 좋겠어요.`,
   ],
   reader: [
-    (a) => `솔직히 저는 "${a}" 이 문장 두 번 읽었어요. 용어 설명이 없어서 기사로 옮기면 오해가 생길 것 같아요.`,
-    (a, b) => `나래 님 방향에 동의해요. 다만 "${b}" 부분은 그래프로 보여 주면 훨씬 빨리 읽힐 거예요.`,
+    (a) => `솔직히 저는 "${a}" 이 문장 두 번 읽었어요. 처음 보는 사람은 오해할 수 있을 것 같아요.`,
+    (a, b) => `나래 님 방향에 동의해요. 다만 "${b}" 부분은 예시를 하나 붙이면 훨씬 쉽게 읽힐 거예요.`,
   ],
   method: [
-    (a) => `"${a}" 이 비교는 조건이 하나 붙어야 해요. 지표마다 기준 시점과 자료원이 달라서, 주석으로 밝혀 두는 게 맞습니다.`,
-    (a, b) => `한결 님 지적에 이유를 보태면, "${b}"는 표본조사 결과라 확정적인 표현은 피하는 게 좋겠어요.`,
+    (a) => `"${a}" 이 부분은 조건이 하나 붙어야 해요. 무엇을 기준으로 비교했는지 밝혀 두는 게 맞습니다.`,
+    (a, b) => `한결 님 지적에 이유를 보태면, "${b}"는 일부 사례에서 나온 이야기라 단정적인 표현은 피하는 게 좋겠어요.`,
   ],
   policy: [
-    (a) => `이거 내일 기사 제목 뭐로 나올 것 같아요? "${a}" 문장은 지역 순위처럼 읽혀서 반발이 나올 수 있어요.`,
-    (a, b) => `보람 님 말대로 쉬운 표현은 좋은데, 민감 지표는 순위 대신 변화 추이로 보여 주는 게 안전합니다.`,
+    (a) => `이거 반대하는 사람은 뭐라고 할까요? "${a}" 문장은 받아들이는 사람에 따라 불편하게 읽힐 수 있어요.`,
+    (a, b) => `보람 님 말대로 쉽게 쓰는 건 좋은데, 민감한 부분은 미리 반대 의견을 들어 보고 표현을 다듬는 게 안전합니다.`,
   ],
 };
 
@@ -92,8 +93,8 @@ export function mockMember(personaId, { document, myTurn, phase, topic }) {
   const a = cut(f[k % f.length]);
   const b = cut(f[(k + 3) % f.length]);
   const i = phase === "round1" ? 0 : 1;  // 2라운드 이후와 최종 반론은 두 번째 대사
-  const ask = phase === "round1" && personaId === "critic" ? { to: "나래", question: "이 수치를 제목에 꼭 올려야 하나요?" }
-            : phase === "round1" && personaId === "reader" ? { to: "서진", question: "이 용어, 각주 정의면 충분할까요?" }
+  const ask = phase === "round1" && personaId === "critic" ? { to: "나래", question: "이 내용을 핵심으로 내세워도 될 만큼 근거가 충분할까요?" }
+            : phase === "round1" && personaId === "reader" ? { to: "서진", question: "이 용어, 짧은 설명만 붙이면 충분할까요?" }
             : { to: null, question: "" };
   return {
     utterance: LINES[personaId][i](a, b),
@@ -127,20 +128,20 @@ export function mockSummary({ document, topic }) {
   }
   const f = facts(document?.text);
   return {
-    verdict: "수정 후 배포", tone: "mixed",
-    headline: "핵심 발견은 분명하지만, 수치 표기와 용어 설명, 민감 지표 표현을 손봐야 합니다.",
+    verdict: "보완 후 진행", tone: "mixed",
+    headline: "방향은 대체로 좋지만, 근거를 보강하고 오해를 부를 표현을 다듬은 뒤 진행하자는 결론이에요.",
     key_points: [
-      { where: cut(f[0], 30), title: "본문과 표의 증감 표기(%, %p) 확인 필요", detail: "재계산 후 표기 통일", raised_by: "한결" },
-      { where: cut(f[1 % f.length], 30), title: "지표별 기준 시점이 달라 비교 조건이 필요", detail: "표 아래 주석으로 기준 시점 명시", raised_by: "서진" },
-      { where: cut(f[2 % f.length], 30), title: "지역 순위처럼 읽히는 문장", detail: "순위 대신 변화 추이 중심으로 서술", raised_by: "하율" },
+      { where: cut(f[0], 30), title: "핵심 주장마다 근거와 출처 보강", detail: "숫자와 사실관계를 다시 확인해요", raised_by: "한결" },
+      { where: cut(f[1 % f.length], 30), title: "비교 기준과 조건 밝히기", detail: "무엇과 비교했는지 한 줄로 적어요", raised_by: "서진" },
+      { title: "핵심 메시지를 맨 앞으로", detail: "가장 하고 싶은 말을 첫 문장에", raised_by: "나래" },
     ],
     concerns: [
-      { title: "제목이 가장 큰 변화를 담지 못함", detail: "변화 폭이 가장 큰 지표를 제목으로", raised_by: "나래" },
-      { title: "전문용어 설명 부족", detail: "첫 등장 시 괄호로 한 줄 정의", raised_by: "보람" },
+      { where: cut(f[2 % f.length], 30), title: "받아들이는 사람에 따라 불편할 표현", detail: "반대 의견을 미리 듣고 표현을 다듬어요", raised_by: "하율" },
+      { title: "처음 보는 사람에게 어려운 용어", detail: "짧은 설명이나 예시를 붙여요", raised_by: "보람" },
     ],
-    agreements: ["지역 간 비교가 한눈에 들어오는 구성", "출처 표기가 꼼꼼함"],
-    open_questions: ["후속 분석으로 연령대별 분해가 필요한지"],
-    closing: "(모의 모드) 수정사항 반영해서 다시 공유해 주세요.",
+    agreements: ["전체 방향과 문제의식에는 모두 공감했어요", "근거를 보강하면 설득력이 커진다"],
+    open_questions: ["어느 범위까지 근거를 보강할지"],
+    closing: "(모의 모드) 오늘 나온 보완점을 반영해서 다시 이야기해 봐요.",
   };
 }
 
@@ -148,11 +149,11 @@ export function mockFollowup(personaId, { question, review }) {
   const q = cut(String(question || ""), 40);
   const lines = {
     moderator: `좋은 질문이에요. "${q}"에 대해서는, 회의에서 한결 님은 근거를, 하율 님은 실행했을 때의 파장을 가장 걱정했어요. 판정이 '${review?.verdict || "조건부 합의"}'인 이유도 거기 있어요. 핵심 결론 첫 항목부터 보시길 권해요.`,
-    critic: `"${q}" 질문이요? 저는 여전히 숫자부터 맞추는 게 먼저라고 봐요. 본문과 표의 증감 표기를 다시 계산해 보면 답이 보일 거예요.`,
-    strategist: `"${q}"라면, 저는 제목부터 다시 보겠어요. 독자가 가장 먼저 기억할 한 문장을 정하면 나머지 수정 순서도 자연스럽게 정해져요.`,
-    reader: `솔직히 "${q}" 부분은 처음 읽는 사람 입장에서 헷갈릴 수 있어요. 용어에 한 줄 설명만 붙여도 훨씬 나아져요.`,
-    method: `"${q}"는 조건을 하나 붙여서 답해야 해요. 지표마다 기준 시점이 달라서, 주석으로 그 차이를 밝혀 두는 게 안전해요.`,
-    policy: `"${q}"요? 이게 내일 기사 제목으로 어떻게 나올지부터 생각해 보세요. 순위처럼 읽히는 문장만 피해도 반발은 크게 줄어요.`,
+    critic: `"${q}" 질문이요? 저는 여전히 근거부터 확인하는 게 먼저라고 봐요. 주장마다 출처를 붙여 보면 답이 보일 거예요.`,
+    strategist: `"${q}"라면, 저는 목표부터 다시 보겠어요. 가장 먼저 기억해야 할 한 문장을 정하면 나머지 순서도 자연스럽게 정해져요.`,
+    reader: `솔직히 "${q}" 부분은 처음 듣는 사람 입장에서 헷갈릴 수 있어요. 쉬운 말로 한 줄만 풀어 줘도 훨씬 나아져요.`,
+    method: `"${q}"는 조건을 하나 붙여서 답해야 해요. 어떤 기준으로 판단하느냐에 따라 답이 달라지니, 기준부터 정해 두는 게 안전해요.`,
+    policy: `"${q}"요? 반대하는 사람이 뭐라고 할지부터 생각해 보세요. 그 말에 미리 답을 준비해 두면 반발은 크게 줄어요.`,
   };
   return { answer: `${lines[personaId] || lines.moderator} (모의 모드)`, private_notes: `후속 질문 "${q}"에 답함.` };
 }

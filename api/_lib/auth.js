@@ -2,6 +2,9 @@
 // 인증키를 설정하지 않았다면 누구나 공용 키를 씁니다. 공개 주소라면 꼭 설정하세요.
 import crypto from "node:crypto";
 
+// 공용 키(운영자 키)로 할 수 있는 최대 턴 수. 내 API 키를 쓰면 이 제한이 없어요.
+export const SHARED_MAX_TURNS = Math.max(2, parseInt(process.env.SHARED_MAX_TURNS || "12", 10) || 12);
+
 export function passcodeOk(req) {
   const pass = process.env.MEETING_PASSCODE;
   if (!pass) return true;
