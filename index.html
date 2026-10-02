@@ -413,6 +413,9 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .pc-mine li{margin-top:3px}
 .pc-me-art{display:grid;place-items:center;background:linear-gradient(135deg,#FDE68A,#C7D2FE 55%,#FBCFE8)}
 .pc-me-art > span:first-child{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:#0A0A0A;color:#fff;font-size:40px;font-weight:700;box-shadow:0 0 0 4px #fff}
+/* 회의 결과 공유 */
+.sh-link{display:flex;gap:8px}
+.sh-link .inp{flex:1;font-family:var(--mono);font-size:13px}
 /* 자료·요청 추가, 추가 회의 */
 .prev-reviews{margin-bottom:12px;padding:10px 12px;border-radius:12px;background:var(--soft);font-size:13.5px}
 .prev-reviews summary{cursor:pointer;font-weight:650;margin-top:4px}
@@ -886,6 +889,21 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
     <div class="tp-foot"><span id="more-count" class="eyebrow ko"></span><div class="spacer"></div><button class="pill" data-close>취소</button><button class="pill dark" id="more-go">추가하기</button></div>
   </div>
 </dialog>
+<dialog id="dlg-share" class="newdlg" aria-label="회의 결과 공유">
+  <div class="dh"><h2>회의 결과 공유</h2><button class="pill sm" data-close>닫기</button></div>
+  <div class="db">
+    <div id="sh-ready">
+      <p class="tp-hint" style="margin:2px 0 10px">결론, 회의록, 속마음, 상황판을 지금 화면 모습 그대로 담은 결과 페이지예요. 링크를 아는 사람은 누구나 볼 수 있어요.</p>
+      <div class="sh-link"><input class="inp" id="sh-url" readonly><button class="pill dark" id="sh-copy">복사</button></div>
+      <div class="nm-actions" style="margin-top:12px"><button class="pill" id="sh-open">열어 보기</button><button class="pill" id="sh-native" hidden>다른 앱으로 보내기</button><button class="pill" id="sh-save">파일로 저장</button></div>
+    </div>
+    <div id="sh-off" hidden>
+      <p class="tp-hint" style="margin:2px 0 12px">아직 링크 공유가 켜져 있지 않아서, 결과 페이지를 <b>파일로 저장</b>했어요. 이 파일은 인터넷 없이도 열리고, 메일이나 메신저로 보내면 받은 사람도 같은 화면으로 볼 수 있어요.</p>
+      <p class="tp-hint" style="margin:0 0 12px">링크 공유를 켜려면 운영자가 Vercel 프로젝트에 Blob 저장소를 한 번 연결하면 돼요.</p>
+      <div class="nm-actions"><button class="pill dark" id="sh-save2">다시 저장</button><button class="pill" id="sh-native2" hidden>다른 앱으로 보내기</button></div>
+    </div>
+  </div>
+</dialog>
 <dialog id="dlg-confirm" class="newdlg" aria-label="확인">
   <div class="dh"><h2 id="cf-title">확인</h2></div>
   <div class="db"><p id="cf-body" style="margin:4px 0 16px;font-size:14.5px;line-height:1.6;color:var(--ink-2);white-space:pre-line"></p>
@@ -1193,7 +1211,8 @@ function renderTableInner(state, info = {}) {
     t.innerHTML = `<div class="eyebrow ko">결론 · ${S.plan.length}턴 모두 끝났어요</div>
       <span class="verdict-tag" data-tone="${toneOf(v)}">${esc(v.verdict)}</span>
       <div class="t-say" style="-webkit-line-clamp:4">${esc(v.headline)}</div>
-      <div class="t-actions"><button class="pill light sm" id="tb-review">결론 보기</button><button class="pill on-dark sm" id="tb-more">추가 회의</button></div>`;
+      <div class="t-actions"><button class="pill light sm" id="tb-review">결론 보기</button><button class="pill on-dark sm" id="tb-share">공유</button><button class="pill on-dark sm" id="tb-more">추가 회의</button></div>`;
+    $("#tb-share").onclick = shareResult;
     $("#tb-more").onclick = () => openMore();
     $("#tb-review").onclick = () => showTab("review");
   }
@@ -1873,6 +1892,142 @@ function submitMore() {
   requestAnimationFrame(() => logPane().lastElementChild?.scrollIntoView({ block: "end" }));
   runFrom();
 }
+// ───── 회의 결과: 지금 화면 모습 그대로 한 장짜리 결과 페이지로 저장·공유 ─────
+const resultTitle = () => (S.doc?.prompt?.trim() || S.doc?.name || "회의 결과").replace(/\s+/g, " ");
+const resultFileName = () => `회의결과_${resultTitle().replace(/[\\/:*?"<>|…]/g, "").slice(0, 30).trim() || "회의"}_${new Date().toISOString().slice(0, 10)}.html`;
+// 결과 페이지에 넣을 그림: 큰 그림은 화면에 쓰는 크기(최대 128px)로 줄여서 파일을 가볍게
+async function toDataUrl(src, max = 112) {
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = rej; i.src = src; });
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+    const g = c.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(img, 0, 0, c.width, c.height);
+    const webp = c.toDataURL("image/webp", 0.86);   // 지원하지 않는 브라우저는 png로
+    return webp.startsWith("data:image/webp") ? webp : c.toDataURL("image/png");
+  } catch { return src; }
+}
+async function buildResultPage() {
+  const v = S.review; if (!v) throw new Error("아직 결론이 없어요.");
+  const strip = (el) => {   // 결과 페이지에는 버튼·원본·입력칸을 빼요
+    el.querySelectorAll(".ractions, .jsonbtn, pre.json, .xp-more, button.x, .composer, .live-cp").forEach((e) => e.remove());
+    el.querySelectorAll("[id]").forEach((e) => e.removeAttribute("id"));
+    el.querySelectorAll("[onclick]").forEach((e) => e.removeAttribute("onclick"));
+    return el.innerHTML;
+  };
+  const clone = (sel) => { const el = document.querySelector(sel); return el ? strip(el.cloneNode(true)) : ""; };
+  const people = [...seatIds(), ...(meOn() ? ["me"] : [])];
+  const who = people.map((id) => {
+    const isMe = id === "me", a = S.agents[id] || {};
+    return `<span class="rp-who ${id === "moderator" ? "dark" : ""}" style="${isMe ? "--t:#fff;--c:#0A0A0A" : styleVars(id)}">${face(id)}<span><b>${esc(isMe ? meProfile().name : a.name)}</b><small>${esc(isMe ? meProfile().title || "사용자" : a.title || "")}</small></span></span>`;
+  }).join("");
+  const m = S.meeting || {}, turns = (m.plan || S.plan || []).length, said = S.transcript.filter((t) => t.role !== "moderator").length;
+  const when = new Date().toLocaleString("ko-KR", { dateStyle: "long", timeStyle: "short" });
+  const title = resultTitle();
+  let body = `
+<div class="rp-wrap">
+  <div class="rp-head">
+    <div class="rp-brand"><img src="vendor/brand/favicon-48.png" alt=""><b>Ensembly</b><span>AI 회의실 · 회의 결과</span></div>
+    <h1>${esc(title.length > 140 ? `${title.slice(0, 140)}…` : title)}</h1>
+    <div class="rp-meta">${esc(when)} · ${esc(headsLabel())} · ${turns}턴${m.early ? ` 중 ${m.early.doneTurns}턴에서 마무리` : ""} · 발언 ${said}개</div>
+    <div class="rp-people">${who}</div>
+    <div class="vblock rp-verdict" data-tone="${toneOf(v)}"><span class="eyebrow ko">판정</span><h2>${esc(v.verdict)}</h2><p>${esc(v.headline)}</p></div>
+  </div>
+  <nav class="rp-tabs" role="tablist">
+    <button data-t="review" class="on">결론</button><button data-t="log">회의록 <small>${S.transcript.length}</small></button><button data-t="minds">속마음</button><button data-t="flow">상황판</button>
+  </nav>
+  <section class="rp-sec on" data-s="review"><div class="rp-review">${clone("#pane-review")}</div></section>
+  <section class="rp-sec" data-s="log"><div class="rp-log">${clone("#pane-log")}</div></section>
+  <section class="rp-sec" data-s="minds">${clone("#pane-minds")}</section>
+  <section class="rp-sec" data-s="flow"><div class="flow rp-flow">${clone(".flow")}</div></section>
+  <footer class="rp-foot">Ensembly · A2A로 모인 AI 에이전트들의 회의 결과예요</footer>
+</div>`;
+  // 그림은 파일 안에 넣어요 (인터넷 없이 열어도, 링크로 열어도 보이게)
+  // 같은 그림이 여러 번 나와도 파일에는 한 번만 넣어요 (data-img 번호 → 열 때 채워 넣기)
+  const srcs = [...new Set([...body.matchAll(/src="((?!data:)[^"]+)"/g)].map((x) => x[1]))];
+  const imgs = await Promise.all(srcs.map((u) => toDataUrl(u)));
+  body = body.replace(/src="((?!data:)[^"]+)"/g, (all, u) => `data-img="${srcs.indexOf(u)}" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="`);
+  const imgScript = `var I=${JSON.stringify(imgs)};document.querySelectorAll("[data-img]").forEach(function(e){e.src=I[+e.getAttribute("data-img")]});`;
+  const css = [...document.querySelectorAll("style")].map((st) => st.textContent).join("\n")
+    .replace(/url\((['"]?)((?:\.\/)?vendor\/[^)'"]+)\1\)/g, (all, q, u) => `url(${q}${location.origin}/${u.replace(/^\.\//, "")}${q})`);
+  const extra = `
+body.rp{margin:0;background:#F4F3EF;color:var(--ink);-webkit-font-smoothing:antialiased}
+.rp-wrap{max-width:900px;margin:0 auto;padding:28px 20px 64px}
+.rp-brand{display:flex;align-items:center;gap:8px;font-size:14px}.rp-brand img{width:28px;height:28px}.rp-brand span{color:var(--muted);font-size:12.5px}
+.rp-head h1{margin:18px 0 6px;font-size:clamp(22px,3.2vw,30px);line-height:1.3;letter-spacing:-.02em;word-break:keep-all}
+.rp-meta{color:var(--muted);font-size:13.5px}
+.rp-people{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.rp-who{display:inline-flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:999px;background:var(--t);color:var(--ink);box-shadow:var(--lift)}
+.rp-who.dark{background:#0A0A0A;color:#fff}
+.rp-who .ava,.rp-who .ava-fb{width:30px;height:30px}.rp-who b{display:block;font-size:13px;line-height:1.1}.rp-who small{font-size:11px;opacity:.7}
+.rp-verdict{margin:6px 0 18px}
+.rp-tabs{position:sticky;top:0;z-index:5;display:flex;gap:6px;padding:10px 0;background:#F4F3EF}
+.rp-tabs button{border:1px solid var(--hair);background:#fff;border-radius:999px;padding:7px 16px 8px;font:inherit;font-size:14px;font-weight:650;cursor:pointer}
+.rp-tabs button.on{background:#0A0A0A;color:#fff;border-color:#0A0A0A}.rp-tabs small{font-family:var(--mono);opacity:.6;margin-left:3px}
+.rp-sec{display:none;background:#fff;border:1px solid var(--hair);border-radius:20px;padding:20px 22px;box-shadow:var(--lift)}.rp-sec.on{display:block}
+.rp-review > .vblock:first-of-type{display:none}
+.rp-log .cmt{animation:none}
+.rp-flow{border:0;padding:0;background:none}
+.rp-foot{margin-top:28px;text-align:center;color:var(--muted);font-size:12.5px}
+@media (max-width:640px){.rp-wrap{padding:18px 14px 48px}.rp-sec{padding:16px 14px;border-radius:16px}.rp-tabs{overflow-x:auto}}
+@media print{.rp-tabs{display:none}.rp-sec{display:block!important;break-inside:avoid-page;margin-bottom:16px;box-shadow:none}}`;
+  const desc = `${v.verdict}: ${v.headline}`.slice(0, 180);
+  return `<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(title.slice(0, 60))} · 회의 결과</title>
+<meta name="description" content="${esc(desc)}"><meta property="og:title" content="${esc(title.slice(0, 80))}"><meta property="og:description" content="${esc(desc)}">
+<style>${css}\n${extra}</style></head>
+<body class="rp">${body}
+<scr${""}ipt>${imgScript}document.querySelectorAll(".rp-tabs button").forEach(function(b){b.onclick=function(){document.querySelectorAll(".rp-tabs button").forEach(function(x){x.classList.toggle("on",x===b)});document.querySelectorAll(".rp-sec").forEach(function(s){s.classList.toggle("on",s.dataset.s===b.dataset.t)});window.scrollTo({top:document.querySelector(".rp-tabs").offsetTop-4})}});<\/script>
+</body></html>`;
+}
+let lastShare = null;   // 같은 결론이면 링크를 다시 만들지 않아요
+async function saveResult() {
+  try { const html = await buildResultPage(); download(resultFileName(), html, "text/html;charset=utf-8"); toast("결과 페이지를 저장했어요. 파일을 열면 지금 화면 그대로 볼 수 있어요."); return html; }
+  catch (e) { toast(e.message || "저장하지 못했어요."); }
+}
+async function nativeShareFile(html) {
+  const file = new File([html], resultFileName(), { type: "text/html" });
+  if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: resultTitle() }); return true; } catch { return false; } }
+  return false;
+}
+async function shareResult() {
+  if (!S.review) return toast("회의가 끝나면 공유할 수 있어요.");
+  const d = $("#dlg-share");
+  if (lastShare && lastShare.review === S.review && lastShare.n === S.transcript.length) return openShareDialog(lastShare.url);
+  toast("공유 링크를 만드는 중이에요…");
+  let html;
+  try { html = await buildResultPage(); } catch (e) { return toast(e.message || "결과 페이지를 만들지 못했어요."); }
+  try {
+    const r = await fetch("/api/share", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ html }) });
+    if (r.status === 501) {   // 링크 저장소가 아직 없어요 → 파일로
+      download(resultFileName(), html, "text/html;charset=utf-8");
+      $("#sh-ready").hidden = true; $("#sh-off").hidden = false;
+      const can = !!navigator.canShare?.({ files: [new File([html], "a.html", { type: "text/html" })] });
+      $("#sh-native2").hidden = !can;
+      $("#sh-save2").onclick = () => download(resultFileName(), html, "text/html;charset=utf-8");
+      $("#sh-native2").onclick = () => nativeShareFile(html);
+      return d.showModal();
+    }
+    if (!r.ok) throw new Error(String(r.status));
+    const { path } = await r.json();
+    const url = `${location.origin}${path}`;
+    lastShare = { review: S.review, n: S.transcript.length, url, html };
+    openShareDialog(url);
+  } catch {
+    toast("공유 링크를 만들지 못했어요. 대신 결과 페이지를 파일로 저장했어요.");
+    download(resultFileName(), html, "text/html;charset=utf-8");
+  }
+}
+function openShareDialog(url) {
+  $("#sh-ready").hidden = false; $("#sh-off").hidden = true;
+  $("#sh-url").value = url;
+  $("#sh-copy").onclick = async () => { try { await navigator.clipboard.writeText(url); toast("링크를 복사했어요."); } catch { $("#sh-url").select(); toast("링크를 길게 눌러 복사해 주세요."); } };
+  $("#sh-open").onclick = () => window.open(url, "_blank", "noopener");
+  $("#sh-save").onclick = () => (lastShare?.html ? download(resultFileName(), lastShare.html, "text/html;charset=utf-8") : saveResult());
+  $("#sh-native").hidden = !navigator.share;
+  $("#sh-native").onclick = () => navigator.share({ title: resultTitle(), text: "AI 회의 결과예요", url }).catch(() => {});
+  $("#dlg-share").showModal(); setTimeout(() => $("#sh-url").select(), 50);
+}
 // 확인 창: 브라우저 기본 confirm() 대신 페이지 안 대화상자 (차단돼도 동작하게)
 function askConfirm(title, body, okLabel = "확인") {
   return new Promise((resolve) => {
@@ -2106,7 +2261,9 @@ function renderReview(v) {
     <div class="rsec"><h3>우려와 반대 의견 ${cnt(worries)}</h3>${items(worries)}</div>
     <div class="rsec"><h3>합의된 점</h3>${list(agree)}</div>
     <div class="rsec"><h3>남은 질문</h3>${list(open)}</div>
-    <div class="ractions"><button class="pill dark" id="dl-md">마크다운 받기</button><button class="pill" id="copy-md">복사</button></div>`;
+    <div class="ractions"><button class="pill dark" id="rv-share">링크로 공유</button><button class="pill" id="rv-save">결과 페이지 저장</button><button class="pill" id="dl-md">마크다운</button><button class="pill" id="copy-md">복사</button></div>`;
+  $("#rv-share").onclick = shareResult;
+  $("#rv-save").onclick = saveResult;
   $("#dl-md").onclick = () => download(`${S.doc.name.replace(/[\\/:*?"<>|…]/g, "").slice(0, 40) || "회의"}_결론.md`, reviewMarkdown(v));
   $("#copy-md").onclick = async () => { try { await navigator.clipboard.writeText(reviewMarkdown(v)); toast("복사했어요."); } catch { toast("복사하지 못했어요. 마크다운 받기를 써 주세요."); } };
 }
@@ -2122,7 +2279,7 @@ function reviewMarkdown(v) {
   const prevs = (S.reviews || []).map((r, k) => `- ${k + 1}차 결론 · ${r.verdict}: ${r.headline}`).join("\n");
   return `# ${S.doc.name} 회의 결론\n\n${S.doc.prompt ? `## 토론 주제\n${S.doc.prompt}\n\n` : ""}${adds ? `## 추가 요청과 자료\n${adds}\n\n` : ""}${prevs ? `## 앞선 결론\n${prevs}\n\n` : ""}${files ? `## 첨부 자료\n${files}\n\n` : ""}> ${v.verdict}: ${v.headline}\n\n## 핵심 결론과 제안\n${it(keys)}\n\n## 우려와 반대 의견\n${it(worries)}\n\n## 합의된 점\n${li(agree)}\n\n## 남은 질문\n${li(open)}${v.badges?.length ? `\n\n## 오늘의 배지 (사회자)\n${v.badges.filter((b) => BADGES[b.badge]).map((b) => `- ${b.to}: ${BADGES[b.badge].name} — ${b.reason || BADGES[b.badge].desc}`).join("\n")}` : ""}\n\n## 회의록\n${log}\n${fu ? `\n## 후속 질문\n${fu}\n` : ""}\n---\n참석자 ${members().length}명, ${S.meeting?.early ? `${S.meeting.early.doneTurns}턴에서 일찍 마무리(계획 ${S.plan.length}턴)` : `${S.plan.length}턴`}. 모델: ${models}\n생성: ${new Date().toLocaleString("ko-KR")}\n`;
 }
-function download(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+function download(name, text, type = "text/markdown;charset=utf-8") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
 
 /* ───────────── 자료 읽기 ───────────── */
 const loaded = {};

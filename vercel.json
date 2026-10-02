@@ -7,6 +7,10 @@
     {
       "source": "/agents/:id",
       "destination": "/api/a2a?agent=:id"
+    },
+    {
+      "source": "/s/:id",
+      "destination": "/api/share?id=:id"
     }
   ],
   "functions": {
@@ -15,6 +19,20 @@
     },
     "api/models.js": {
       "maxDuration": 15
+    },
+    "api/share.js": {
+      "maxDuration": 15
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/vendor/fonts/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    }
+  ]
 }

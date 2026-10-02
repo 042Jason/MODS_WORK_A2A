@@ -24,6 +24,7 @@ const handlers = {
   a2a: (await import(pathToFileURL(path.join(ROOT, "api/a2a.js")))).default,
   registry: (await import(pathToFileURL(path.join(ROOT, "api/registry.js")))).default,
   models: (await import(pathToFileURL(path.join(ROOT, "api/models.js")))).default,
+  share: (await import(pathToFileURL(path.join(ROOT, "api/share.js")))).default,
 };
 
 function wrapRes(res) {
@@ -43,6 +44,8 @@ http.createServer(async (req, rawRes) => {
   else if (url.pathname === "/api/registry") fn = "registry";
   else if (url.pathname === "/api/models") fn = "models";
   else if (url.pathname === "/api/a2a") fn = "a2a";
+  else if (url.pathname === "/api/share") fn = "share";
+  else if ((m = url.pathname.match(/^\/s\/([a-f0-9]+)$/))) { fn = "share"; query.id = m[1]; }
 
   if (fn) {
     let body = "";
