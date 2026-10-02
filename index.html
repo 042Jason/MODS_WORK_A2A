@@ -973,7 +973,8 @@ function members() {
   if (list.length < MIN_MEMBERS) list = ALL_MEMBERS.slice();
   return list.slice(0, maxMembers());
 }
-const recommendedTurns = (n) => 2 * n + 2;
+// 권장 턴 수: 참석자(에이전트 + 참여 중이면 나)가 두 번씩 말하고, 최종 반론과 결론이 한 번씩
+const recommendedTurns = (n) => 2 * (n + (meOn() ? 1 : 0)) + 2;
 // 공용 키(운영자 키)로 회의할 때는 턴 수 상한이 낮아요(기본 12). 내 API 키를 넣으면 최대 30턴.
 const usingSharedKey = () => !getKey() && Boolean(S.registry?.serverKey && S.registry?.passcodeOk);
 const maxTurns = () => (usingSharedKey() ? Math.min(MAX_TURNS, S.registry?.sharedMaxTurns || 12) : MAX_TURNS);
@@ -1675,6 +1676,7 @@ function setMe(patch) {
   }
   const saved = loadSettings().members, before = Array.isArray(saved) ? ALL_MEMBERS.filter((id) => saved.includes(id)) : ALL_MEMBERS.slice();
   saveSettings({ me: { ...(loadSettings().me || {}), ...patch } });
+  if ("on" in patch) saveSettings({ turns: null });   // 나도 참여를 켜고 끄면 턴 수도 권장값으로
   if (patch.on && before.length > maxMembers()) {   // 자리가 모자라면 맨 뒤 한 명은 이번엔 빠져요
     const out = before.slice(maxMembers());
     saveSettings({ members: before.slice(0, maxMembers()) });
@@ -2481,7 +2483,7 @@ function drawModelRows() {
       if (cb.checked) list = ALL_MEMBERS.filter((x) => list.includes(x) || x === id);
       else if (list.length <= MIN_MEMBERS) { cb.checked = true; return toast(`참석자는 최소 ${MIN_MEMBERS}명이에요.`); }
       else list = list.filter((x) => x !== id);
-      saveSettings({ members: list }); row.classList.toggle("off", !cb.checked); applyConfig();
+      saveSettings({ members: list, turns: null }); row.classList.toggle("off", !cb.checked); applyConfig();   // 인원이 바뀌면 턴 수도 권장값으로
     };
     row.querySelector("button.pill").onclick = () => testAgent(id);
     box.appendChild(row);
@@ -2493,7 +2495,7 @@ function drawTurns() {
   const cap = maxTurns();
   $("#t-val").textContent = t; $("#t-minus").disabled = t <= n + 1; $("#t-plus").disabled = t >= cap;
   $("#turns-eyebrow").textContent = t === rec ? "Recommended" : "Custom";
-  $("#turns-desc").textContent = `에이전트 ${n}명이면 ${rec}턴을 권해요. 1라운드는 모두 한 번씩 말하고, 그다음부터는 사회자가 흐름을 보고 발언권을 줘요. 최소 ${n + 1}턴, 최대 ${cap}턴까지 정할 수 있어요.`
+  $("#turns-desc").textContent = `${meOn() ? `에이전트 ${n}명과 나, 모두 ${n + 1}명이면` : `에이전트 ${n}명이면`} ${rec}턴을 권해요. 인원이 바뀌면 권장값으로 자동으로 맞춰요. 1라운드는 모두 한 번씩 말하고, 그다음부터는 사회자가 흐름을 보고 발언권을 줘요. 최소 ${n + 1}턴, 최대 ${cap}턴까지 정할 수 있어요.`
     + (cap < MAX_TURNS ? ` 공용 키로는 ${cap}턴까지예요. 더 길게 하려면 내 API 키를 넣어 주세요.` : "");
   $("#plan-preview").innerHTML = planGroups(buildPlan(n, t)).map((g) => `<span data-p="${g.phase}">${esc(phaseLabel(g.phase))} ${g.idx.length}</span>`).join("");
 }
