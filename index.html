@@ -1952,6 +1952,7 @@ async function buildResultPage() {
   const css = [...document.querySelectorAll("style")].map((st) => st.textContent).join("\n")
     .replace(/url\((['"]?)((?:\.\/)?vendor\/[^)'"]+)\1\)/g, (all, q, u) => `url(${q}${location.origin}/${u.replace(/^\.\//, "")}${q})`);
   const extra = `
+html,body.rp{height:auto!important;min-height:100%;overflow-y:visible!important;overflow-x:hidden;display:block!important}   /* 앱은 한 화면 고정이라 스크롤을 막아 둬요. 결과 페이지는 끝까지 스크롤되게 */
 body.rp{margin:0;background:#F4F3EF;color:var(--ink);-webkit-font-smoothing:antialiased}
 .rp-wrap{max-width:900px;margin:0 auto;padding:28px 20px 64px}
 .rp-brand{display:flex;align-items:center;gap:8px;font-size:14px}.rp-brand img{width:28px;height:28px}.rp-brand span{color:var(--muted);font-size:12.5px}
