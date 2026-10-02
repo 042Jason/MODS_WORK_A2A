@@ -362,7 +362,8 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px 10px;border-radius:var(--pill);font-size:14px;z-index:20;display:none}
 .toast.on{display:block}
 /* 나도 참여 */
-.note.mine{background:#fff;border:2px solid var(--ink)}
+.note.mine .n-av{font-size:19px;box-shadow:0 0 0 3px #fff}
+.note .n-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .note.mine.hand::after{content:"✋ 발언 신청";position:absolute;right:-8px;top:-12px;background:#FFD43B;color:#0A0A0A;font-size:11px;font-weight:700;padding:2px 8px 3px;border-radius:999px;border:1.5px solid #0A0A0A;animation:bob 1s ease-in-out infinite}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 /* 보드 위 말풍선: 지금 누가 무슨 말을 하는지 자리에서 바로 보여요 */
@@ -398,7 +399,6 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .live-quick button{flex:none;border:1px solid var(--hair);background:#fff;border-radius:999px;padding:5px 11px 6px;font:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap}
 .live-quick button:hover{border-color:var(--ink)}
 .live-quick button.on{background:#FFD43B;border-color:#0A0A0A;font-weight:650}
-.note.mine .n-av{font-size:19px}
 .me-seat{position:absolute;right:14px;top:12px;z-index:4;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:999px;border:1.5px solid var(--ink);background:#fff;box-shadow:var(--lift);cursor:pointer}
 .me-seat b{display:block;font-size:13px;line-height:1.1}.me-seat small{font-size:11px;color:var(--muted)}
 .me-ava{width:30px;height:30px;font-size:13px;--t:#0A0A0A;--c:#fff}
@@ -411,8 +411,8 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .cmt.meme .text{white-space:pre-line}
 .pc-mine{margin:4px 0 0;padding-left:16px;font-size:12.5px;line-height:1.5}
 .pc-mine li{margin-top:3px}
-.pc-me-art{display:grid;place-items:center;background:linear-gradient(135deg,#FDE68A,#C7D2FE 55%,#FBCFE8)}
-.pc-me-art > span:first-child{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:#0A0A0A;color:#fff;font-size:40px;font-weight:700;box-shadow:0 0 0 4px #fff}
+.pc-me-art{display:grid;place-items:center;background:color-mix(in srgb,var(--t) 70%,white)}
+.pc-me-art > span:first-child{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:#fff;font-size:44px;font-weight:700;box-shadow:0 0 0 5px #fff,0 6px 18px rgba(0,0,0,.12)}
 /* 회의 결과 공유 */
 .sh-link{display:flex;gap:8px}
 .sh-link .inp{flex:1;font-family:var(--mono);font-size:13px}
@@ -1081,7 +1081,7 @@ function face(id, cls = "") {   // 캐릭터 얼굴 (이미지를 못 불러오�
   return `<img class="ava ${cls}" src="${esc(a.face)}" alt="" style="--t:${a.tint};--c:${a.color}" onerror="this.outerHTML='<span class=&quot;ava-fb ${cls}&quot; style=&quot;--t:${a.tint};--c:${a.color}&quot;>${esc(a.name[0])}</span>'">`;
 }
 const crew = (cls = "") => seatIds().map((id) => face(id, cls)).join("") + (meOn() ? meFace(cls) : "");
-const meFace = (cls = "") => `<span class="ava-fb ${cls}" style="--t:#0A0A0A;--c:#FFFFFF">${esc(meProfile().name.slice(0, 1))}</span>`;
+const meFace = (cls = "") => `<span class="ava-fb ${cls}" style="--t:${ME_COLOR};--c:#FFFFFF">${esc(meProfile().name.slice(0, 1))}</span>`;
 function styleVars(id) { const a = S.agents[id]; return `--c:${a.color};--t:${a.tint};--rot:${ROT[id] || 0}deg`; }
 
 function drawSeats() {
@@ -1100,10 +1100,10 @@ function drawSeats() {
   }
   if (meOn()) {   // 나도 같은 모양의 자리에
     const p = meProfile(), b = document.createElement("button");
-    b.className = `note mine ${S.hand ? "hand" : ""}`; b.id = "seat-me"; b.setAttribute("style", "--c:#0A0A0A;--t:#FFFFFF;--rot:-1.5deg");
+    b.className = `note mine ${S.hand ? "hand" : ""}`; b.id = "seat-me"; b.setAttribute("style", `--c:${ME_COLOR};--t:${ME_TINT};--rot:-1.5deg`);
     b.setAttribute("aria-label", `${p.name}, 사용자. 내 카드 보기`);
     b.innerHTML = `<div class="sel"><b></b><b></b><b></b><b></b><span></span></div>
-      <div class="n-top">${meFace("n-av")}<span class="eyebrow" style="opacity:.6">You</span></div>
+      <div class="n-top">${meFace("n-av")}<span class="eyebrow" style="opacity:.6">YOU</span></div>
       <div class="n-name">${esc(p.name)}</div><div class="n-title">${esc(p.title || "사용자")}</div>
       <div class="n-model eyebrow">${esc(p.mbti ? `${p.mbti} · ${MBTI_NAME[p.mbti] || ""}` : "참석 중")}</div><div class="n-state" id="st-me"></div>`;
     b.onclick = showMeCard;
@@ -1659,6 +1659,7 @@ function updateRunButton() {
 }
 // ───── 나도 참여: 내 프로필, 내 카드, 회의 중 한마디와 질문에 답하기 ─────
 const MBTI = ["ISTJ", "ISFJ", "INFJ", "INTJ", "ISTP", "ISFP", "INFP", "INTP", "ESTP", "ESFP", "ENFP", "ENTP", "ESTJ", "ESFJ", "ENFJ", "ENTJ"];
+const ME_COLOR = "#3B3486", ME_TINT = "#E6E3F5";   // 내 자리·카드 색 (다른 참석자처럼 파스텔 바탕)
 function meProfile() {
   const m = loadSettings().me || {};
   return { on: !!m.on, name: String(m.name || "").trim() || "나", title: String(m.title || "").trim(), about: String(m.about || "").trim(), mbti: m.mbti || "" };
@@ -1704,15 +1705,17 @@ function showMeCard() {
   const quote = (p.about.split(/(?<=[.!?。])\s|\n/)[0] || "").trim() || "같이 이야기해 봐요.";
   const recent = mine.slice(-3).map((t) => `<li>${esc(t.text.length > 70 ? `${t.text.slice(0, 70)}…` : t.text)}</li>`).join("");
   $("#pc-wrap").innerHTML = `
-    <div class="pcard" id="pcard" style="--c:#0A0A0A;--t:#EEF0FF;--rot:0deg">
+    <div class="pcard" id="pcard" style="--c:${ME_COLOR};--t:${ME_TINT};--rot:0deg">
       <div class="pc-inner">
         <div class="pc-face pc-front">
-          <div class="pc-top"><span class="pc-stage">Human</span><span class="pc-hp"><small>참여</small>${p.on ? "ON" : "OFF"}</span></div>
+          <div class="pc-top"><span class="pc-stage">A2A Human</span><span class="pc-hp"><small>Role</small>${p.on ? "참석자" : "관전"}</span></div>
           <div class="pc-name"><b>${esc(p.name)}</b>${p.mbti ? `<span class="pc-mbti" title="${esc(MBTI_NAME[p.mbti] || "")}">${esc(p.mbti)}<small>${esc(MBTI_NAME[p.mbti] || "")}</small></span>` : ""}<span class="spacer"></span><span class="pc-type">사용자</span></div>
           <div class="pc-art pc-me-art"><span>${esc(p.name.slice(0, 1))}</span><span class="pc-shine"></span></div>
           <div class="pc-sub">No.000 · ${esc(p.title || "역할을 적어 보세요")} · 사람 참석자</div>
           <div class="pc-move"><div class="pc-move-h"><span class="pc-energy"></span><b>나의 관점</b></div><p>${esc(p.about || "아직 소개가 없어요. 적어 두면 사회자와 참석자들이 나를 알고 이야기해요.")}</p></div>
-          <div class="pc-move"><div class="pc-move-h"><span class="pc-energy alt"></span><b>참여 방식</b></div><p>사회자가 내 경험이나 생각이 필요할 때 물어봐요. 회의 중에는 언제든 한마디 할 수 있어요.</p></div>
+          <div class="pc-move"><div class="pc-move-h"><span class="pc-energy alt"></span><b>참여 방식</b></div><p>사회자가 물어보면 답하고, 언제든 한마디 해요.</p></div>
+          <div class="pc-stats">${[["발언", said], ["답변", S.history.filter((h) => h.t === "me" && h.a?.label === "답변").length], ["한마디", S.history.filter((h) => h.t === "me" && h.a?.label === "한마디").length]]
+            .map(([k, v]) => `<div class="pc-stat"><span>${k}</span><i>${[1, 2, 3, 4, 5].map((n) => `<b class="${n <= Math.min(5, v) ? "on" : ""}"></b>`).join("")}</i></div>`).join("")}</div>
           <div class="pc-foot"><div><small>MBTI</small><b>${p.mbti ? `${esc(p.mbti)} ${esc(MBTI_NAME[p.mbti] || "")}` : "-"}</b></div><div><small>오늘 회의</small><b>${said ? `발언 ${said}번` : "아직 발언 전"}</b></div></div>
           <p class="pc-quote">“${esc(quote)}”</p>
         </div>
@@ -1724,11 +1727,12 @@ function showMeCard() {
         </div>
       </div>
     </div>`;
-  $("#pc-ask").hidden = true; $(".pc-dev").hidden = true; $("#pc-flip").hidden = false;
+  $("#pc-ask").hidden = false; $("#pc-ask").disabled = false; $("#pc-ask").textContent = "프로필 고치기";
+  $("#pc-ask").onclick = () => { $("#dlg-card").close(); openMe(); };
+  $(".pc-dev").hidden = true; $("#pc-flip").hidden = false;
   $("#pc-flip").textContent = "뒤집어 보기";
   $("#pc-flip").onclick = () => { const c = $("#pcard"); c.classList.toggle("flipped"); $("#pc-flip").textContent = c.classList.contains("flipped") ? "앞면 보기" : "뒤집어 보기"; };
-  $("#pc-hint").innerHTML = `<button class="pill on-dark sm" id="pc-me-edit">프로필 고치기</button>`;
-  $("#pc-me-edit").onclick = () => { $("#dlg-card").close(); openMe(); };
+  $("#pc-hint").textContent = "이름·역할·소개·MBTI를 고칠 수 있어요.";
   if (!$("#dlg-card").open) $("#dlg-card").showModal();
 }
 // 보드 위 말풍선: 말하는 사람 자리 위에 띄워요 (생각 중이면 점 세 개)
@@ -1923,7 +1927,7 @@ async function buildResultPage() {
   const people = [...seatIds(), ...(meOn() ? ["me"] : [])];
   const who = people.map((id) => {
     const isMe = id === "me", a = S.agents[id] || {};
-    return `<span class="rp-who ${id === "moderator" ? "dark" : ""}" style="${isMe ? "--t:#fff;--c:#0A0A0A" : styleVars(id)}">${face(id)}<span><b>${esc(isMe ? meProfile().name : a.name)}</b><small>${esc(isMe ? meProfile().title || "사용자" : a.title || "")}</small></span></span>`;
+    return `<span class="rp-who ${id === "moderator" ? "dark" : ""}" style="${isMe ? `--t:${ME_TINT};--c:${ME_COLOR}` : styleVars(id)}">${face(id)}<span><b>${esc(isMe ? meProfile().name : a.name)}</b><small>${esc(isMe ? meProfile().title || "사용자" : a.title || "")}</small></span></span>`;
   }).join("");
   const m = S.meeting || {}, turns = (m.plan || S.plan || []).length, said = S.transcript.filter((t) => t.role !== "moderator").length;
   const when = new Date().toLocaleString("ko-KR", { dateStyle: "long", timeStyle: "short" });
@@ -2176,7 +2180,7 @@ function backHtml(id, a) {
 /* ───────────── 에이전트 카드 (포켓몬 카드처럼) ───────────── */
 function showCard(id) {
   if (id === "me") return showMeCard();
-  $("#pc-ask").hidden = false; $("#pc-flip").hidden = false; $(".pc-dev").hidden = false;
+  $("#pc-ask").hidden = false; $("#pc-flip").hidden = false; $(".pc-dev").hidden = false; $("#pc-ask").textContent = "이 에이전트에게 질문하기";
   const a = S.agents[id], p = a.profile || {}, m = modelFor(id), isMod = id === "moderator";
   const pips = (v) => [1, 2, 3, 4, 5].map((n) => `<b class="${n <= v ? "on" : ""}"></b>`).join("");
   const stats = (p.stats || []).map(([k, v]) => `<div class="pc-stat"><span>${esc(k)}</span><i>${pips(v)}</i></div>`).join("");
