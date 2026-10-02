@@ -98,9 +98,10 @@ main{display:grid;grid-template-columns:minmax(600px,1fr) minmax(460px,40%);min-
 .t-meta button + button{margin-left:14px}
 .t-meta button.on{color:#FFD43B}
 .t-who{display:flex;align-items:center;gap:8px;font-weight:650;font-size:14px;margin-bottom:8px}
-.t-who .ava{width:24px;height:24px;box-shadow:0 0 0 2px rgba(255,255,255,.85)}
+.t-who .ava,.t-who .ava-fb{width:24px;height:24px;box-shadow:0 0 0 2px rgba(255,255,255,.85)}
 .t-crew{display:flex;margin-bottom:14px}
-.t-crew .ava{width:30px;height:30px;box-shadow:0 0 0 2px var(--navy);margin-right:-7px}
+.t-crew .ava,.t-crew .ava-fb{width:30px;height:30px;box-shadow:0 0 0 2px var(--navy);margin-right:-7px}
+.t-crew .ava-fb,.t-who .ava-fb{font-size:13px}
 .t-say{font-size:17px;line-height:1.55;letter-spacing:-.015em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
 .table{z-index:4}
 .table > *{flex-shrink:0}
@@ -139,7 +140,7 @@ main{display:grid;grid-template-columns:minmax(600px,1fr) minmax(460px,40%);min-
 .cursor{position:absolute;left:0;top:0;pointer-events:none;z-index:6;transition:left .6s cubic-bezier(.3,.8,.3,1),top .6s cubic-bezier(.3,.8,.3,1),opacity .3s;opacity:0}
 .cursor.on{opacity:1}
 .cursor span{position:absolute;left:14px;top:16px;display:flex;align-items:center;gap:5px;background:var(--ink);color:#fff;font-size:11.5px;font-weight:600;padding:2px 8px 2px 3px;border-radius:0 8px 8px 8px;white-space:nowrap}
-.cursor span .ava{width:16px;height:16px}
+.cursor span .ava,.cursor span .ava-fb{width:16px;height:16px;font-size:8px}
 
 /* 자료, 진행표 */
 .dock{display:grid;grid-template-columns:1fr;gap:8px}
@@ -183,7 +184,8 @@ main{display:grid;grid-template-columns:minmax(600px,1fr) minmax(460px,40%);min-
 .empty{margin:12vh auto 0;max-width:340px;text-align:center;color:var(--muted)}
 .empty .blk{width:72px;height:72px;margin:0 auto 16px;border-radius:18px;background:var(--lilac);transform:rotate(-4deg);display:grid;place-items:center}
 .crew{display:flex;justify-content:center;margin:0 auto 18px}
-.crew .ava{width:46px;height:46px;box-shadow:0 0 0 3px #fff;margin:0 -3px}
+.crew .ava,.crew .ava-fb{width:46px;height:46px;box-shadow:0 0 0 3px #fff;margin:0 -3px}
+.crew .ava-fb{font-size:19px}
 .bust{width:84px;height:84px;margin:0 auto 16px;border-radius:22px;object-fit:cover;display:block;transform:rotate(3deg);box-shadow:var(--lift)}
 .empty strong{display:block;color:var(--ink);font-size:17px;font-weight:650;margin-bottom:6px;letter-spacing:-.02em}
 
@@ -920,7 +922,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 <dialog id="dlg-card" class="carddlg" aria-label="에이전트 카드">
   <button class="pc-close" data-close aria-label="카드 닫기"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
   <div class="pc-wrap" id="pc-wrap"></div>
-  <div class="pc-actions"><button class="pill light" id="pc-ask">이 에이전트에게 질문하기</button><button class="pill on-dark" id="pc-flip">뒤집어 보기</button><button class="pill on-dark" data-close>닫기</button></div>
+  <div class="pc-actions"><button class="pill light" id="pc-ask">이 사람에게 질문하기</button><button class="pill on-dark" id="pc-flip">뒤집어 보기</button><button class="pill on-dark" data-close>닫기</button></div>
   <p class="pc-hint" id="pc-hint"></p>
   <p class="pc-dev"><button id="pc-json">A2A 명함 원본(JSON) 보기</button></p>
 </dialog>
@@ -2180,7 +2182,7 @@ function backHtml(id, a) {
 /* ───────────── 에이전트 카드 (포켓몬 카드처럼) ───────────── */
 function showCard(id) {
   if (id === "me") return showMeCard();
-  $("#pc-ask").hidden = false; $("#pc-flip").hidden = false; $(".pc-dev").hidden = false; $("#pc-ask").textContent = "이 에이전트에게 질문하기";
+  $("#pc-ask").hidden = false; $("#pc-flip").hidden = false; $(".pc-dev").hidden = false; $("#pc-ask").textContent = "이 사람에게 질문하기";
   const a = S.agents[id], p = a.profile || {}, m = modelFor(id), isMod = id === "moderator";
   const pips = (v) => [1, 2, 3, 4, 5].map((n) => `<b class="${n <= v ? "on" : ""}"></b>`).join("");
   const stats = (p.stats || []).map(([k, v]) => `<div class="pc-stat"><span>${esc(k)}</span><i>${pips(v)}</i></div>`).join("");
@@ -2214,7 +2216,7 @@ function showCard(id) {
   makeExpandable($("#pcard .pc-bubble p"));
   const done = S.meeting?.status === "done";
   $("#pc-ask").disabled = !done; $("#pc-ask").onclick = () => openAsk(id);
-  $("#pc-hint").textContent = done ? "" : "회의가 끝나면 이 에이전트에게 직접 질문할 수 있어요.";
+  $("#pc-hint").textContent = done ? "" : "회의가 끝나면 이 사람에게 직접 질문할 수 있어요.";
   $("#pc-flip").textContent = "뒤집어 보기";
   $("#pc-flip").onclick = () => { const c = $("#pcard"); c.classList.toggle("flipped"); $("#pc-flip").textContent = c.classList.contains("flipped") ? "앞면 보기" : "뒤집어 보기"; };
   $("#pc-json").onclick = () => {   // A2A 명함 원본은 개발자용으로 따로
@@ -2666,7 +2668,7 @@ document.body.dataset.view = "board";
 document.querySelectorAll(".mnav button").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
 mq.addEventListener("change", () => { placeSeats(); if (!isMobile()) document.body.dataset.view = "board"; });
 $("#btn-settings").onclick = () => openSettings();
-$("#btn-close").onclick = saveAndCloseSettings; $("#set-cancel").onclick = cancelSettings; $("#scrim").onclick = cancelSettings;
+$("#btn-close").onclick = saveAndCloseSettings; $("#set-cancel").onclick = cancelSettings; $("#scrim").onclick = saveAndCloseSettings;
 $("#doc-change").onclick = openTopic;
 $("#file").onchange = (e) => { const fs = [...e.target.files]; e.target.value = ""; if (fs.length) addFiles(fs); };
 $("#doc-view").onclick = viewTopic;
@@ -2696,7 +2698,7 @@ $("#reset-models").onclick = () => { saveSettings({ models: {} }); drawModelRows
 $("#t-minus").onclick = () => setTurns(turns() - 1);
 $("#t-plus").onclick = () => setTurns(turns() + 1);
 $("#t-reset").onclick = () => setTurns(null);
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#drawer").classList.contains("on")) cancelSettings(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#drawer").classList.contains("on")) saveAndCloseSettings(); });   // 빠져나오면 저장, 되돌리기는 '취소' 버튼으로
 window.addEventListener("resize", () => placeSeats());
 const board = $("#board");
 ["dragenter", "dragover"].forEach((t) => board.addEventListener(t, (e) => { e.preventDefault(); board.classList.add("drag"); }));
