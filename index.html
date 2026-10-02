@@ -1914,6 +1914,7 @@ async function buildResultPage() {
     el.querySelectorAll(".ractions, .jsonbtn, pre.json, .xp-more, button.x, .composer, .live-cp").forEach((e) => e.remove());
     el.querySelectorAll("[id]").forEach((e) => e.removeAttribute("id"));
     el.querySelectorAll("[onclick]").forEach((e) => e.removeAttribute("onclick"));
+    el.querySelectorAll("svg").forEach((g) => (g.closest("summary") ? g.replaceWith("▾ ") : g.remove()));   // 메신저 미리보기 등은 SVG를 못 그려요
     return el.innerHTML;
   };
   const clone = (sel) => { const el = document.querySelector(sel); return el ? strip(el.cloneNode(true)) : ""; };
@@ -1934,21 +1935,19 @@ async function buildResultPage() {
     <div class="rp-people">${who}</div>
     <div class="vblock rp-verdict" data-tone="${toneOf(v)}"><span class="eyebrow ko">판정</span><h2>${esc(v.verdict)}</h2><p>${esc(v.headline)}</p></div>
   </div>
-  <nav class="rp-tabs" role="tablist">
-    <button data-t="review" class="on">결론</button><button data-t="log">회의록 <small>${S.transcript.length}</small></button><button data-t="minds">속마음</button><button data-t="flow">상황판</button>
-  </nav>
-  <section class="rp-sec on" data-s="review"><div class="rp-review">${clone("#pane-review")}</div></section>
-  <section class="rp-sec" data-s="log"><div class="rp-log">${clone("#pane-log")}</div></section>
-  <section class="rp-sec" data-s="minds">${clone("#pane-minds")}</section>
-  <section class="rp-sec" data-s="flow"><div class="flow rp-flow">${clone(".flow")}</div></section>
+  <input type="radio" name="rp-t" id="rp-t1" class="rp-r" checked><input type="radio" name="rp-t" id="rp-t2" class="rp-r"><input type="radio" name="rp-t" id="rp-t3" class="rp-r"><input type="radio" name="rp-t" id="rp-t4" class="rp-r">
+  <nav class="rp-tabs"><label for="rp-t1">결론</label><label for="rp-t2">회의록 <small>${S.transcript.length}</small></label><label for="rp-t3">속마음</label><label for="rp-t4">상황판</label></nav>
+  <section class="rp-sec s1"><div class="rp-review">${clone("#pane-review")}</div></section>
+  <section class="rp-sec s2"><div class="rp-log">${clone("#pane-log")}</div></section>
+  <section class="rp-sec s3">${clone("#pane-minds")}</section>
+  <section class="rp-sec s4"><div class="flow rp-flow">${clone(".flow")}</div></section>
   <footer class="rp-foot">Ensembly · A2A로 모인 AI 에이전트들의 회의 결과예요</footer>
 </div>`;
   // 그림은 파일 안에 넣어요 (인터넷 없이 열어도, 링크로 열어도 보이게)
-  // 같은 그림이 여러 번 나와도 파일에는 한 번만 넣어요 (data-img 번호 → 열 때 채워 넣기)
+  // 자바스크립트 없이도 보이게 각 <img>에 바로 넣어요 (작게 줄여 둬서 여러 번 들어가도 가벼워요)
   const srcs = [...new Set([...body.matchAll(/src="((?!data:)[^"]+)"/g)].map((x) => x[1]))];
-  const imgs = await Promise.all(srcs.map((u) => toDataUrl(u)));
-  body = body.replace(/src="((?!data:)[^"]+)"/g, (all, u) => `data-img="${srcs.indexOf(u)}" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="`);
-  const imgScript = `var I=${JSON.stringify(imgs)};document.querySelectorAll("[data-img]").forEach(function(e){e.src=I[+e.getAttribute("data-img")]});`;
+  const imgs = Object.fromEntries(await Promise.all(srcs.map(async (u) => [u, await toDataUrl(u, 88)])));
+  body = body.replace(/src="((?!data:)[^"]+)"/g, (all, u) => `src="${imgs[u] || ""}"`);
   const css = [...document.querySelectorAll("style")].map((st) => st.textContent).join("\n")
     .replace(/url\((['"]?)((?:\.\/)?vendor\/[^)'"]+)\1\)/g, (all, q, u) => `url(${q}${location.origin}/${u.replace(/^\.\//, "")}${q})`);
   const extra = `
@@ -1963,16 +1962,19 @@ body.rp{margin:0;background:#F4F3EF;color:var(--ink);-webkit-font-smoothing:anti
 .rp-who.dark{background:#0A0A0A;color:#fff}
 .rp-who .ava,.rp-who .ava-fb{width:30px;height:30px}.rp-who b{display:block;font-size:13px;line-height:1.1}.rp-who small{font-size:11px;opacity:.7}
 .rp-verdict{margin:6px 0 18px}
+.rp-r{position:absolute;opacity:0;pointer-events:none}
 .rp-tabs{position:sticky;top:0;z-index:5;display:flex;gap:6px;padding:10px 0;background:#F4F3EF}
-.rp-tabs button{border:1px solid var(--hair);background:#fff;border-radius:999px;padding:7px 16px 8px;font:inherit;font-size:14px;font-weight:650;cursor:pointer}
-.rp-tabs button.on{background:#0A0A0A;color:#fff;border-color:#0A0A0A}.rp-tabs small{font-family:var(--mono);opacity:.6;margin-left:3px}
-.rp-sec{display:none;background:#fff;border:1px solid var(--hair);border-radius:20px;padding:20px 22px;box-shadow:var(--lift)}.rp-sec.on{display:block}
+.rp-tabs label{display:inline-flex;align-items:center;min-height:36px;border:1px solid var(--hair);background:#fff;border-radius:999px;padding:0 16px;font-size:14px;font-weight:650;cursor:pointer;white-space:nowrap}
+.rp-tabs small{font-family:var(--mono);opacity:.6;margin-left:4px}
+#rp-t1:checked~.rp-tabs label[for=rp-t1],#rp-t2:checked~.rp-tabs label[for=rp-t2],#rp-t3:checked~.rp-tabs label[for=rp-t3],#rp-t4:checked~.rp-tabs label[for=rp-t4]{background:#0A0A0A;color:#fff;border-color:#0A0A0A}
+.rp-sec{display:none;background:#fff;border:1px solid var(--hair);border-radius:20px;padding:20px 22px;box-shadow:var(--lift)}
+#rp-t1:checked~.s1,#rp-t2:checked~.s2,#rp-t3:checked~.s3,#rp-t4:checked~.s4{display:block}
 .rp-review > .vblock:first-of-type{display:none}
 .rp-log .cmt{animation:none}
 .rp-flow{border:0;padding:0;background:none}
 .rp-foot{margin-top:28px;text-align:center;color:var(--muted);font-size:12.5px}
 @media (max-width:640px){.rp-wrap{padding:18px 14px 48px}.rp-sec{padding:16px 14px;border-radius:16px}.rp-tabs{overflow-x:auto}}
-@media print{.rp-tabs{display:none}.rp-sec{display:block!important;break-inside:avoid-page;margin-bottom:16px;box-shadow:none}}`;
+@media print{.rp-tabs{display:none}.rp-sec{display:block!important;margin-bottom:16px;box-shadow:none}}`;
   const desc = `${v.verdict}: ${v.headline}`.slice(0, 180);
   return `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1980,7 +1982,6 @@ body.rp{margin:0;background:#F4F3EF;color:var(--ink);-webkit-font-smoothing:anti
 <meta name="description" content="${esc(desc)}"><meta property="og:title" content="${esc(title.slice(0, 80))}"><meta property="og:description" content="${esc(desc)}">
 <style>${css}\n${extra}</style></head>
 <body class="rp">${body}
-<scr${""}ipt>${imgScript}document.querySelectorAll(".rp-tabs button").forEach(function(b){b.onclick=function(){document.querySelectorAll(".rp-tabs button").forEach(function(x){x.classList.toggle("on",x===b)});document.querySelectorAll(".rp-sec").forEach(function(s){s.classList.toggle("on",s.dataset.s===b.dataset.t)});window.scrollTo({top:document.querySelector(".rp-tabs").offsetTop-4})}});<\/script>
 </body></html>`;
 }
 let lastShare = null;   // 같은 결론이면 링크를 다시 만들지 않아요
