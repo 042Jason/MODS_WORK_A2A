@@ -292,6 +292,8 @@ pre.json.open{display:block}
 .drawer.on{transform:none}
 .dh{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--hair)}
 .dh h2{margin:0;font-size:16px;font-weight:700;flex:1}
+.autosave{font-size:12px;color:var(--muted);white-space:nowrap;transition:color .2s}
+.autosave.on{color:#067647;font-weight:650}
 .db{overflow:auto;padding:0 20px 40px}
 .sec{padding:20px 0;border-bottom:1px solid var(--hair)}
 .sec:last-child{border-bottom:0}
@@ -795,7 +797,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-label="설정" aria-hidden="true">
-  <div class="dh"><h2>설정</h2><button class="pill sm" id="btn-close">닫기</button></div>
+  <div class="dh"><h2>설정</h2><span class="autosave" id="set-saved" aria-live="polite">바꾸면 바로 저장돼요</span><button class="pill sm dark" id="btn-close">완료</button></div>
   <div class="db">
     <div class="warn" id="set-warn" hidden></div>
     <section class="sec">
@@ -954,9 +956,16 @@ const S = {
 /* ───────────── 설정 저장 ───────────── */
 const SET_KEY = "meetingroom.settings";
 function loadSettings() { try { return JSON.parse(localStorage.getItem(SET_KEY)) || {}; } catch { return {}; } }
-function saveSettings(p) { try { localStorage.setItem(SET_KEY, JSON.stringify({ ...loadSettings(), ...p })); } catch {} }
+function saveSettings(p) { try { localStorage.setItem(SET_KEY, JSON.stringify({ ...loadSettings(), ...p })); } catch {} flashSaved(); }
+// 설정 화면이 열려 있을 때 바꾼 내용은 바로 저장돼요. 저장될 때마다 머리에 '저장했어요 ✓'를 잠깐 보여 줘요
+function flashSaved() {
+  const el = document.getElementById("set-saved"), d = document.getElementById("drawer");
+  if (!el || !d?.classList.contains("on")) return;
+  S.setDirty = true; el.textContent = "저장했어요 ✓"; el.classList.add("on");
+  clearTimeout(flashSaved.t); flashSaved.t = setTimeout(() => { el.textContent = "바꾸면 바로 저장돼요"; el.classList.remove("on"); }, 1600);
+}
 function getKey() { try { return sessionStorage.getItem("meetingroom.key") || localStorage.getItem("meetingroom.key") || ""; } catch { return ""; } }
-function setKey(v, where) { try { sessionStorage.removeItem("meetingroom.key"); localStorage.removeItem("meetingroom.key"); if (v) (where === "local" ? localStorage : sessionStorage).setItem("meetingroom.key", v); } catch {} }
+function setKey(v, where) { try { sessionStorage.removeItem("meetingroom.key"); localStorage.removeItem("meetingroom.key"); if (v) (where === "local" ? localStorage : sessionStorage).setItem("meetingroom.key", v); } catch {} flashSaved(); }
 function getPass() { try { return sessionStorage.getItem("meetingroom.pass") || localStorage.getItem("meetingroom.pass") || ""; } catch { return ""; } }
 function setPass(v, where) { try { sessionStorage.removeItem("meetingroom.pass"); localStorage.removeItem("meetingroom.pass"); if (v) (where === "local" ? localStorage : sessionStorage).setItem("meetingroom.pass", v); } catch {} }
 const storeChoice = () => document.querySelector("input[name=keystore]:checked")?.value || "session";
@@ -2550,7 +2559,11 @@ function openSettings(warn) {
   drawModelRows(); drawTurns(); updateMode();
 }
 function openMembers() { openSettings(); setTimeout(() => $("#sec-members").scrollIntoView({ behavior: "smooth" }), 260); }
-function closeSettings() { $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); $("#drawer").setAttribute("aria-hidden", "true"); }
+function closeSettings() {
+  const k = $("#key").value.trim(); if (k !== (getKey() || "")) { setKey(k, storeChoice()); updateMode(); }   // 입력만 하고 '완료'를 눌러도 저장
+  const pw = $("#pass").value.trim(); if (pw && pw !== (getPass() || "") && !$("#pass-field").hidden) checkPass();
+  if (S.setDirty) { S.setDirty = false; toast("설정을 저장했어요."); }
+  $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); $("#drawer").setAttribute("aria-hidden", "true"); }
 
 
 /* ───────────── 시작 ───────────── */
