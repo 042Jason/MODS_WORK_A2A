@@ -292,8 +292,6 @@ pre.json.open{display:block}
 .drawer.on{transform:none}
 .dh{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--hair)}
 .dh h2{margin:0;font-size:16px;font-weight:700;flex:1}
-.autosave{font-size:12px;color:var(--muted);white-space:nowrap;transition:color .2s}
-.autosave.on{color:#067647;font-weight:650}
 .db{overflow:auto;padding:0 20px 40px}
 .sec{padding:20px 0;border-bottom:1px solid var(--hair)}
 .sec:last-child{border-bottom:0}
@@ -797,7 +795,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-label="설정" aria-hidden="true">
-  <div class="dh"><h2>설정</h2><span class="autosave" id="set-saved" aria-live="polite">바꾸면 바로 저장돼요</span><button class="pill sm dark" id="btn-close">완료</button></div>
+  <div class="dh"><h2>설정</h2><button class="pill sm" id="set-cancel">취소</button><button class="pill sm dark" id="btn-close">저장</button></div>
   <div class="db">
     <div class="warn" id="set-warn" hidden></div>
     <section class="sec">
@@ -957,13 +955,8 @@ const S = {
 const SET_KEY = "meetingroom.settings";
 function loadSettings() { try { return JSON.parse(localStorage.getItem(SET_KEY)) || {}; } catch { return {}; } }
 function saveSettings(p) { try { localStorage.setItem(SET_KEY, JSON.stringify({ ...loadSettings(), ...p })); } catch {} flashSaved(); }
-// 설정 화면이 열려 있을 때 바꾼 내용은 바로 저장돼요. 저장될 때마다 머리에 '저장했어요 ✓'를 잠깐 보여 줘요
-function flashSaved() {
-  const el = document.getElementById("set-saved"), d = document.getElementById("drawer");
-  if (!el || !d?.classList.contains("on")) return;
-  S.setDirty = true; el.textContent = "저장했어요 ✓"; el.classList.add("on");
-  clearTimeout(flashSaved.t); flashSaved.t = setTimeout(() => { el.textContent = "바꾸면 바로 저장돼요"; el.classList.remove("on"); }, 1600);
-}
+// 설정 화면에서 바꾼 내용은 미리 보기처럼 바로 반영되지만, '취소'를 누르면 열기 전 상태로 되돌려요
+function flashSaved() {}
 function getKey() { try { return sessionStorage.getItem("meetingroom.key") || localStorage.getItem("meetingroom.key") || ""; } catch { return ""; } }
 function setKey(v, where) { try { sessionStorage.removeItem("meetingroom.key"); localStorage.removeItem("meetingroom.key"); if (v) (where === "local" ? localStorage : sessionStorage).setItem("meetingroom.key", v); } catch {} flashSaved(); }
 function getPass() { try { return sessionStorage.getItem("meetingroom.pass") || localStorage.getItem("meetingroom.pass") || ""; } catch { return ""; } }
@@ -2547,7 +2540,12 @@ async function checkPass() {
     else { res.className = "help bad"; res.textContent = "인증키가 맞지 않아요. 다시 확인해 주세요."; setPass("", storeChoice()); }
   } catch { res.className = "help bad"; res.textContent = "확인하지 못했어요. 잠시 뒤 다시 시도해 주세요."; }
 }
+function settingsState() {
+  let keyWhere = "session"; try { if (localStorage.getItem("meetingroom.key") || localStorage.getItem("meetingroom.pass")) keyWhere = "local"; } catch {}
+  return { settings: loadSettings(), key: getKey() || "", pass: getPass() || "", keyWhere };
+}
 function openSettings(warn) {
+  if (!$("#drawer").classList.contains("on")) S.setSnap = settingsState();   // '취소'하면 이 상태로 되돌려요
   $("#set-warn").hidden = !warn; $("#set-warn").textContent = warn || "";
   $("#drawer").classList.add("on"); $("#scrim").classList.add("on"); $("#drawer").setAttribute("aria-hidden", "false");
   $("#key").value = getKey(); $("#pass").value = getPass();
@@ -2559,10 +2557,30 @@ function openSettings(warn) {
   drawModelRows(); drawTurns(); updateMode();
 }
 function openMembers() { openSettings(); setTimeout(() => $("#sec-members").scrollIntoView({ behavior: "smooth" }), 260); }
-function closeSettings() {
-  const k = $("#key").value.trim(); if (k !== (getKey() || "")) { setKey(k, storeChoice()); updateMode(); }   // 입력만 하고 '완료'를 눌러도 저장
+function hideSettings() { $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); $("#drawer").setAttribute("aria-hidden", "true"); }
+function saveAndCloseSettings() {
+  const k = $("#key").value.trim(); if (k !== (getKey() || "")) { setKey(k, storeChoice()); updateMode(); }   // 입력만 해 둔 키·인증키도 저장
   const pw = $("#pass").value.trim(); if (pw && pw !== (getPass() || "") && !$("#pass-field").hidden) checkPass();
-  if (S.setDirty) { S.setDirty = false; toast("설정을 저장했어요."); }
+  const changed = JSON.stringify(settingsState()) !== JSON.stringify(S.setSnap || {}) || (k && k !== (S.setSnap?.key || ""));
+  S.setSnap = null; hideSettings();
+  toast(changed ? "설정을 저장했어요." : "바뀐 설정이 없어요.");
+}
+async function cancelSettings() {
+  const snap = S.setSnap, now = settingsState();
+  const dirty = snap && (JSON.stringify(now) !== JSON.stringify(snap) || $("#key").value.trim() !== (getKey() || "") || ($("#pass").value.trim() && $("#pass").value.trim() !== (getPass() || "")));
+  if (dirty) {
+    // 프로필 카드는 따로 '저장'했으니 그대로 두고, 나머지만 열기 전으로
+    const keepMe = loadSettings().me || {}, back = { ...snap.settings, me: { ...keepMe, on: !!snap.settings.me?.on } };
+    try { localStorage.setItem(SET_KEY, JSON.stringify(back)); } catch {}
+    setKey(snap.key, snap.keyWhere); setPass(snap.pass, snap.keyWhere);
+    $("#key").value = snap.key; $("#pass").value = snap.pass;
+    drawMe(); if (!S.running && S.meeting?.status !== "paused") applyConfig(); else drawTurns();
+    updateMode(); refreshSeats(); describeConfig?.();
+    toast("바꾼 설정을 취소했어요.");
+  }
+  S.setSnap = null; hideSettings();
+}
+function closeSettings() {
   $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); $("#drawer").setAttribute("aria-hidden", "true"); }
 
 
@@ -2644,7 +2662,7 @@ document.body.dataset.view = "board";
 document.querySelectorAll(".mnav button").forEach((b) => (b.onclick = () => setView(b.dataset.view)));
 mq.addEventListener("change", () => { placeSeats(); if (!isMobile()) document.body.dataset.view = "board"; });
 $("#btn-settings").onclick = () => openSettings();
-$("#btn-close").onclick = closeSettings; $("#scrim").onclick = closeSettings;
+$("#btn-close").onclick = saveAndCloseSettings; $("#set-cancel").onclick = cancelSettings; $("#scrim").onclick = cancelSettings;
 $("#doc-change").onclick = openTopic;
 $("#file").onchange = (e) => { const fs = [...e.target.files]; e.target.value = ""; if (fs.length) addFiles(fs); };
 $("#doc-view").onclick = viewTopic;
@@ -2674,7 +2692,7 @@ $("#reset-models").onclick = () => { saveSettings({ models: {} }); drawModelRows
 $("#t-minus").onclick = () => setTurns(turns() - 1);
 $("#t-plus").onclick = () => setTurns(turns() + 1);
 $("#t-reset").onclick = () => setTurns(null);
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("#drawer").classList.contains("on")) cancelSettings(); });
 window.addEventListener("resize", () => placeSeats());
 const board = $("#board");
 ["dragenter", "dragover"].forEach((t) => board.addEventListener(t, (e) => { e.preventDefault(); board.classList.add("drag"); }));
