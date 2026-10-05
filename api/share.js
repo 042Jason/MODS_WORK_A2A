@@ -1,3 +1,4 @@
+// Ensembly (AI 회의실) · Copyright (c) 2026 박재현. All rights reserved. 무단 복제·수정·배포 금지 (LICENSE 참고)
 // 회의 결과 공유: 결과 페이지(HTML 한 장)를 Vercel Blob에 저장하고 /s/<id> 링크로 보여 줘요.
 // 필요한 것: Vercel 프로젝트에 Blob 저장소 연결 (환경변수 BLOB_READ_WRITE_TOKEN이 자동으로 생겨요).
 // 공유 페이지는 sandbox로 보여 줘서, 이 사이트에 저장된 키 같은 정보에 접근할 수 없어요.

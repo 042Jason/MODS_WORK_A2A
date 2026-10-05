@@ -1,3 +1,4 @@
+// Ensembly (AI 회의실) · Copyright (c) 2026 박재현. All rights reserved. 무단 복제·수정·배포 금지 (LICENSE 참고)
 // 에이전트들의 A2A 엔드포인트 (JSON-RPC, A2A 1.0 SendMessage)
 //   GET  /agents/{id}/.well-known/agent-card.json  → 명함
 //   POST /agents/{id}                              → SendMessage
