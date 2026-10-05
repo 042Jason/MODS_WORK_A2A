@@ -208,3 +208,11 @@ vendor/               자료 읽기 라이브러리, 글꼴, 캐릭터, 배지, 
 dev-server.mjs        로컬 실행용 서버
 vercel.json           주소 연결, 함수 제한시간
 ```
+
+---
+
+## 저작권
+
+Copyright (c) 2026 박재현 (GitHub: [@042Jason](https://github.com/042Jason)). All rights reserved.
+최초 작성일 2026년 9월 30일. 개인 저작물이며, 허락 없이 복제·수정·배포·서비스 운영·상업적 이용을 할 수 없습니다.
+자세한 내용은 [LICENSE](LICENSE), [NOTICE.md](NOTICE.md), 외부 구성요소는 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)를 보세요.

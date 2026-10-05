@@ -1,6 +1,10 @@
 {
   "name": "a2a-meeting-room",
+  "version": "1.0.0",
   "private": true,
+  "description": "Ensembly (AI 회의실) — A2A 기반 AI 에이전트 회의 서비스",
+  "author": "박재현 (https://github.com/042Jason)",
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "dev": "node dev-server.mjs"

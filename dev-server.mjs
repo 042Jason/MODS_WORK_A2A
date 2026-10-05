@@ -1,3 +1,4 @@
+// Ensembly (AI 회의실) · Copyright (c) 2026 박재현. All rights reserved. 무단 복제·수정·배포 금지 (LICENSE 참고)
 // 로컬 실행용 서버: Vercel 없이 `node dev-server.mjs` 로 똑같이 돌려 볼 수 있습니다.
 import fs from "node:fs";
 import http from "node:http";

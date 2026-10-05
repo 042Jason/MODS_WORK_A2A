@@ -1,0 +1,35 @@
+Ensembly (AI 회의실)
+Copyright (c) 2026 박재현 (GitHub: 042Jason). All rights reserved.
+
+이 저장소에 담긴 소스 코드, 문서, 화면 디자인, 캐릭터·배지·로고 등 이미지,
+에이전트 페르소나와 회의 진행 규칙(프롬프트) 일체(이하 "본 저작물")의 저작권은
+저작자 박재현에게 있습니다.
+
+1. 허용되는 이용
+   - 이 저장소를 열람하는 것
+   - 저작권법이 정한 범위(인용, 사적 이용 등) 안에서의 이용
+
+2. 저작자의 사전 서면 허락이 필요한 이용
+   - 본 저작물의 전부 또는 일부를 복제, 수정, 번역하거나 2차적 저작물을 만드는 것
+   - 배포, 공중송신, 전시, 서비스 형태로 운영하거나 다른 서비스에 넣는 것
+   - 영리 목적의 모든 이용
+   - 인공지능 모델의 학습·평가 데이터로 쓰는 것
+
+3. 외부 구성요소
+   이 저장소에 포함된 외부 라이브러리와 글꼴은 각자의 라이선스를 따릅니다.
+   목록은 THIRD_PARTY_NOTICES.md, 원문은 THIRD_PARTY_LICENSES.md를 보세요.
+
+4. 보증의 부인
+   본 저작물은 "있는 그대로" 제공되며, 저작자는 이용으로 생긴 어떠한 손해에도
+   책임을 지지 않습니다.
+
+이용 허락 문의: GitHub @042Jason
+
+------------------------------------------------------------------------------
+English summary
+Copyright (c) 2026 박재현 (GitHub: 042Jason). All rights reserved.
+No permission is granted to copy, modify, distribute, publicly perform, operate
+as a service, use commercially, or use as AI training data any part of this
+work without the author's prior written consent. Viewing the repository is
+permitted. Third-party components are licensed under their own terms (see
+THIRD_PARTY_NOTICES.md). The work is provided "AS IS", without warranty.
