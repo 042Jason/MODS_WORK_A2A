@@ -1,3 +1,4 @@
+// Ensembly (AI 회의실) · Copyright (c) 2026 박재현. All rights reserved. 무단 복제·수정·배포 금지 (LICENSE 참고)
 // API 키 없이 흐름을 연습할 수 있는 모의 응답. 첨부 자료가 있으면 자료 속 문장을, 없으면 토론 주제를 인용해 그럴듯하게 말합니다.
 import { MEMBER_IDS, PERSONAS } from "./personas.js";
 

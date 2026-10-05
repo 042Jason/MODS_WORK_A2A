@@ -1,3 +1,4 @@
+// Ensembly (AI 회의실) · Copyright (c) 2026 박재현. All rights reserved. 무단 복제·수정·배포 금지 (LICENSE 참고)
 // OpenRouter 호출. 키는 (1) 브라우저에서 보낸 사용자 키 → (2) 인증된 사람에게만 서버 공용 키 순서로 씁니다.
 // 둘 다 안 되면 모의 모드(mock.js)로 답합니다.
 

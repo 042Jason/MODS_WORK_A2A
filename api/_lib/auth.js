@@ -1,3 +1,4 @@
+// Ensembly (AI 회의실) · Copyright (c) 2026 박재현. All rights reserved. 무단 복제·수정·배포 금지 (LICENSE 참고)
 // 인증키 확인. 인증키(MEETING_PASSCODE)가 맞는 사람만 운영자의 공용 키를 쓸 수 있습니다.
 // 인증키를 설정하지 않았다면 누구나 공용 키를 씁니다. 공개 주소라면 꼭 설정하세요.
 import crypto from "node:crypto";

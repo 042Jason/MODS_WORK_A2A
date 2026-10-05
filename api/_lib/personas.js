@@ -1,3 +1,4 @@
+// Ensembly (AI 회의실) · Copyright (c) 2026 박재현. All rights reserved. 무단 복제·수정·배포 금지 (LICENSE 참고)
 // 토론 참석 에이전트들의 정체성. 각자 자기 프롬프트와 자기 모델로만 움직입니다.
 
 export const MEMBER_NAMES = ["민서", "나래", "도윤", "현우", "하율"];
