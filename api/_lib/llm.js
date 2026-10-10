@@ -18,7 +18,17 @@ export function parseJSON(text) {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
-async function callOnce({ apiKey, model, system, user, temperature, maxTokens, jsonMode, lightReasoning }) {
+// 같은 에이전트가 같은 자료를 매번 다시 읽으니, 앞부분(주제·자료)을 캐시해 두면 다시 읽을 때 싸고 빨라요.
+// GPT·Gemini·DeepSeek·Grok 계열은 앞부분이 같으면 자동으로 캐시돼요. Claude는 표시(cache_control)를 붙여야 해요.
+function userContent(model, user, cachePrefixLen) {
+  if (!/^anthropic\//.test(model) || !cachePrefixLen || cachePrefixLen < 4000 || cachePrefixLen >= user.length) return user;
+  return [
+    { type: "text", text: user.slice(0, cachePrefixLen), cache_control: { type: "ephemeral" } },
+    { type: "text", text: user.slice(cachePrefixLen) },
+  ];
+}
+
+async function callOnce({ apiKey, model, system, user, temperature, maxTokens, jsonMode, lightReasoning, cachePrefixLen = 0 }) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 55_000);
   try {
@@ -37,7 +47,7 @@ async function callOnce({ apiKey, model, system, user, temperature, maxTokens, j
         max_tokens: maxTokens,
         messages: [
           { role: "system", content: system },
-          { role: "user", content: user },
+          { role: "user", content: userContent(model, user, cachePrefixLen) },
         ],
         ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
         // 추론 모델이 생각하느라 시간을 다 쓰지 않도록 가볍게, 추론 내용은 받지 않음
@@ -82,8 +92,8 @@ export async function chatJSON({ apiKey, model, fallbacks = [], onModel, ...rest
   throw lastErr;
 }
 
-async function chatWithModel({ apiKey, model, system, user, temperature = 0.7, maxTokens = 2500 }) {
-  const base = { apiKey, model, system, user, temperature, maxTokens };
+async function chatWithModel({ apiKey, model, system, user, temperature = 0.7, maxTokens = 2500, cachePrefixLen = 0 }) {
+  const base = { apiKey, model, system, user, temperature, maxTokens, cachePrefixLen };
   let content;
   try {
     content = await callOnce({ ...base, jsonMode: true, lightReasoning: true });
