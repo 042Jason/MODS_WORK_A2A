@@ -11,6 +11,7 @@
 
 import crypto from "node:crypto";
 import { ID_BY_NAME, MEMBER_IDS, MEMBER_NAMES, PERSONAS, agentCard, defaultModelOf, isAllowedModel, sharedModelOf } from "./_lib/personas.js";
+import { isCheapModel, SHARED_MAX_OUT } from "./models.js";
 import { chatJSON, resolveKey } from "./_lib/llm.js";
 import { mockFollowup, mockMember, mockModerate, mockSummary } from "./_lib/mock.js";
 import { openState, sealState } from "./_lib/state.js";
@@ -473,15 +474,19 @@ export default async function handler(req, res) {
   // 내 키가 있으면 내 키, 없으면 인증키가 맞는 경우에만 공용 키, 그것도 아니면 모의 모드
   const userKey = String(req.headers["x-openrouter-key"] || "").trim() || null;
   const apiKey = resolveKey(userKey, passcodeOk(req));
-  // 모델은 '내 키'로 부를 때만 바꿀 수 있어요. 공용 키일 때는 운영자가 정한 기본 모델(MODEL_*)로 고정해요.
+  // 내 키: 어떤 허용 모델이든 고를 수 있어요. 공용 키: 저렴한 모델(출력 100만 토큰당 SHARED_MAX_OUT_PRICE달러 이하)만 고를 수 있어요.
   const wanted = String(req.headers["x-agent-model"] || "").trim();
-  if (userKey && wanted && !isAllowedModel(wanted)) {
+  if (wanted && !isAllowedModel(wanted)) {
     return rpcError(res, body.id, -32602, `허용되지 않은 모델이에요: ${wanted}`);
   }
-  // 내 키: 고른 모델(없으면 기본 모델). 공용 키: 운영자가 정한 가벼운 모델.
-  const model = userKey ? (wanted || defaultModelOf(persona)) : apiKey ? sharedModelOf(persona) : defaultModelOf(persona);
+  const sharedPick = !userKey && apiKey && wanted && wanted !== sharedModelOf(persona);
+  if (sharedPick && !(await isCheapModel(wanted))) {
+    return rpcError(res, body.id, -32602, `공용 키로는 출력 100만 토큰당 $${SHARED_MAX_OUT()} 이하 모델만 고를 수 있어요(${wanted}). 더 좋은 모델은 내 API 키로 써 주세요.`);
+  }
+  // 내 키: 고른 모델(없으면 기본 모델). 공용 키: 고른 저렴한 모델(없으면 운영자가 정한 가벼운 모델).
+  const model = userKey ? (wanted || defaultModelOf(persona)) : apiKey ? (wanted || sharedModelOf(persona)) : defaultModelOf(persona);
   // 모델이 지원 종료되면 그 에이전트의 기본 모델 → FALLBACK_MODEL 순서로 대신 불러요
-  const fallbacks = [defaultModelOf(persona), process.env.FALLBACK_MODEL || "google/gemini-3-flash-preview"];
+  const fallbacks = [userKey || !apiKey ? defaultModelOf(persona) : sharedModelOf(persona), process.env.FALLBACK_MODEL || "google/gemini-3.8-flash"];   // 공용 키는 비싼 기본 모델로 넘어가지 않게
   const llm = { apiKey, model, mock: !apiKey, fallbacks, onModel: (m) => { llm.model = m; } };
 
   const input = msg.parts.find((p) => p.data)?.data || {};

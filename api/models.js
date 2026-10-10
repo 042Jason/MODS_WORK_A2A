@@ -45,6 +45,27 @@ export function pickModels(data, vendors, now = Date.now()) {
   })));
 }
 
+// 공용 키로 고를 수 있는 모델: 출력 100만 토큰당 이 가격(달러) 이하
+export const SHARED_MAX_OUT = () => Number(process.env.SHARED_MAX_OUT_PRICE) || 5;
+// 모델 목록(1시간 캐시). 공용 키로 고른 모델이 저렴한지 서버에서 확인할 때도 써요
+export async function getCatalog() {
+  if (!cache.list || Date.now() - cache.at > 3600_000) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const r = await fetch("https://openrouter.ai/api/v1/models", { signal: ctrl.signal });
+      if (!r.ok) throw new Error(String(r.status));
+      const { data } = await r.json();
+      cache = { at: Date.now(), list: pickModels(data, ALLOWED_VENDORS()) };
+    } finally { clearTimeout(t); }
+  }
+  return cache.list;
+}
+export async function isCheapModel(id) {
+  try { const m = (await getCatalog()).find((x) => x.id === id); return !!m && m.priceOut <= SHARED_MAX_OUT(); }
+  catch { return false; }
+}
+
 function fallback() {
   const ids = [...new Set(Object.values(PERSONAS).map(defaultModelOf))];
   return ids.map((id) => ({ id, name: id, vendor: VENDOR_LABEL[id.split("/")[0]] || id.split("/")[0], context: null, priceIn: null, priceOut: null }));
@@ -54,17 +75,9 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "public, max-age=600");
   const vendors = ALLOWED_VENDORS();
   try {
-    if (!cache.list || Date.now() - cache.at > 3600_000) {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 8000);
-      const r = await fetch("https://openrouter.ai/api/v1/models", { signal: ctrl.signal });
-      clearTimeout(t);
-      if (!r.ok) throw new Error(String(r.status));
-      const { data } = await r.json();
-      cache = { at: Date.now(), list: pickModels(data, vendors) };
-    }
-    res.status(200).json({ live: true, vendors, models: cache.list });
+    const models = await getCatalog();
+    res.status(200).json({ live: true, vendors, models, sharedMaxOut: SHARED_MAX_OUT() });
   } catch {
-    res.status(200).json({ live: false, vendors, models: fallback() });
+    res.status(200).json({ live: false, vendors, models: fallback(), sharedMaxOut: SHARED_MAX_OUT() });
   }
 }
