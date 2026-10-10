@@ -28,7 +28,7 @@ function userContent(model, user, cachePrefixLen) {
   ];
 }
 
-async function callOnce({ apiKey, model, system, user, temperature, maxTokens, jsonMode, lightReasoning, cachePrefixLen = 0 }) {
+async function callOnce({ apiKey, model, system, user, temperature, maxTokens, jsonMode, lightReasoning, cachePrefixLen = 0, onUsage }) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 55_000);
   try {
@@ -63,6 +63,8 @@ async function callOnce({ apiKey, model, system, user, temperature, maxTokens, j
       throw err;
     }
     const data = JSON.parse(text);
+    // 회의 품질 점수표의 '비용' 칸에 쓸 실제 토큰 수
+    if (data.usage) onUsage?.({ in: Number(data.usage.prompt_tokens) || 0, out: Number(data.usage.completion_tokens) || 0, cost: Number(data.usage.cost) || 0 });
     return data.choices?.[0]?.message?.content ?? "";
   } catch (e) {
     if (e.name === "AbortError") throw new Error("모델 응답이 55초 안에 오지 않았어요.");
@@ -92,8 +94,8 @@ export async function chatJSON({ apiKey, model, fallbacks = [], onModel, ...rest
   throw lastErr;
 }
 
-async function chatWithModel({ apiKey, model, system, user, temperature = 0.7, maxTokens = 2500, cachePrefixLen = 0 }) {
-  const base = { apiKey, model, system, user, temperature, maxTokens, cachePrefixLen };
+async function chatWithModel({ apiKey, model, system, user, temperature = 0.7, maxTokens = 2500, cachePrefixLen = 0, onUsage }) {
+  const base = { apiKey, model, system, user, temperature, maxTokens, cachePrefixLen, onUsage };
   let content;
   try {
     content = await callOnce({ ...base, jsonMode: true, lightReasoning: true });

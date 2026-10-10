@@ -96,7 +96,30 @@ const FREE_LINES = {   // 자유 토론·아이디어 회의 (근거·숫자 대
   method: [(t) => `"${t}"에 대해 두 가지 마음이 같이 드는 것 같아요. 기대랑 걱정이 사실 같은 뿌리인 것 같기도 하고요.`, () => `두 분 말이 사실 같은 얘기 같아요. 결국 '선택할 수 있느냐'가 핵심인 것 같아요.`],
   policy: [(t) => `만약에 "${t}"가 내일 당장 이뤄진다면요? 저는 첫 주엔 신나다가 둘째 주에 혼란스러울 것 같아요.`, () => `하나 상상해 보면, 다 같이 하는 대신 원하는 사람만 해 보면 어떨까요? 생각보다 재밌을 것 같아요.`],
 };
-export function mockMember(personaId, { document, myTurn, phase, topic, style = "review" }) {
+const MOCK_CRITERION = { critic: "근거의 정확성", strategist: "목표 적합성", reader: "사람들의 체감", method: "비교의 공정성", policy: "미해결 위험" };
+const MOCK_OBJ = [
+  { text: "반대하는 이해관계자의 입장이 아직 검토되지 않았어요", why: "실행 단계에서 반발로 일정이 밀릴 수 있어요" },
+  { text: "실패했을 때 되돌리는 방법이 없어요", why: "시범이 실패하면 원래대로 돌아갈 기준이 필요해요" },
+  { text: "비용 추정이 빠져 있어요", why: "예산 없이 결정하면 나중에 범위를 줄여야 해요" },
+  { text: "성과를 무엇으로 볼지 합의가 없어요", why: "기준이 없으면 결과를 두고 다시 다투게 돼요" },
+];
+export function mockMember(personaId, args) {
+  const base = mockMemberBase(personaId, args);
+  const { phase, myTurn, ledger = [] } = args;
+  const open = ledger.filter((o) => o.status === "open");
+  const out = { ...base, criterion: MOCK_CRITERION[personaId] || "", changed_because: "", objections: [], resolves: [] };
+  // 레드팀은 매번 반론을 하나씩, 검증가는 첫 발언에 하나
+  if (personaId === "policy") out.objections = [MOCK_OBJ[(myTurn - 1) % MOCK_OBJ.length]];
+  if (personaId === "critic" && phase === "round1") out.objections = [MOCK_OBJ[3]];
+  // 2라운드부터 전략가·논리 점검가가 열린 반론을 하나씩 정리
+  if (phase !== "round1" && ["strategist", "method", "reader"].includes(personaId) && open.length) {
+    const o = open.find((x) => x.by !== "하율") || open[0];
+    out.resolves = [{ id: o.id, how: personaId === "reader" ? "수용" : "반박", why: personaId === "reader" ? "그 걱정을 받아들여 설명과 보완책을 넣기로 해요" : "시범 범위를 작게 잡으면 그 위험은 관리할 수 있어요" }];
+  }
+  if (phase !== "round1" && base.stance !== "보류") out.changed_because = personaId === "policy" ? "" : "앞선 발언에서 시범 범위를 줄이자는 근거를 듣고 생각이 바뀌었어요";
+  return out;
+}
+function mockMemberBase(personaId, { document, myTurn, phase, topic, style = "review" }) {
   if (style !== "review") {
     const i = phase === "round1" ? 0 : 1;
     return {
@@ -159,6 +182,8 @@ export function mockSummary({ document, topic, style = "review" }) {
       concerns: [{ title: "누구를 위한 변화인지", detail: "반기는 사람과 불안한 사람이 함께 있어요", raised_by: "민서" }],
       agreements: ["처음부터 정답을 찾기보다 작게 해 보며 배우자", "사람마다 느끼는 게 다르다는 걸 인정하자"],
       open_questions: ["원하는 사람만 해 볼 때 나머지 사람은 어떻게 느낄까?"],
+      options: style === "idea" ? [{ name: "원하는 사람만 먼저 해 보기", pros: ["부담이 적어요"], cons: ["참여가 적을 수 있어요"], risks: ["안 하는 사람이 소외될 수 있어요"] }] : [],
+      recommendation: "", decision_points: ["원하는 사람만 해 볼 때 기준을 어떻게 정할지"],
       closing: "(모의 모드) 오늘 이야기 재밌었어요. 생각이 더 나면 다음에 또 이어 가요.",
       private_notes: "근거 따지지 않으니 오히려 솔직한 얘기가 많이 나왔다.",
     };
@@ -178,6 +203,13 @@ export function mockSummary({ document, topic, style = "review" }) {
       ],
       agreements: ["작게 시범으로 시작하는 게 현실적이다", "설명은 보통 사람 눈높이로 쉽게"],
       open_questions: ["시범 기간과 대상을 어떻게 정할지"],
+      options: [
+        { name: "A안 · 작은 시범부터", pros: ["위험이 작고 배우며 넓힐 수 있어요"], cons: ["효과가 늦게 보여요"], risks: ["시범 결과를 일반화하기 어려워요"] },
+        { name: "B안 · 전면 도입", pros: ["효과가 빨리 나타나요"], cons: ["준비 부담이 커요"], risks: ["반발과 되돌리기 어려움"] },
+        { name: "C안 · 보류 후 재검토", pros: ["준비할 시간을 벌어요"], cons: ["기회를 놓칠 수 있어요"], risks: ["논의가 흐지부지될 수 있어요"] },
+      ],
+      recommendation: "A안을 권해요. 성공 기준과 되돌리는 기준을 먼저 정하면 위험이 가장 작아요.",
+      decision_points: ["시범 대상과 기간", "성공으로 볼 기준"],
       closing: "(모의 모드) 오늘 나온 조건들을 정리해서 다음 회의에서 다시 보죠.",
       private_notes: "생각보다 방향은 빨리 모였다. 남은 질문은 다음 회의에서 꼭 다시 짚어야겠다.",
     };
@@ -213,4 +245,26 @@ export function mockFollowup(personaId, { question, review }) {
     policy: `"${q}"요? 반대하는 사람이 뭐라고 할지부터 생각해 보세요. 그 말에 미리 답을 준비해 두면 반발은 크게 줄어요.`,
   };
   return { answer: `${lines[personaId] || lines.moderator} (모의 모드)`, private_notes: `후속 질문 "${q}"에 답함.` };
+}
+
+// 단일 LLM 비교 실험 (모의): 한 번에 만든 결론은 반론과 선택지가 조금 적은 편으로 흉내 내요
+export function mockBaseline({ topic }) {
+  const t = cut(String(topic || "이 주제").split("\n\n[")[0].trim(), 30);
+  return {
+    verdict: "조건부 찬성", tone: "mixed",
+    headline: `"${t}"는 장점이 있지만 준비가 필요하니 단계적으로 추진하자는 의견이에요.`,
+    key_points: [{ title: "단계적으로 추진하기", detail: "작게 시작해 넓혀요" }, { title: "목표를 분명히 하기", detail: "무엇을 얻을지 정해요" }],
+    concerns: [{ title: "준비 부족", detail: "사전 준비를 해요" }],
+    agreements: ["단계적 추진이 현실적이다"], open_questions: ["언제 시작할지"],
+    options: [{ name: "단계적 추진", pros: ["안전해요"], cons: ["느려요"], risks: [] }],
+    recommendation: "단계적으로 추진하는 걸 권해요.", decision_points: ["시작 시기"],
+  };
+}
+export function mockJudge(a, b) {
+  const size = (r) => (r?.key_points?.length || 0) + (r?.concerns?.length || 0) * 2 + (r?.options?.length || 0) * 2 + (r?.open_questions?.length || 0);
+  const sa = size(a), sb = size(b), hi = (x, y) => (x > y ? 4 : x === y ? 3 : 3), lo = (x, y) => (x > y ? 3 : 3);
+  return {
+    scores: ["관점 다양성", "비판·위험 발견", "의사결정 완성도", "논점 집중", "실행 가능성"].map((c, i) => ({ criterion: c, a: i === 3 ? 4 : sa > sb ? hi(sa, sb) + (i === 1 ? 1 : 0) : lo(sa, sb), b: i === 3 ? 4 : sb > sa ? hi(sb, sa) + (i === 1 ? 1 : 0) : lo(sb, sa), why: "(모의 채점) 담긴 반론·선택지 수를 기준으로 흉내 냈어요." })),
+    better: sa > sb ? "A" : sb > sa ? "B" : "비슷", summary: "(모의 채점) 실제 모델로 돌리면 내용 기준으로 채점해요.",
+  };
 }
