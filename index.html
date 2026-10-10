@@ -418,6 +418,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .pc-me-art > span:first-child{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:#fff;font-size:44px;font-weight:700;box-shadow:0 0 0 5px #fff,0 6px 18px rgba(0,0,0,.12)}
 /* 회의 결과 공유 */
 .sh-link{display:flex;gap:8px}
+.row2 .refs{font-size:11.5px;color:var(--muted);font-family:var(--mono);letter-spacing:.01em}
 .sh-link .inp{flex:1;font-family:var(--mono);font-size:13px}
 /* 자료·요청 추가, 추가 회의 */
 .prev-reviews{margin-bottom:12px;padding:10px 12px;border-radius:12px;background:var(--soft);font-size:13.5px}
@@ -857,7 +858,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
     <div class="tp-files" id="tp-drop">
       <div class="tp-files-h"><div><b>자료 첨부</b><span>선택</span></div><button class="pill sm" id="tp-add">파일 추가</button></div>
       <div id="tp-list"></div>
-      <p class="tp-hint">PDF, HWPX, Word, Excel, CSV, 텍스트를 읽어요. 자료는 합쳐서 약 20쪽(3만 6천 자)까지 넣을 수 있어요.</p>
+      <p class="tp-hint">PDF, HWPX, Word, Excel, CSV, 텍스트를 읽어요. 자료는 합쳐서 약 55쪽(10만 자)까지 넣을 수 있어요. 20쪽이 넘으면 사회자가 요약 카드를 먼저 만들고, 발언마다 필요한 부분만 골라 읽어요.</p>
     </div>
     <div class="tp-foot"><span id="tp-count" class="eyebrow ko"></span><div class="spacer"></div><button class="pill" id="tp-save">저장</button><button class="pill dark" id="tp-start">회의 시작</button></div>
   </div>
@@ -935,7 +936,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const ALL_MEMBERS = ["critic", "strategist", "reader", "method", "policy"];   // 기본이자 최대 인원
-const MIN_MEMBERS = 2, MAX_TURNS = 30, MAX_CHARS = 36000;   // 자료는 합쳐서 3만 6천 자(약 20쪽)까지만 받아요
+const MIN_MEMBERS = 2, MAX_TURNS = 30, MAX_CHARS = 100000, FULL_DOC = 36000;   // 자료는 합쳐서 10만 자(약 55쪽)까지. 3만 6천 자가 넘으면 요약 카드 + 쟁점별 구간으로 읽어요
 // 보드 자리 순서: 로고의 색 점 배치와 같게 (위 사회자부터 시계 방향으로 나래, 도윤, 현우, 하율, 민서)
 const SEAT_ORDER = ["strategist", "reader", "method", "policy", "critic"];
 const ROT = { moderator: -1.2, critic: 1.4, strategist: -1.6, reader: 1.1, method: -0.9, policy: 1.7 };
@@ -1318,7 +1319,7 @@ function emptyLog() {
 }
 function logPane() { const p = $("#pane-log"); if (p.querySelector(".empty")) p.innerHTML = ""; return p; }
 function addDivider(phase) { logPane().insertAdjacentHTML("beforeend", `<div class="divider"><span class="eyebrow ko">${esc(phaseEyebrow(phase))}</span><span style="font-size:13px">${esc(phaseLabel(phase))}</span></div>`); }
-function addMsg({ id, to, text, ask, stance, confidence, position, thought, raw, model, err, turn, label, thoughtLabel }) {
+function addMsg({ id, to, text, ask, stance, confidence, position, thought, raw, model, err, turn, label, thoughtLabel, refs }) {
   const a = S.agents[id], isMod = id === "moderator";
   const el = document.createElement("article");
   el.className = `cmt ${isMod ? "mod" : ""} ${err ? "err" : ""}`; el.setAttribute("style", styleVars(id));
@@ -1328,7 +1329,7 @@ function addMsg({ id, to, text, ask, stance, confidence, position, thought, raw,
       ${model ? `<span class="eyebrow">${esc(model === "mock" ? "모의" : shortModel(model))}</span>` : ""}
       ${raw ? `<button class="jsonbtn eyebrow ko">원본</button>` : ""}</div>
     <div class="text">${esc(text)}</div>
-    ${stance || ask ? `<div class="row2">${stance ? stanceChip(stance, confidence, position) : ""}${ask ? `<span class="tag">${esc(ask.to)} 님께 질문 · ${esc(ask.question)}</span>` : ""}</div>` : ""}
+    ${stance || ask || refs?.length ? `<div class="row2">${stance ? stanceChip(stance, confidence, position) : ""}${ask ? `<span class="tag">${esc(ask.to)} 님께 질문 · ${esc(ask.question)}</span>` : ""}${refs?.length ? `<span class="refs" title="이번 발언에 함께 넣은 자료 구간">참고 구간 ${refs.map((x) => `${x.n}(${x.page}쪽)`).join(" · ")}</span>` : ""}</div>` : ""}
     ${thought ? `<details class="inner"><summary><svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>${thoughtLabel || (isMod ? "이렇게 정한 이유" : "속마음")}</summary><div class="ibody">${esc(cleanNote(thought))}</div></details>` : ""}
     ${raw ? `<pre class="json">${esc(JSON.stringify(raw, null, 2))}</pre>` : ""}</div>`;
   const jb = el.querySelector(".jsonbtn"); if (jb) jb.onclick = () => el.querySelector("pre.json").classList.toggle("open");
@@ -1362,7 +1363,7 @@ function drawMinds() {
 /* ───────────── 회의 진행: 끊겨도 멈춘 턴부터 이어서 ───────────── */
 const publicTranscript = () => S.transcript.map(({ role, speaker, text, ask }) => ({ role, speaker, text, ask }));
 // 지금 무엇을 하는 중인지 (회의록 '…하는 중', 자리 위 이름표)
-const busyLabel = (id, type) => type === "summarize" ? ["회의를 마무리하는 중", "마무리 중"] : id === "moderator" ? ["순서를 정하는 중", "진행 중"] : ["생각하는 중", "생각 중"];
+const busyLabel = (id, type) => type === "digest" ? ["자료를 정리하는 중", "자료 읽는 중"] : type === "summarize" ? ["회의를 마무리하는 중", "마무리 중"] : id === "moderator" ? ["순서를 정하는 중", "진행 중"] : ["생각하는 중", "생각 중"];
 async function call(id, text, data) {
   const [logLabel, tag] = busyLabel(id, data?.type);
   setSpeaking(id, "thinking"); const tg = $(`#seat-${id} .sel span`); if (tg) tg.textContent = tag;
@@ -1412,6 +1413,7 @@ async function runFrom() {
   let i = m.i, wrap = false;
   try {
     for (; i < total; i++) {
+      await ensureDigest();   // 긴 자료면 요약 카드 (이미 있으면 바로 넘어가요. 회의 중 자료가 추가되면 다시 만들어요)
       const phase = m.plan[i], turn = i + 1, roundStart = phase !== m.lastPhase;
       if (phase !== m.lastPhase) { logDivider(phase); castPhase(phase); m.lastPhase = phase; }
       markCell(i, "now");
@@ -1508,7 +1510,7 @@ async function runFrom() {
       castPick(next, lastSpeaker?.ask?.to === S.agents[next].name ? lastSpeaker.role : null);
       let r;
       try {
-        r = await call(next, `[사회자→${S.agents[next].name}] ${say}`, { type: "review_turn", document: docForAgents(), transcript: publicTranscript(), request: { from: "사회자", text: say }, phase, ...base(i) });
+        r = await call(next, `[사회자→${S.agents[next].name}] ${say}`, { type: "review_turn", document: docForAgents(), transcript: publicTranscript(), request: { from: "사회자", text: say }, issue: m.issue, phase, ...base(i) });
         if (r.failed) throw failErr(r.text);
       } catch (e) { dropMod(); throw e; }
 
@@ -1537,7 +1539,7 @@ async function afterMemberTurn(m, i, phase, turn, total, next, r) {
   castReaction(next, prev, { stance, confidence, position }, ask, turn, total);
   (S.trail[next] ||= []).push({ turn, stance, confidence, position });
   S.transcript.push({ role: next, speaker: S.agents[next].name, text: r.text, ask: ask || null });
-  logMsg({ id: next, text: r.text, ask, stance, confidence, position, thought: thoughts, raw: r.raw, model, turn });
+  logMsg({ id: next, text: r.text, ask, stance, confidence, position, thought: thoughts, raw: r.raw, model, turn, refs: r.data.refs });
   renderTable("live", { id: next, text: r.text, phase, turn, issue: m.issue }); setSpeaking(next); showBubble(next, r.text);
   markCell(i, "done", next); m.cells[i] = next; refreshSeats(); drawMinds(); drawMood();
   m.i = i + 1; saveSnapshot();
@@ -1862,7 +1864,7 @@ async function addMoreFiles(list) {
       const { text, meta } = await readFile(file); Object.assign(f, { text: text.replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim(), meta, loading: false });
       const have = (S.doc?.text || "").length + (S.doc?.addenda || []).flatMap((a) => a.files || []).reduce((n, x) => n + x.text.length, 0);
       const total = have + moreDraft.files.filter((x) => !x.loading).reduce((n, x) => n + x.text.length, 0);
-      if (total > MAX_CHARS) { moreDraft.files.splice(moreDraft.files.indexOf(f), 1); toast(`'${f.name}' 파일은 너무 커서 넣지 못했어요. 이 회의의 자료는 합쳐서 ${MAX_CHARS.toLocaleString()}자(약 20쪽)까지예요. 지금 ${have.toLocaleString()}자를 쓰고 있어요.`); }
+      if (total > MAX_CHARS) { moreDraft.files.splice(moreDraft.files.indexOf(f), 1); toast(`'${f.name}' 파일은 너무 커서 넣지 못했어요. 이 회의의 자료는 합쳐서 ${MAX_CHARS.toLocaleString()}자(약 55쪽)까지예요. 지금 ${have.toLocaleString()}자를 쓰고 있어요.`); }
     } catch (e) { moreDraft.files.splice(moreDraft.files.indexOf(f), 1); toast(e.message); }
     drawMoreFiles();
   }
@@ -2379,7 +2381,7 @@ async function addFiles(list) {
       const { text, meta } = await readFile(file);
       Object.assign(f, { text: text.replace(/\r/g, "").replace(/\n{3,}/g, "\n\n").trim(), meta, loading: false });
       const total = S.draft.files.filter((x) => !x.loading).reduce((n, x) => n + x.text.length, 0);
-      if (total > MAX_CHARS) { S.draft.files.splice(S.draft.files.indexOf(f), 1); toast(`'${f.name}' 파일은 너무 커서 넣지 못했어요. 자료는 합쳐서 ${MAX_CHARS.toLocaleString()}자(약 20쪽)까지예요.`); }
+      if (total > MAX_CHARS) { S.draft.files.splice(S.draft.files.indexOf(f), 1); toast(`'${f.name}' 파일은 너무 커서 넣지 못했어요. 자료는 합쳐서 ${MAX_CHARS.toLocaleString()}자(약 55쪽)까지예요.`); }
     } catch (e) { S.draft.files.splice(S.draft.files.indexOf(f), 1); toast(e.message); }
     drawDraftFiles();
   }
@@ -2412,7 +2414,8 @@ function showDocChip() {
 function viewTopic() {
   const d = S.doc;
   $("#view-head").innerHTML = ""; $("#view-title").textContent = "토론 주제와 자료";
-  $("#view-body").textContent = d.prompt === undefined ? d.text : `[토론 주제]\n${d.prompt || "(주제 문장 없음)"}${d.text ? `\n\n${d.text}` : ""}`;
+  const card = d.digest ? `[자료 요약 카드 · 사회자가 만들었어요]\n${d.digest}\n\n────────────\n\n` : "";
+  $("#view-body").textContent = card + (d.prompt === undefined ? d.text : `[토론 주제]\n${d.prompt || "(주제 문장 없음)"}${d.text ? `\n\n${d.text}` : ""}`);
   $("#dlg-view").showModal();
 }
 // 추가 요청은 주제 뒤에, 앞선 결론과 함께. 추가 자료는 처음 자료보다 앞에 둬서 길어도 잘리지 않게 해요.
@@ -2430,8 +2433,21 @@ const docForAgents = () => {
   const extra = addendaText(), base = S.doc.text || "";
   const text = extra ? `${extra}${base ? `\n\n[처음 자료]\n${base}` : ""}` : base;
   const names = [...(S.doc.addenda || []).flatMap((a) => (a.files || []).map((f) => f.name)), ...(S.doc.files || []).map((f) => f.name)];
-  return { name: names.join(", ") || (S.doc.prompt === undefined ? S.doc.name : ""), text };
+  const digest = text.length > FULL_DOC && S.doc.digestKey === docKey(text) ? S.doc.digest : undefined;
+  return { name: names.join(", ") || (S.doc.prompt === undefined ? S.doc.name : ""), text, ...(digest ? { digest } : {}) };
 };
+const docKey = (t) => `${t.length}:${t.slice(0, 40)}:${t.slice(-40)}`;
+// 긴 자료는 회의 시작 전에 사회자가 한 번 읽고 '자료 요약 카드'를 만들어요 (자료가 바뀌면 다시)
+async function ensureDigest() {
+  const d = docForAgents();
+  if (d.text.length <= FULL_DOC || S.doc.digestKey === docKey(d.text)) return;
+  status(`자료가 ${d.text.length.toLocaleString()}자로 길어서, 사회자가 먼저 요약 카드를 만들고 있어요…`);
+  const r = await call("moderator", "[회의실→사회자] 자료 요약 카드 요청", { type: "digest", document: { name: d.name, text: d.text } });
+  if (r.failed) throw failErr(r.text);
+  S.doc.digest = r.data?.digest || ""; S.doc.digestKey = docKey(d.text);
+  logMsg({ id: "moderator", text: `자료가 길어서(약 ${Math.ceil(d.text.length / 1800)}쪽) 요약 카드를 먼저 만들었어요. 발언마다 이 카드와 그 쟁점에 맞는 구간만 함께 봐요. 카드는 '내용 보기'에서 볼 수 있어요.`, label: "자료 정리", thought: S.doc.digest, thoughtLabel: "요약 카드 보기", model: r.data?.model });
+  saveSnapshot();
+}
 
 /* ───────────── 설정 ───────────── */
 let modelCatalog = [];
