@@ -28,9 +28,10 @@ function userContent(model, user, cachePrefixLen) {
   ];
 }
 
-async function callOnce({ apiKey, model, system, user, temperature, maxTokens, jsonMode, lightReasoning, cachePrefixLen = 0, onUsage }) {
+async function callOnce({ apiKey, model, system, user, temperature, maxTokens, jsonMode, lightReasoning, cachePrefixLen = 0, onUsage, timeoutMs = 50_000 }) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 55_000);
+  const limit = Math.max(3000, timeoutMs);
+  const timer = setTimeout(() => ctrl.abort(), limit);
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -67,48 +68,65 @@ async function callOnce({ apiKey, model, system, user, temperature, maxTokens, j
     if (data.usage) onUsage?.({ in: Number(data.usage.prompt_tokens) || 0, out: Number(data.usage.completion_tokens) || 0, cost: Number(data.usage.cost) || 0 });
     return data.choices?.[0]?.message?.content ?? "";
   } catch (e) {
-    if (e.name === "AbortError") throw new Error("모델 응답이 55초 안에 오지 않았어요.");
+    if (e.name === "AbortError") { const err = new Error(`모델 응답이 ${Math.round(limit / 1000)}초 안에 오지 않았어요.`); err.status = 408; throw err; }
     throw e;
   } finally {
     clearTimeout(timer);
   }
 }
 
-// 모델이 지원 종료되었거나 없어졌다는 응답인지 (이때만 다른 모델로 바꿔 다시 불러요)
-const modelGone = (e) => e?.status === 404 || (e?.status === 400 && /deprecat|not a valid model|no endpoints|not found|is not available/i.test(e.message || ""));
+// ── 모델 폴백 ─────────────────────────────────────────────────────────
+// 고른 모델이 응답하지 않거나(시간 초과·서버 오류·과부하·빈 답·JSON 깨짐·지원 종료) 실패하면 다음 모델로 넘어가요.
+// 키가 틀렸거나(401) 잔액이 없을 때(402)는 다른 모델로 바꿔도 같으니 바로 알려 줘요.
+const fatal = (e) => e?.status === 401 || e?.status === 402;
+// 최근에 실패한 모델은 5분 동안 뒤로 미뤄요 (같은 서버 인스턴스가 살아 있는 동안)
+const sick = new Map();
+const SICK_MS = 5 * 60_000;
+export const isSick = (m) => (sick.get(m) || 0) > Date.now();
 
-// model을 먼저 부르고, 지원 종료로 실패하면 fallbacks를 차례로 불러요. 실제로 쓴 모델은 onModel로 알려 줘요.
-export async function chatJSON({ apiKey, model, fallbacks = [], onModel, ...rest }) {
-  const chain = [model, ...fallbacks].filter((m, i, a) => m && a.indexOf(m) === i);
-  let lastErr;
-  for (const m of chain) {
+// model을 먼저 부르고, 실패하면 fallbacks를 차례로 불러요. 실제로 쓴 모델은 onModel, 대신 불렀으면 onFallback으로 알려 줘요.
+// 서버 함수 제한 시간(60초) 안에 끝나도록 전체 예산을 나눠 써요: 뒤에 대체 모델이 남아 있으면 한 모델에 최대 25초.
+export async function chatJSON({ apiKey, model, fallbacks = [], onModel, onFallback, budgetMs = 52_000, ...rest }) {
+  const end = Date.now() + budgetMs;
+  const all = [model, ...fallbacks].filter((m, i, a) => m && a.indexOf(m) === i);
+  const chain = [...all.filter((m) => !isSick(m)), ...all.filter((m) => isSick(m))];
+  let lastErr, firstErr;
+  for (const [k, m] of chain.entries()) {
+    const left = end - Date.now();
+    if (left < 6000) break;
+    const timeoutMs = k < chain.length - 1 ? Math.min(25_000, left - 5000) : left - 1500;
     try {
-      const out = await chatWithModel({ apiKey, model: m, ...rest });
+      const out = await chatWithModel({ apiKey, model: m, timeoutMs, ...rest });
+      sick.delete(m);
       onModel?.(m);
+      if (m !== model) onFallback?.({ from: model, to: m, reason: String(firstErr?.message || "").slice(0, 160) });
       return out;
     } catch (e) {
-      lastErr = e;
-      if (!modelGone(e)) throw e;
+      lastErr = e; firstErr ||= e;
+      if (fatal(e)) throw e;
+      sick.set(m, Date.now() + SICK_MS);
     }
   }
-  throw lastErr;
+  throw lastErr || new Error("모델들이 제한 시간 안에 응답하지 않았어요.");
 }
 
-async function chatWithModel({ apiKey, model, system, user, temperature = 0.7, maxTokens = 2500, cachePrefixLen = 0, onUsage }) {
+async function chatWithModel({ apiKey, model, system, user, temperature = 0.7, maxTokens = 2500, cachePrefixLen = 0, onUsage, timeoutMs = 50_000 }) {
+  const until = Date.now() + timeoutMs;
   const base = { apiKey, model, system, user, temperature, maxTokens, cachePrefixLen, onUsage };
+  const left = () => { const t = until - Date.now(); if (t < 3000) { const e = new Error("이 모델에 쓸 시간이 다 됐어요."); e.status = 408; throw e; } return t; };
   let content;
   try {
-    content = await callOnce({ ...base, jsonMode: true, lightReasoning: true });
+    content = await callOnce({ ...base, jsonMode: true, lightReasoning: true, timeoutMs: left() });
   } catch (e) {
     // 모델이 JSON 모드나 추론 옵션을 지원하지 않으면 옵션 없이 다시
-    if (e.status === 400) content = await callOnce({ ...base, jsonMode: false, lightReasoning: false });
+    if (e.status === 400 && !/deprecat|not a valid model|no endpoints|not found|is not available/i.test(e.message || "")) content = await callOnce({ ...base, jsonMode: false, lightReasoning: false, timeoutMs: left() });
     else throw e;
   }
   try {
     return parseJSON(content);
   } catch {
     const retry = await callOnce({
-      ...base, temperature: 0.3, jsonMode: false, lightReasoning: false,
+      ...base, temperature: 0.3, jsonMode: false, lightReasoning: false, timeoutMs: left(),
       user: `${user}\n\n(중요: 설명 없이 JSON 객체 하나만 출력하세요.)`,
     });
     return parseJSON(retry);
