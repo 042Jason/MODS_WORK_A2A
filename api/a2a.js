@@ -97,6 +97,70 @@ function clipDoc(text, limit) {
   return { text: parts.join(""), cut: true };
 }
 
+// ── 긴 자료: 요약 카드 + 이번 쟁점에 맞는 구간만 ─────────────────────────
+// 3만 6천 자(약 20쪽)까지는 지금처럼 자료 전체를 넣어요. 그보다 길면 회의 시작 때 만든 '자료 요약 카드'와
+// 이번 발언에 필요한 구간만 골라 넣어서, 자료가 길어져도 발언마다 읽는 양은 비슷하게 유지돼요.
+const FULL_DOC = 36000, CHUNK = 1500, PAGE_CHARS = 1800;
+const chunkMemo = new Map();
+function chunkDoc(text) {
+  const src = String(text || ""), key = `${src.length}:${src.slice(0, 80)}:${src.slice(-80)}`;
+  if (chunkMemo.has(key)) return chunkMemo.get(key);
+  const paras = [], re = /\n\s*\n/g; let last = 0, m;
+  while ((m = re.exec(src))) { paras.push({ t: src.slice(last, m.index), s: last }); last = m.index + m[0].length; }
+  paras.push({ t: src.slice(last), s: last });
+  const out = []; let cur = "", curStart = 0;
+  const flush = () => { if (cur.trim()) out.push({ text: cur.trim(), start: curStart }); cur = ""; };
+  for (const p of paras) {
+    if (!p.t.trim()) continue;
+    if (p.t.length > CHUNK * 1.6) {   // 아주 긴 문단은 잘라서 (바로 앞이 제목뿐이면 첫 조각에 붙여요)
+      const lead = cur.length <= 300 ? cur : (flush(), ""); const leadStart = lead ? curStart : p.s; cur = "";
+      for (let k = 0; k < p.t.length; k += CHUNK) out.push({ text: `${k === 0 && lead ? `${lead}\n\n` : ""}${p.t.slice(k, k + CHUNK)}`.trim(), start: k === 0 ? leadStart : p.s + k });
+      continue;
+    }
+    const isHead = p.t.trim().length <= 60 && /^(\[첨부|[0-9]+(\.[0-9]+)*[.)]?\s|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+[.)]?|[□■○●▶◆①-⑳]|제\s?\d+\s?[장절조]|#)/.test(p.t.trim());
+    // 크기가 넘치면 새 구간으로 (단, 지금 구간이 제목뿐이면 본문과 함께 두어요). 제목은 새 구간의 첫머리로
+    if (cur && ((cur.length + p.t.length + 2 > CHUNK && cur.length > 300) || (isHead && cur.length > CHUNK * 0.3))) flush();
+    if (!cur) curStart = p.s;
+    cur += (cur ? "\n\n" : "") + p.t;
+  }
+  flush();
+  const res = out.filter((c) => c.text).map((c, n) => ({ ...c, n: n + 1, page: Math.floor(c.start / PAGE_CHARS) + 1 }));
+  if (chunkMemo.size > 20) chunkMemo.clear();
+  chunkMemo.set(key, res);
+  return res;
+}
+// 한글은 띄어쓰기·조사 때문에 단어보다 두 글자 묶음으로 비교하는 게 잘 맞아요
+function grams(s) {
+  const t = String(s || "").toLowerCase().replace(/[^0-9a-z가-힣]+/g, " ");
+  const g = new Set();
+  for (const w of t.split(" ")) { if (w.length === 1 && /[0-9a-z]/.test(w)) continue; if (w.length <= 2) { if (w) g.add(w); continue; } for (let i = 0; i < w.length - 1; i++) g.add(w.slice(i, i + 2)); }
+  return g;
+}
+function pickChunks(text, query, k) {
+  const chunks = chunkDoc(text); if (!chunks.length) return [];
+  const q = grams(query); if (!q.size) return chunks.slice(0, k);
+  const sets = chunks.map((c) => grams(c.text)), df = {};
+  for (const s of sets) for (const g of s) if (q.has(g)) df[g] = (df[g] || 0) + 1;
+  const N = chunks.length;
+  const scored = chunks.map((c, i) => { let sc = 0; for (const g of q) if (sets[i].has(g)) sc += Math.log(1 + N / (df[g] || 1)); return { c, sc: sc / Math.sqrt(1 + sets[i].size / 400) }; });
+  return scored.sort((a, b) => b.sc - a.sc).slice(0, k).map((x) => x.c).sort((a, b) => a.n - b.n);
+}
+const recentText = (transcript = [], n = 3) => transcript.slice(-n).map((t) => t.text).join(" ");
+
+// 주제·자료 부분. stable은 회의 내내 같은 앞부분(캐시용), varying은 발언마다 바뀌는 구간
+function agendaParts(input, limit, opt = {}) {
+  const topic = String(input.topic || "").trim();
+  const doc = input.document || {};
+  if (doc.text && doc.text.length > FULL_DOC && doc.digest) {
+    const picked = pickChunks(doc.text, `${topic} ${opt.query || ""}`, opt.k || 4);
+    const N = chunkDoc(doc.text).length;
+    const head = `[토론 주제]\n${topic || "(주제 문장 없음. 첨부 자료를 검토해 주세요.)"}\n\n[첨부 자료${doc.name ? `: ${doc.name}` : ""}] 전체 ${doc.text.length.toLocaleString()}자(약 ${Math.ceil(doc.text.length / PAGE_CHARS)}쪽), ${N}개 구간\n(자료가 길어서 '자료 요약 카드'와 이번 발언에 관련된 구간만 넣었어요. 넣지 않은 부분은 추측하지 말고 확인이 필요하다고 말하세요. 근거를 들 때는 <구간 번호>를 밝히세요.)\n\n[자료 요약 카드]\n${doc.digest}\n\n`;
+    const body = `[이번 발언과 관련된 구간]\n${picked.map((c) => `<구간 ${c.n}/${N} · 약 ${c.page}쪽>\n${c.text}`).join("\n\n")}`;
+    return { stable: head, varying: body, refs: picked.map((c) => ({ n: c.n, page: c.page })) };
+  }
+  return { stable: agenda(input, limit), varying: "", refs: [] };
+}
+
 function agenda(input, limit) {
   const topic = String(input.topic || "").trim();
   const doc = input.document || {};
@@ -129,9 +193,10 @@ async function moderate(llm, persona, input, state) {
     (state.issues || []).length ? `[지금까지 다룬 쟁점] ${state.issues.slice(-6).join(" → ")}` : "",
     input.roundStart && transcript.length ? "이번이 이 라운드의 첫 차례입니다. say에서 지금까지 흐름을 한 문장으로 짚고, 이번 라운드에 무엇을 할지 소개한 뒤 첫 사람을 부르세요." : "",
   ].filter(Boolean).join("\n");
+  const A = agendaParts(input, 10000, { query: `${(state.issues || []).slice(-2).join(" ")} ${recentText(transcript, 3)}`, k: 2 });
   const out = llm.mock ? mockModerate({ transcript, phase, eligible: pool, hasDoc: !!document?.text, roundStart: input.roundStart, standing: input.standing || {} }) : await chatJSON({
-    ...llm, system: persona.system, temperature: 0.4, maxTokens: 1200,
-    user: `${agenda(input, 10000)}
+    ...llm, system: persona.system, temperature: 0.4, maxTokens: 1200, cachePrefixLen: A.stable.length,
+    user: `${A.stable}${A.varying}
 
 [지금까지 회의록]
 ${transcriptText(transcript)}
@@ -170,9 +235,10 @@ async function summarize(llm, persona, input, state) {
   const when = early
     ? `회의를 전체 ${totalTurns}턴 중 ${doneTurns}턴까지만 하고 여기서 일찍 마무리합니다. 지금까지 나온 의견만 담아 결론을 정리하세요. 아직 다루지 못한 쟁점은 open_questions에 남기세요.`
     : `이제 마지막(${totalTurns}번째) 턴, 결론입니다. 회의에서 나온 의견만 담아 정리하세요.`;
+  const A = agendaParts(input, 30000, { query: `${(state.issues || []).join(" ")} ${recentText(transcript, 12)}`, k: 8 });
   const review = llm.mock ? mockSummary({ document, topic: input.topic }) : await chatJSON({
-    ...llm, system: persona.system, temperature: 0.3, maxTokens: 3500,
-    user: `${agenda(input, 30000)}
+    ...llm, system: persona.system, temperature: 0.3, maxTokens: 3500, cachePrefixLen: A.stable.length,
+    user: `${A.stable}${A.varying}
 
 [회의록]
 ${transcriptText(transcript)}
@@ -213,13 +279,40 @@ JSON 하나만 출력합니다.
   };
 }
 
+// ── 사회자: 긴 자료의 요약 카드 (회의 시작 때 한 번) ─────────────────────
+function extractiveDigest(text) {   // 모델 없이도 만드는 간단한 카드 (모의 모드·실패 대비)
+  const lines = String(text || "").split("\n").map((l) => l.trim()).filter(Boolean);
+  const heads = lines.filter((l) => l.length <= 60 && /^(\[첨부|[0-9]+[.)]|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+[.)]?|[□■○●◦▶◇◆①-⑳가-하][.)]?\s|제\s?\d+\s?[장절조])/.test(l)).slice(0, 14);
+  const nums = lines.filter((l) => /\d[\d,.]*\s?(%|명|원|건|개|억|만|천|배|p|%p|개소|년)/.test(l) && l.length <= 140).slice(0, 8);
+  return [`목차(추정): ${heads.length ? heads.join(" / ") : "(뚜렷한 제목 없음)"}`, nums.length ? `주요 수치: ${nums.join(" / ")}` : ""].filter(Boolean).join("\n").slice(0, 3000);
+}
+async function makeDigest(llm, persona, input, state) {
+  const doc = input.document || {};
+  if (!doc.text) return { text: "자료가 없어요.", data: { digest: "" }, newState: state };
+  let digest = "";
+  if (!llm.mock) {
+    try {
+      const src = clipDoc(doc.text, 60000);
+      const out = await chatJSON({
+        ...llm, system: "당신은 회의 자료를 정리하는 담당자입니다. 여러 사람이 이 자료로 토론하면서 다시 찾아볼 수 있게, 사실만 정확하게 정리합니다. 자료에 없는 내용은 쓰지 않습니다.", temperature: 0.2, maxTokens: 1800,
+        user: `[자료${doc.name ? `: ${doc.name}` : ""}] 전체 ${doc.text.length.toLocaleString()}자${src.cut ? " (길어서 앞부분과 뒤쪽 여러 군데를 발췌)" : ""}\n${src.text}\n\n이 자료의 요약 카드를 만드세요. JSON 하나만 출력합니다.\n{"outline": ["장·절 제목과 한 줄 요약 (최대 12개)"], "key_points": ["핵심 주장이나 결론 (최대 8개)"], "numbers": ["핵심 수치와 기준(단위·시점) (최대 10개)"], "issues": ["토론할 만한 쟁점 (최대 6개)"]}`,
+      });
+      const L = (k, t) => (Array.isArray(out?.[k]) && out[k].length ? `${t}\n${out[k].slice(0, 12).map((x) => `- ${String(x).slice(0, 200)}`).join("\n")}` : "");
+      digest = [L("outline", "■ 목차"), L("key_points", "■ 핵심 내용"), L("numbers", "■ 주요 수치"), L("issues", "■ 쟁점 후보")].filter(Boolean).join("\n").slice(0, 4000);
+    } catch { digest = ""; }
+  }
+  if (!digest) digest = extractiveDigest(doc.text);
+  return { text: "자료 요약 카드를 만들었어요.", data: { digest }, newState: state };
+}
+
 // ── 참석자: 발언 ─────────────────────────────────────────────────────
 async function reviewTurn(llm, persona, input, state) {
   const { document, transcript = [], request, turn = 1, totalTurns = 12, phase = "round1", attendees = MEMBER_IDS } = input;
   const myTurn = (state.turns || 0) + 1;
+  const A = agendaParts(input, 36000, { query: `${input.issue || ""} ${request?.text || ""} ${recentText(transcript, 3)}`, k: persona.id === "critic" ? 7 : 4 });
   const out = llm.mock ? mockMember(persona.id, { document, myTurn, phase, topic: input.topic }) : await chatJSON({
-    ...llm, system: persona.system, temperature: 0.8, maxTokens: 2500,
-    user: `${agenda(input, 36000)}
+    ...llm, system: persona.system, temperature: 0.8, maxTokens: 2500, cachePrefixLen: A.stable.length,
+    user: `${A.stable}${A.varying}
 
 [지금까지 회의록]
 ${transcriptText(transcript)}
@@ -248,7 +341,7 @@ ${myTurn === 1 ? "주제와 자료를 보고 당신 관점에서 가장 중요�
     said: [...(state.said || []), utterance].slice(-6),
     stances: [...(state.stances || []), { turn, stance, confidence, position }],
   };
-  return { text: utterance, data: { stance, confidence, position, ask, wantsUser, phase, thoughts: newState.notes }, newState };
+  return { text: utterance, data: { stance, confidence, position, ask, wantsUser, phase, refs: A.refs, thoughts: newState.notes }, newState };
 }
 
 // ── 회의 뒤 후속 질문 (사회자, 참석자 모두) ───────────────────────────────
@@ -262,9 +355,10 @@ function reviewText(review) {
 async function followup(llm, persona, input, state) {
   const { document, transcript = [], review, question = "", thread = [] } = input;
   const isMod = persona.id === "moderator";
+  const A = agendaParts(input, 30000, { query: `${question} ${recentText(thread.map((t) => ({ text: t.question })), 2)}`, k: 5 });
   const out = llm.mock ? mockFollowup(persona.id, { question, review }) : await chatJSON({
-    ...llm, system: persona.system, temperature: 0.6, maxTokens: 1800,
-    user: `${agenda(input, 30000)}
+    ...llm, system: persona.system, temperature: 0.6, maxTokens: 1800, cachePrefixLen: A.stable.length,
+    user: `${A.stable}${A.varying}
 
 [회의록]
 ${transcriptText(transcript)}
@@ -354,6 +448,7 @@ export default async function handler(req, res) {
     if (input.type === "ping") r = { ...(await ping(llm, persona)), newState: state };
     else if (isMod && input.type === "moderate") r = await moderate(llm, persona, input, state);
     else if (isMod && input.type === "summarize") r = await summarize(llm, persona, input, state);
+    else if (isMod && input.type === "digest") r = await makeDigest(llm, persona, input, state);
     else if (!isMod && input.type === "review_turn") r = await reviewTurn(llm, persona, input, state);
     else if (input.type === "followup") r = await followup(llm, persona, input, state);
     else return rpcError(res, body.id, -32602, `${persona.name}은(는) '${input.type}' 요청을 처리하지 않아요.`);
