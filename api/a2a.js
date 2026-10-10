@@ -13,7 +13,7 @@ import crypto from "node:crypto";
 import { ID_BY_NAME, MEMBER_IDS, MEMBER_NAMES, PERSONAS, agentCard, defaultModelOf, isAllowedModel, sharedModelOf } from "./_lib/personas.js";
 import { isCheapModel, SHARED_MAX_OUT } from "./models.js";
 import { chatJSON, resolveKey } from "./_lib/llm.js";
-import { mockFollowup, mockMember, mockModerate, mockSummary } from "./_lib/mock.js";
+import { mockBaseline, mockFollowup, mockJudge, mockMember, mockModerate, mockSummary } from "./_lib/mock.js";
 import { openState, sealState } from "./_lib/state.js";
 import { SHARED_MAX_TURNS, passcodeOk } from "./_lib/auth.js";
 
@@ -92,14 +92,14 @@ const STYLE_ROLE = {
     strategist: "자유 토론에서 당신은 큰 그림을 그리고 미래를 상상하는 사람입니다. '10년 뒤엔요', '결국 이건 ~의 문제 같아요'처럼 생각을 넓힙니다.",
     reader: "자유 토론에서 당신은 감정과 경험을 이야기하는 사람입니다. '저라면 서운할 것 같아요', '제 주변 얘기인데요' 같은 생활 속 이야기를 합니다.",
     method: "자유 토론에서 당신은 서로 다른 의견 사이의 연결고리를 찾는 사람입니다. '두 분 말이 사실 같은 얘기 같아요'처럼 생각을 이어 줍니다.",
-    policy: "자유 토론에서 당신은 '이러다 이렇게 되면?' 하고 시나리오를 상상하는 사람입니다. 겁주기보다 재미있게 극단적인 경우를 떠올려 봅니다.",
+    policy: "자유 토론에서도 당신은 레드팀입니다. 다들 너무 쉽게 같은 생각으로 모이면 '정말 그럴까요?', '반대편은 이렇게 말할 거예요'처럼 다른 가능성을 꺼냅니다. 근거·데이터 대신 상상과 반대편의 시선으로 말합니다.",
   },
   idea: {
     critic: "아이디어 회의에서 당신은 아이디어를 더 날카롭게 다듬는 사람입니다. 약점을 짚을 때는 바로 고치는 방법을 함께 말합니다.",
     strategist: "아이디어 회의에서 당신은 흩어진 아이디어를 큰 방향으로 묶는 사람입니다.",
     reader: "아이디어 회의에서 당신은 실제로 쓰는 사람이 되어 아이디어를 상상해 보는 사람입니다.",
     method: "아이디어 회의에서 당신은 아이디어를 조합하고 구조를 잡는 사람입니다.",
-    policy: "아이디어 회의에서 당신은 가장 엉뚱한 아이디어를 던지는 사람입니다.",
+    policy: "아이디어 회의에서 당신은 레드팀입니다. 모두가 좋아하는 아이디어의 가장 큰 약점을 짚고, 그 약점을 뒤집는 엉뚱한 대안을 함께 던집니다.",
   },
 };
 const MOD_STYLE = {
@@ -202,6 +202,11 @@ function pickChunks(text, query, k) {
   const scored = chunks.map((c, i) => { let sc = 0; for (const g of q) if (sets[i].has(g)) sc += Math.log(1 + N / (df[g] || 1)); return { c, sc: sc / Math.sqrt(1 + sets[i].size / 400) }; });
   return scored.sort((a, b) => b.sc - a.sc).slice(0, k).map((x) => x.c).sort((a, b) => a.n - b.n);
 }
+// 반론 장부: 회의 중 제기된 반론과 상태(열림·반박·수용). 열린 것은 사회자·참석자 모두에게 보여 줘요
+const ledgerText = (ledger = []) => {
+  const open = (Array.isArray(ledger) ? ledger : []).filter((o) => o && o.status === "open").slice(0, 12);
+  return open.length ? open.map((o) => `${o.id} (${o.by}): ${String(o.text).slice(0, 140)}${o.why ? ` — ${String(o.why).slice(0, 120)}` : ""}`).join("\n") : "(없음)";
+};
 const recentText = (transcript = [], n = 3) => transcript.slice(-n).map((t) => t.text).join(" ");
 
 // 주제·자료 부분. stable은 회의 내내 같은 앞부분(캐시용), varying은 발언마다 바뀌는 구간
@@ -249,6 +254,7 @@ async function moderate(llm, persona, input, state) {
     lastTalk ? `[직전 발언] ${lastTalk.speaker}${lastTalk.ask?.to ? ` (→ ${lastTalk.ask.to}에게 질문: ${lastTalk.ask.question})` : ""}` : "",
     (state.issues || []).length ? `[지금까지 다룬 쟁점] ${state.issues.slice(-6).join(" → ")}` : "",
     input.roundStart && transcript.length ? "이번이 이 라운드의 첫 차례입니다. say에서 지금까지 흐름을 한 문장으로 짚고, 이번 라운드에 무엇을 할지 소개한 뒤 첫 사람을 부르세요." : "",
+    `[열린 반론] (반론 장부에서 아직 정리되지 않은 것. 답할 관점을 가진 사람에게 발언권을 줘 정리하게 하세요)\n${ledgerText(input.ledger)}`,
   ].filter(Boolean).join("\n");
   const A = agendaParts(input, 10000, { query: `${(state.issues || []).slice(-2).join(" ")} ${recentText(transcript, 3)}`, k: 2 });
   const out = llm.mock ? mockModerate({ transcript, phase, eligible: pool, hasDoc: !!document?.text, roundStart: input.roundStart, standing: input.standing || {}, style: styleOf(input) }) : await chatJSON({
@@ -314,10 +320,16 @@ JSON 하나만 출력합니다.
   "concerns": [{"title": "우려나 반대 의견", "detail": "보완 방법", "raised_by": "이름"}],
   "agreements": ["모두 동의한 점"],
   "open_questions": ["결론 나지 않은 질문"],
+  "options": [{"name": "선택지 이름 (예: A안 시범 도입)", "pros": ["장점"], "cons": ["단점"], "risks": ["위험"]}],
+  "recommendation": "사회자 권고 한두 문장 (어느 선택지를 왜. 결정은 사용자가 합니다)",
+  "decision_points": ["사용자가 직접 정해야 할 것"],
   "closing": "사회자 마무리 멘트 1~2문장",
   "private_notes": "사회자로서 회의를 마치며 드는 솔직한 생각 1~2문장 (머리말 없이)",
   "badges": [{"to": "받는 사람 이름", "badge": "배지 키", "reason": "왜 이 배지인지 사회자가 건네는 한 문장 (~해요 체)"}]
 }
+[결정 카드] 결정은 사용자가 합니다. options에는 회의에서 실제로 나온 선택지 2~3개를 장단점·위험과 함께 담고(자유 토론이면 생략해도 됩니다), recommendation은 권고일 뿐 결정이 아닙니다.
+[열린 반론] 아래는 아직 정리되지 않은 반론입니다. 결론에서 지우지 말고 concerns나 open_questions에 '미해결'로 남기세요.
+${ledgerText(input.ledger)}
 [오늘의 배지] 사회자로서 참석자마다 회의에서 실제로 한 일에 맞는 배지를 1~2개 주세요. 근거 없이 주지 말고, 같은 배지를 여러 명에게 줘도 됩니다. 사회자 자신은 받지 않습니다.
 참석자: ${(input.attendees || []).map((id) => PERSONAS[id]?.name).filter(Boolean).join(", ")}${input.user?.name && transcript.some((t) => t.role === "me") ? `, ${input.user.name}(사용자, 발언했다면 1개)` : ""}
 배지 키: ${Object.entries(BADGE_GUIDE).map(([k, v]) => `${k}(${v})`).join(", ")}`,
@@ -365,12 +377,39 @@ async function makeDigest(llm, persona, input, state) {
   return { text: "자료 요약 카드를 만들었어요.", data: { digest }, newState: state };
 }
 
+// ── 단일 LLM 비교 실험 ─────────────────────────────────────────────────
+// 같은 의제·같은 자료로, 잘 짠 프롬프트 한 번에 단일 AI가 결론까지 내게 해요 (회의와 같은 결론 형식)
+const REVIEW_SCHEMA = `{"verdict": "판정 10자 이내", "tone": "positive" | "mixed" | "negative", "headline": "결론 한두 문장",
+  "key_points": [{"title": "핵심 결론이나 제안", "detail": "근거나 방법"}], "concerns": [{"title": "우려나 반대 의견", "detail": "보완 방법"}],
+  "agreements": ["합의할 만한 점"], "open_questions": ["남은 질문"],
+  "options": [{"name": "선택지", "pros": ["장점"], "cons": ["단점"], "risks": ["위험"]}], "recommendation": "권고", "decision_points": ["사용자가 정할 것"]}`;
+async function baseline(llm, persona, input, state) {
+  const A = agendaParts(input, 36000, { query: input.topic || "", k: 8 });
+  const review = llm.mock ? mockBaseline({ topic: input.topic }) : await chatJSON({
+    ...llm, temperature: 0.4, maxTokens: 3500, cachePrefixLen: A.stable.length,
+    system: "당신은 혼자서 의사결정 검토 결과를 만드는 AI입니다. 근거 검증, 전략, 영향받는 사람, 논리, 위험(레드팀) 관점을 모두 스스로 고려해 균형 있게 검토합니다.",
+    user: `${A.stable}${A.varying}\n\n위 주제를 여러 관점에서 검토해 결론을 내세요. 서로 다른 관점, 반론과 위험, 선택지와 장단점, 남은 질문을 빠짐없이 담으세요.\nJSON 하나만 출력합니다.\n${REVIEW_SCHEMA}`,
+  });
+  return { text: "단일 AI 결과를 만들었어요.", data: { review }, newState: state };
+}
+const JUDGE_CRITERIA = ["관점 다양성", "비판·위험 발견", "의사결정 완성도", "논점 집중", "실행 가능성"];
+async function judge(llm, persona, input, state) {
+  const show = (r) => JSON.stringify({ verdict: r?.verdict, headline: r?.headline, key_points: r?.key_points, concerns: r?.concerns, agreements: r?.agreements, open_questions: r?.open_questions, options: r?.options, recommendation: r?.recommendation }).slice(0, 9000);
+  const out = llm.mock ? mockJudge(input.a, input.b) : await chatJSON({
+    ...llm, temperature: 0.1, maxTokens: 1500,
+    system: "당신은 의사결정 검토 결과물을 공정하게 채점하는 평가자입니다. 어느 쪽이 어떤 방식으로 만들어졌는지 모릅니다. 길이나 말투가 아니라 내용만 봅니다.",
+    user: `[주제]\n${String(input.topic || "").slice(0, 1500)}\n\n[결과 A]\n${show(input.a)}\n\n[결과 B]\n${show(input.b)}\n\n아래 기준마다 A와 B를 1~5점으로 채점하고 이유를 한 문장씩 쓰세요. 기준: ${JUDGE_CRITERIA.join(", ")}.\nJSON 하나만 출력합니다.\n{"scores": [{"criterion": "기준 이름", "a": 1~5, "b": 1~5, "why": "한 문장"}], "better": "A" | "B" | "비슷", "summary": "전체 평가 한두 문장"}`,
+  });
+  const scores = JUDGE_CRITERIA.map((c) => { const x = (out.scores || []).find((y) => y?.criterion === c) || {}; const n = (v) => Math.max(1, Math.min(5, parseInt(v, 10) || 3)); return { criterion: c, a: n(x.a), b: n(x.b), why: String(x.why || "").slice(0, 200) }; });
+  return { text: "채점을 마쳤어요.", data: { scores, better: ["A", "B", "비슷"].includes(out.better) ? out.better : "비슷", summary: String(out.summary || "").slice(0, 400) }, newState: state };
+}
+
 // ── 참석자: 발언 ─────────────────────────────────────────────────────
 async function reviewTurn(llm, persona, input, state) {
   const { document, transcript = [], request, turn = 1, totalTurns = 12, phase = "round1", attendees = MEMBER_IDS } = input;
   const myTurn = (state.turns || 0) + 1;
   const A = agendaParts(input, 36000, { query: `${input.issue || ""} ${request?.text || ""} ${recentText(transcript, 3)}`, k: persona.id === "critic" ? 7 : 4 });
-  const out = llm.mock ? mockMember(persona.id, { document, myTurn, phase, topic: input.topic, style: styleOf(input) }) : await chatJSON({
+  const out = llm.mock ? mockMember(persona.id, { document, myTurn, phase, topic: input.topic, style: styleOf(input), ledger: input.ledger || [] }) : await chatJSON({
     ...llm, system: persona.system, temperature: 0.8, maxTokens: 2500, cachePrefixLen: A.stable.length,
     user: `${A.stable}${A.varying}
 
@@ -381,13 +420,31 @@ ${transcriptText(transcript)}
 ${state.notes || "(아직 없음)"}
 
 [이번 회의 참석자] ${attendeeLine(attendees)}${input.user?.name ? `, ${userLine(input.user)}` : ""}${userIntro(input.user)}${input.user?.name ? `\n사용자 ${input.user.name}에게는 직접 질문하지 마세요(발언 안에서도, ask에서도). 사용자 의견이 꼭 필요하면 JSON에 "user_question": "사용자에게 듣고 싶은 것 한 문장"을 덧붙이세요. 사회자가 판단해서 대신 물어봅니다.` : ""}
+[열린 반론]\n${ledgerText(input.ledger)}
+[당신의 지난 입장] ${(state.stances || []).at(-1) ? `${state.stances.at(-1).position || ""} (${state.stances.at(-1).stance}, 확신 ${state.stances.at(-1).confidence}%)` : "(첫 발언)"}
 [지금 차례] 전체 ${totalTurns}턴 중 ${turn}번째. ${phaseGuide(phase, styleOf(input))}${styleBlock(input, persona.id)}
 사회자가 당신에게: "${request?.text || "의견 부탁드립니다."}"
 ${myTurn === 1 ? (styleOf(input) === "review" ? "주제와 자료를 보고 당신 관점에서 가장 중요한 한 가지부터 말하세요." : "주제를 듣고 가장 먼저 떠오른 생각을 편하게 말하세요.") : "지난 메모와 다른 사람 발언을 참고해, 이미 한 말은 반복하지 마세요."}`,
   });
   const utterance = String(out.utterance || "").trim() || "잠시 생각을 정리해 볼게요.";
-  const stance = ["동의", "우려", "보류"].includes(out.stance) ? out.stance : "보류";
-  const confidence = Math.max(0, Math.min(100, parseInt(out.confidence, 10) || 50));
+  let stance = ["동의", "우려", "보류"].includes(out.stance) ? out.stance : "보류";
+  let confidence = Math.max(0, Math.min(100, parseInt(out.confidence, 10) || 50));
+  // 동조 방지: 입장이나 확신(20%p 넘게)을 바꾸려면 누구의 어떤 근거 때문인지 있어야 해요. 없으면 바꾼 것으로 치지 않아요
+  const prevStance = (state.stances || []).at(-1);
+  const changedBecause = String(out.changed_because || "").trim().slice(0, 200);
+  const shifted = prevStance && (stance !== prevStance.stance || Math.abs(confidence - prevStance.confidence) > 20);
+  let unjustified = false;
+  if (shifted && changedBecause.length < 8) { stance = prevStance.stance; confidence = prevStance.confidence; unjustified = true; }
+  // 레드팀은 자기가 낸 반론이 열려 있는 동안 '동의'로 돌아서지 않아요
+  const ledger = Array.isArray(input.ledger) ? input.ledger : [];
+  const redTeamBlocked = persona.id === "policy" && stance === "동의" && ledger.some((o) => o.status === "open" && o.by === persona.name);
+  if (redTeamBlocked) stance = "우려";
+  const objections = (Array.isArray(out.objections) ? out.objections : []).map((o) => ({ text: String(o?.text || "").trim().slice(0, 140), why: String(o?.why || "").trim().slice(0, 180) }))
+    .filter((o) => o.text.length >= 6).slice(0, persona.id === "policy" ? 3 : 2);
+  const openIds = new Set(ledger.filter((o) => o.status === "open").map((o) => o.id));
+  const resolves = (Array.isArray(out.resolves) ? out.resolves : []).map((r) => ({ id: String(r?.id || "").trim().toUpperCase(), how: r?.how === "수용" ? "수용" : "반박", why: String(r?.why || "").trim().slice(0, 180) }))
+    .filter((r) => openIds.has(r.id) && r.why.length >= 4).slice(0, 3);
+  const criterion = String(out.criterion || "").trim().slice(0, 16);
   const position = String(out.position || "").replace(/^["'“‘]|["'”’]$/g, "").trim().slice(0, 30);
   const names = attendees.map((id) => PERSONAS[id]?.name).filter(Boolean);
   // 사용자에게 묻고 싶은 건 사회자에게 넘겨요 (ask.to에 사용자를 적었어도 마찬가지)
@@ -401,7 +458,8 @@ ${myTurn === 1 ? (styleOf(input) === "review" ? "주제와 자료를 보고 당�
     said: [...(state.said || []), utterance].slice(-6),
     stances: [...(state.stances || []), { turn, stance, confidence, position }],
   };
-  return { text: utterance, data: { stance, confidence, position, ask, wantsUser, phase, refs: A.refs, thoughts: newState.notes }, newState };
+  return { text: utterance, data: { stance, confidence, position, ask, wantsUser, phase, refs: A.refs, thoughts: newState.notes,
+    criterion, changedBecause: shifted && !unjustified ? changedBecause : "", unjustified, redTeamBlocked, objections, resolves }, newState };
 }
 
 // ── 회의 뒤 후속 질문 (사회자, 참석자 모두) ───────────────────────────────
@@ -487,7 +545,8 @@ export default async function handler(req, res) {
   const model = userKey ? (wanted || defaultModelOf(persona)) : apiKey ? (wanted || sharedModelOf(persona)) : defaultModelOf(persona);
   // 모델이 지원 종료되면 그 에이전트의 기본 모델 → FALLBACK_MODEL 순서로 대신 불러요
   const fallbacks = [userKey || !apiKey ? defaultModelOf(persona) : sharedModelOf(persona), process.env.FALLBACK_MODEL || "google/gemini-3.8-flash"];   // 공용 키는 비싼 기본 모델로 넘어가지 않게
-  const llm = { apiKey, model, mock: !apiKey, fallbacks, onModel: (m) => { llm.model = m; } };
+  const usage = { in: 0, out: 0, cost: 0 };
+  const llm = { apiKey, model, mock: !apiKey, fallbacks, onModel: (m) => { llm.model = m; }, onUsage: (u) => { usage.in += u.in; usage.out += u.out; usage.cost += u.cost; } };
 
   const input = msg.parts.find((p) => p.data)?.data || {};
   // 공용 키로는 회의를 SHARED_MAX_TURNS턴까지만 (토큰 비용 보호)
@@ -513,12 +572,14 @@ export default async function handler(req, res) {
     else if (isMod && input.type === "moderate") r = await moderate(llm, persona, input, state);
     else if (isMod && input.type === "summarize") r = await summarize(llm, persona, input, state);
     else if (isMod && input.type === "digest") r = await makeDigest(llm, persona, input, state);
+    else if (isMod && input.type === "baseline") r = await baseline(llm, persona, input, state);
+    else if (isMod && input.type === "judge") r = await judge(llm, persona, input, state);
     else if (!isMod && input.type === "review_turn") r = await reviewTurn(llm, persona, input, state);
     else if (input.type === "followup") r = await followup(llm, persona, input, state);
     else return rpcError(res, body.id, -32602, `${persona.name}은(는) '${input.type}' 요청을 처리하지 않아요.`);
 
     const result = taskResult(ctx, {
-      text: r.text, data: { ...r.data, model: llm.mock ? "mock" : llm.model },
+      text: r.text, data: { ...r.data, model: llm.mock ? "mock" : llm.model, usage },
       artifacts: r.artifacts, stateToken: sealState(persona.id, r.newState),
     });
     return res.status(200).json({ jsonrpc: "2.0", id: body.id, result });
