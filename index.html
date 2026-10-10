@@ -561,6 +561,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .pc-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 10px}
 .pc-badge{display:flex;flex-direction:column;align-items:center;gap:3px;width:62px}
 .pc-badge img{width:44px;height:44px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.12))}
+.pc-badge .bemoji{width:44px;height:44px;font-size:22px}
 .pc-badge span{font-size:10.5px;font-weight:700;text-align:center;line-height:1.2}
 .pc-none{margin:2px 0;font-size:12px;color:var(--ink-2);text-align:center}
 .pc-why{margin:7px 0 0;font-size:11.5px;line-height:1.45;color:var(--ink-2);text-align:center}
@@ -568,7 +569,8 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 /* 결론 탭: 사회자가 준 오늘의 배지 */
 .awards{display:grid;gap:8px}
 .award{display:grid;grid-template-columns:40px 1fr;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:var(--soft)}
-.award img{width:40px;height:40px}
+.award img,.award .bemoji{width:40px;height:40px}
+.bemoji{display:inline-grid;place-items:center;border-radius:50%;box-shadow:0 0 0 3px #fff,0 1px 3px rgba(0,0,0,.12);font-size:20px;line-height:1;flex:none}
 .award b{font-size:13.5px}.award .who{display:inline-block;margin-left:6px;font-size:12px;font-weight:650;padding:1px 8px 2px;border-radius:999px;background:var(--t,#fff)}
 .award p{margin:2px 0 0;font-size:12.5px;color:var(--ink-2);line-height:1.45}
 .pc-dev{margin:8px 0 0;text-align:center}
@@ -1380,14 +1382,14 @@ function emptyLog() {
 }
 function logPane() { const p = $("#pane-log"); if (p.querySelector(".empty")) p.innerHTML = ""; return p; }
 function addDivider(phase) { logPane().insertAdjacentHTML("beforeend", `<div class="divider"><span class="eyebrow ko">${esc(phaseEyebrow(phase))}</span><span style="font-size:13px">${esc(phaseLabel(phase))}</span></div>`); }
-function addMsg({ id, to, text, ask, stance, confidence, position, thought, raw, model, err, turn, label, thoughtLabel, refs, criterion, changedBecause, unjustified, objections, resolves }) {
+function addMsg({ id, to, text, ask, stance, confidence, position, thought, raw, model, err, turn, label, thoughtLabel, refs, criterion, changedBecause, unjustified, objections, resolves, fallbackFrom }) {
   const a = S.agents[id], isMod = id === "moderator";
   const el = document.createElement("article");
   el.className = `cmt ${isMod ? "mod" : ""} ${err ? "err" : ""}`; el.setAttribute("style", styleVars(id));
   el.innerHTML = `${face(id)}<div>
     <div class="meta"><b>${esc(a.name)}</b>${to ? `<span class="to">→ ${esc(to === "me" ? meProfile().name : S.agents[to]?.name)}</span>` : ""}
       ${turn && !isMod ? `<span class="phase">${esc(shortPhase(phaseOfTurn(turn)))}</span>` : ""}${label ? `<span class="phase">${esc(label === "Answer" ? "후속 답변" : label)}</span>` : ""}
-      ${model ? `<span class="eyebrow">${esc(model === "mock" ? "모의" : shortModel(model))}</span>` : ""}
+      ${model ? `<span class="eyebrow" ${fallbackFrom ? `title="${esc(shortModel(fallbackFrom))}이(가) 응답하지 않아 대신 답했어요"` : ""}>${esc(model === "mock" ? "모의" : shortModel(model))}${fallbackFrom ? " · 대체" : ""}</span>` : ""}
       ${raw ? `<button class="jsonbtn eyebrow ko">원본</button>` : ""}</div>
     <div class="text">${esc(text)}</div>
     ${stance || ask || refs?.length || criterion ? `<div class="row2">${stance ? stanceChip(stance, confidence, position) : ""}${ask ? `<span class="tag">${esc(ask.to)} 님께 질문 · ${esc(ask.question)}</span>` : ""}${refs?.length ? `<span class="refs" title="이번 발언에 함께 넣은 자료 구간">참고 구간 ${refs.map((x) => `${x.n}(${x.page}쪽)`).join(" · ")}</span>` : ""}${criterion ? `<span class="crit" title="이번 발언에서 적용한 판단 기준">기준 · ${esc(criterion)}</span>` : ""}</div>` : ""}
@@ -1439,12 +1441,19 @@ async function call(id, text, data) {
       if (attempt === 0) status(`${S.agents[id].name} 님 응답이 실패해서 한 번 더 부탁하고 있어요.`);
     }
     if (sig?.aborted) throw new DOMException("회의를 멈췄어요.", "AbortError");   // 답을 기다리는 사이 멈추거나 새 회의를 열었으면 이 답은 버려요
+    if (r.data?.fallbackFrom) noteFallback(id, r.data.fallbackFrom, r.data.model, r.data.fallbackWhy);
     if (S.meeting && !r.failed) {   // 점수표의 비용 칸: 실제 토큰 수와 걸린 시간 (비교 실험은 따로)
       const k = ["baseline", "judge"].includes(data?.type) ? "compareUsage" : "usage", u = (S.meeting[k] ||= { in: 0, out: 0, cost: 0, ms: 0, calls: 0 });
       u.in += r.data?.usage?.in || 0; u.out += r.data?.usage?.out || 0; u.cost += r.data?.usage?.cost || 0; u.ms += Date.now() - t0; u.calls++;
     }
     return r;
   } finally { done(); }
+}
+// 고른 모델이 응답하지 않아 대체 모델이 답했을 때: 같은 사람·같은 모델은 회의마다 한 번만 알려요
+function noteFallback(id, from, to, why) {
+  const k = `${id}:${from}`, seen = (S.fbSeen ||= new Set());
+  if (seen.has(k)) return; seen.add(k);
+  toast(`${S.agents[id]?.name || id} 님 모델(${shortModel(from)})이 응답하지 않아 ${shortModel(to)}이(가) 대신 답했어요.`);
 }
 const isNetErr = (e) => !!e && (e.name === "TypeError" || /Failed to fetch|NetworkError|network|Load failed/i.test(e.message || ""));
 function failErr(text) { const e = new Error(text); e.kind = "failed"; return e; }
@@ -1625,7 +1634,7 @@ async function afterMemberTurn(m, i, phase, turn, total, next, r) {
   for (const x of r.data.resolves || []) { const o = L.find((y) => y.id === x.id && y.status === "open"); if (o) { Object.assign(o, { status: x.how, resolvedBy: S.agents[next].name, resolveWhy: x.why, resolvedTurn: turn }); done.push({ ...x, text: o.text }); } }
   if (r.data.unjustified) m.unjustified = (m.unjustified || 0) + 1;
   logMsg({ id: next, text: r.text, ask, stance, confidence, position, thought: thoughts, raw: r.raw, model, turn, refs: r.data.refs,
-    criterion: r.data.criterion, changedBecause: r.data.changedBecause, unjustified: r.data.unjustified, objections: newObj, resolves: done });
+    criterion: r.data.criterion, changedBecause: r.data.changedBecause, unjustified: r.data.unjustified, objections: newObj, resolves: done, fallbackFrom: r.data.fallbackFrom });
   drawLedger();
   renderTable("live", { id: next, text: r.text, phase, turn, issue: m.issue }); setSpeaking(next); showBubble(next, r.text);
   markCell(i, "done", next); m.cells[i] = next; refreshSeats(); drawMinds(); drawMood();
@@ -1754,7 +1763,7 @@ function restoreSnapshot(snap) {
 function newMeeting() {
   if (S.running && S.abort) { S.abort.abort(); S.running = false; }
   hideBubbles(); S.hand = false;
-  Object.assign(S, { transcript: [], tokens: {}, contexts: {}, last: {}, thoughts: {}, trail: {}, review: null, reviews: [], meeting: null, history: [], followups: [] });
+  Object.assign(S, { transcript: [], tokens: {}, contexts: {}, last: {}, thoughts: {}, trail: {}, review: null, reviews: [], meeting: null, history: [], followups: [], fbSeen: new Set() });
   clearSnapshot();
   emptyLog();
   $("#pane-review").innerHTML = `<div class="empty"><img class="bust" src="${esc(S.agents.moderator?.bust || "")}" alt=""><strong>결론이 아직 없어요</strong>마지막 턴에서 사회자가 핵심 결론과 남은 쟁점을 정리해 드려요.</div>`;
@@ -2232,12 +2241,27 @@ const BADGES = {
   magnifier: { name: "날카로운 지적", desc: "우려와 반대 의견에 이름이 가장 많이 올랐어요" },
   handshake: { name: "합의 도우미",   desc: "모이는 의견에 가장 확신 있게 힘을 보탰어요" },
   bulb:      { name: "아이디어 뱅크", desc: "핵심 결론과 제안에 이름이 가장 많이 올랐어요" },
+  siren:     { name: "경고등",        desc: "아무도 못 본 결정적인 위험을 처음 짚었어요", emoji: "🚨", bg: "#FAD4D4" },
+  scale:     { name: "균형추",        desc: "한쪽으로 기울던 합의를 반대편 논리로 다시 균형 잡았어요", emoji: "⚖️", bg: "#D6E4F7" },
+  key:       { name: "해결사",        desc: "열린 반론을 근거로 가장 많이 정리했어요", emoji: "🔑", bg: "#FFF1C1" },
+  compass:   { name: "길잡이",        desc: "논점이 흐를 때 원래 질문으로 되돌렸어요", emoji: "🧭", bg: "#D3F0EC" },
+  link:      { name: "연결고리",      desc: "서로 다른 의견 사이의 공통점을 찾아 이어 줬어요", emoji: "🔗", bg: "#E6DDF7" },
+  map:       { name: "설계자",        desc: "선택지와 실행 계획을 가장 구체적으로 그렸어요", emoji: "🗺️", bg: "#DDF1D5" },
+  ear:       { name: "경청왕",        desc: "영향받는 사람들의 목소리를 가장 잘 대변했어요", emoji: "👂", bg: "#FCE1CF" },
+  rocket:    { name: "엉뚱한 상상",   desc: "아무도 생각 못 한 기발한 아이디어를 던졌어요", emoji: "🚀", bg: "#FFF3B8" },
 };
+// 배지 그림: 그림 파일이 아직 없으면(새 배지) 같은 모양의 이모지 동그라미로 대신 보여요
+const badgeImg = (k) => `<img src="vendor/badges/${k}.webp" alt="" data-badge="${k}" onerror="badgeFail(this)">`;
+function badgeFail(img) {
+  const b = BADGES[img.dataset.badge] || {}, span = document.createElement("span");
+  span.className = "bemoji"; span.style.background = b.bg || "#F1EFEA"; span.textContent = b.emoji || "🏅";
+  img.replaceWith(span);
+}
 // 카드 뒷면 배지 줄: 배지 그림 + 이름, 아래에 사회자가 준 이유
 function badgeStrip(id) {
   const mine = earnedBadges()[id] || [];
   if (!mine.length) return { html: `<p class="pc-none">이번 회의에서는 받은 배지가 없어요.</p>`, why: "" };
-  const html = mine.map((k) => `<div class="pc-badge" title="${esc(badgeReason(id, k) || BADGES[k].desc)}"><img src="vendor/badges/${k}.webp" alt=""><span>${esc(BADGES[k].name)}</span></div>`).join("");
+  const html = mine.map((k) => `<div class="pc-badge" title="${esc(badgeReason(id, k) || BADGES[k].desc)}">${badgeImg(k)}<span>${esc(BADGES[k].name)}</span></div>`).join("");
   const why = mine.map((k) => badgeReason(id, k)).filter(Boolean);
   return { html, why: why.length ? `<p class="pc-why"><b>사회자</b> “${esc(why.join(" "))}”</p>` : "" };
 }
@@ -2485,7 +2509,7 @@ function renderReview(v) {
     <div class="rsec"><h3>${L.keys} ${cnt(keys)}</h3>${items(keys)}</div>
     ${v.badges?.length ? `<div class="rsec"><h3>오늘의 배지 <span class="eyebrow ko">사회자가 줬어요</span></h3><div class="awards">${v.badges.filter((b) => BADGES[b.badge]).map((b) => {
       const id = badgeOwner(b.to), t = id === "me" ? "#E9E9EC" : S.agents[id]?.tint || "#fff";
-      return `<div class="award"><img src="vendor/badges/${b.badge}.webp" alt=""><div><b>${esc(BADGES[b.badge].name)}</b><span class="who" style="--t:${t}">${esc(b.to)}</span><p>${esc(b.reason || BADGES[b.badge].desc)}</p></div></div>`; }).join("")}</div></div>` : ""}
+      return `<div class="award">${badgeImg(b.badge)}<div><b>${esc(BADGES[b.badge].name)}</b><span class="who" style="--t:${t}">${esc(b.to)}</span><p>${esc(b.reason || BADGES[b.badge].desc)}</p></div></div>`; }).join("")}</div></div>` : ""}
     <div class="rsec"><h3>${L.worries} ${cnt(worries)}</h3>${items(worries)}</div>
     <div class="rsec"><h3>${L.agree}</h3>${list(agree)}</div>
     <div class="rsec"><h3>${L.open}</h3>${list(open)}</div>
@@ -2783,6 +2807,7 @@ async function testAgent(id) {
     const r = await send(id, "[회의실] 연결 확인", { type: "ping" }); delete S.tokens[id]; delete S.contexts[id];
     if (r.failed) { res.className = "res bad"; res.textContent = r.text; return; }
     res.className = "res ok";
+    if (r.data.fallbackFrom) { res.className = "res bad"; res.textContent = `고른 모델(${r.data.fallbackFrom})이 응답하지 않아 ${r.data.model}로 대신 연결됐어요. 회의 중에도 자동으로 대체돼요.${r.data.fallbackWhy ? ` (${r.data.fallbackWhy})` : ""}`; return; }
     res.textContent = r.data.mock ? "모의 모드예요. API 키를 넣으면 실제 모델로 확인해요." : `연결됐어요 · ${r.data.model} · ${(r.data.ms / 1000).toFixed(1)}초`;
   } catch (e) { res.className = "res bad"; res.textContent = e.message; }
 }
