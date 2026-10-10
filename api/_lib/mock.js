@@ -15,7 +15,8 @@ const cut = (s, n = 36) => (s.length > n ? s.slice(0, n) + "…" : s);
 const NAME = (id) => PERSONAS[id].name;
 
 const MOCK_ISSUES = { round1: "첫 의견", round2: "근거와 반론", round3: "대안", round4: "입장 바꿔 보기", round5: "합의점", round6: "실행 순서", last_word: "남은 걱정" };
-export function mockModerate({ transcript, phase, eligible, hasDoc = true, roundStart = false, standing = {} }) {
+const MOCK_ISSUES_FREE = { round1: "첫 생각", round2: "서로 다른 느낌", round3: "생각 더하기", round4: "만약에", round5: "공통점", round6: "해 볼 만한 것", last_word: "마음에 남는 것" };
+export function mockModerate({ transcript, phase, eligible, hasDoc = true, roundStart = false, standing = {}, style = "review" }) {
   const last = [...transcript].reverse().find((t) => t.role !== "moderator");
   // 모의 모드도 순서를 돌리지 않게: 덜 말한 사람 중에서 직전 발언자와 시각이 다른 사람을 먼저
   const talks = (id) => transcript.filter((t) => t.role === id).length;
@@ -24,10 +25,11 @@ export function mockModerate({ transcript, phase, eligible, hasDoc = true, round
   const differ = pool.filter((id) => standing[id]?.stance && standing[id].stance !== standing[last?.role]?.stance);
   const from = differ.length ? differ : pool.length ? pool : eligible;
   let next = from[Math.floor(Math.random() * from.length)];
-  const issue = MOCK_ISSUES[phase] || "추가 쟁점";
+  const free = style !== "review";
+  const issue = (free ? MOCK_ISSUES_FREE : MOCK_ISSUES)[phase] || "추가 쟁점";
   const asked = last?.ask?.to && Object.values(PERSONAS).find((p) => p.name === last.ask.to)?.id;
   if (asked && eligible.includes(asked)) next = asked;
-  const intro = roundStart && transcript.length && phase !== "round1" ? `지금까지 근거와 걱정이 함께 나왔어요. 이번엔 '${issue}'을 중심으로 이야기해 볼게요. ` : "";
+  const intro = roundStart && transcript.length && phase !== "round1" ? (free ? `다들 생각이 조금씩 다르네요. 이번엔 '${issue}' 얘기를 해 볼까요? ` : `지금까지 근거와 걱정이 함께 나왔어요. 이번엔 '${issue}'을 중심으로 이야기해 볼게요. `) : "";
   const say = intro + (phase === "last_word"
     ? `결론 내기 전에, ${NAME(next)} 님이 아직 가장 걸리는 부분을 한 번 더 말씀해 주세요.`
     : transcript.length === 0
@@ -35,7 +37,7 @@ export function mockModerate({ transcript, phase, eligible, hasDoc = true, round
       : asked === next
         ? `${NAME(next)} 님, 방금 질문에 답해 주시겠어요?`
         : phase !== "round1"
-          ? `${NAME(next)} 님, 앞선 의견 중 동의하기 어려운 게 있으면 짚어 주세요.`
+          ? (free ? `${NAME(next)} 님은 방금 얘기 들으면서 어떤 생각 드셨어요?` : `${NAME(next)} 님, 앞선 의견 중 동의하기 어려운 게 있으면 짚어 주세요.`)
           : `${NAME(next)} 님은 어떻게 보셨어요?`);
   return { next, say, issue, reason: asked === next ? `${NAME(next)} 님이 질문을 받았으니 바로 답하게 함` : `아직 이번 라운드에 말하지 않은 ${NAME(next)} 님 차례` };
 }
@@ -87,7 +89,27 @@ const TOPIC_LINES = {
   ],
 };
 
-export function mockMember(personaId, { document, myTurn, phase, topic }) {
+const FREE_LINES = {   // 자유 토론·아이디어 회의 (근거·숫자 대신 경험, 직관, 상상)
+  critic: [(t) => `근데 "${t}", 그게 진짜 그럴까요? 반대로 생각해 보면 오히려 지금이 나은 사람도 있을 것 같아요.`, () => `오, 그 말 들으니 좀 흔들리네요. 그래도 저는 결국 '누구를 위한 거냐'가 남는 것 같아요.`],
+  strategist: [(t) => `저는 "${t}"를 들으니 10년 뒤 모습부터 떠올라요. 결국 이건 일하는 방식이 바뀌는 문제 같아요.`, () => `민서 님 말에 하나 보태면, 처음부터 정답을 찾기보다 작게 해 보면서 배우는 게 맞는 것 같아요.`],
+  reader: [(t) => `저라면 "${t}" 얘기 들으면 일단 설렐 것 같아요. 근데 주변에 서운해할 사람도 떠오르긴 해요.`, () => `저도 비슷해요. 제 주변만 봐도 반기는 사람과 불안해하는 사람이 반반이에요.`],
+  method: [(t) => `"${t}"에 대해 두 가지 마음이 같이 드는 것 같아요. 기대랑 걱정이 사실 같은 뿌리인 것 같기도 하고요.`, () => `두 분 말이 사실 같은 얘기 같아요. 결국 '선택할 수 있느냐'가 핵심인 것 같아요.`],
+  policy: [(t) => `만약에 "${t}"가 내일 당장 이뤄진다면요? 저는 첫 주엔 신나다가 둘째 주에 혼란스러울 것 같아요.`, () => `하나 상상해 보면, 다 같이 하는 대신 원하는 사람만 해 보면 어떨까요? 생각보다 재밌을 것 같아요.`],
+};
+export function mockMember(personaId, { document, myTurn, phase, topic, style = "review" }) {
+  if (style !== "review") {
+    const i = phase === "round1" ? 0 : 1;
+    return {
+      utterance: FREE_LINES[personaId][i](cut(String(topic || "이 주제").split("\n\n[")[0].trim(), 30)),
+      stance: phase === "round1" ? "보류" : personaId === "critic" ? "우려" : "동의",
+      confidence: phase === "round1" ? 55 : 70,
+      position: (phase === "round1"
+        ? { critic: "정말 그럴까?", strategist: "일하는 방식의 문제", reader: "설렘 반 걱정 반", method: "기대와 걱정은 한 뿌리", policy: "첫 주는 신날 듯" }
+        : { critic: "누구를 위한 건지", strategist: "작게 해 보며 배우기", reader: "반기는 사람 반반", method: "선택할 수 있느냐", policy: "원하는 사람만 해 보기" })[personaId],
+      ask: { to: null, question: "" },
+      private_notes: phase === "round1" ? "다들 생각이 다르니 재밌다. 다른 사람 얘기를 더 들어 보자." : "생각이 조금씩 모이는 것 같다. 끝까지 내 느낌은 지키고 싶다.",
+    };
+  }
   if (!document?.text) {
     const i = phase === "round1" ? 0 : 1;
     return {
@@ -123,7 +145,24 @@ export function mockMember(personaId, { document, myTurn, phase, topic }) {
   };
 }
 
-export function mockSummary({ document, topic }) {
+export function mockSummary({ document, topic, style = "review" }) {
+  if (style !== "review") {
+    const t = cut(String(topic || "이 주제").split("\n\n[")[0].trim(), 30);
+    return {
+      verdict: style === "idea" ? "원하는 사람만 해 보기" : "설렘 반 걱정 반", tone: style === "idea" ? "positive" : "mixed",
+      headline: `"${t}"를 두고 기대와 걱정이 함께 나왔고, 결국 '선택할 수 있느냐'가 핵심이라는 데 생각이 모였어요.`,
+      key_points: [
+        { title: "결국 일하는 방식이 바뀌는 문제", detail: "10년 뒤를 생각하면 지금의 고민이 다르게 보여요", raised_by: "나래" },
+        { title: "기대와 걱정은 같은 뿌리", detail: "'선택할 수 있느냐'에 따라 마음이 갈려요", raised_by: "현우" },
+        { title: "원하는 사람만 먼저 해 보기", detail: "다 같이보다 부담이 적고 재밌을 수 있어요", raised_by: "하율" },
+      ],
+      concerns: [{ title: "누구를 위한 변화인지", detail: "반기는 사람과 불안한 사람이 함께 있어요", raised_by: "민서" }],
+      agreements: ["처음부터 정답을 찾기보다 작게 해 보며 배우자", "사람마다 느끼는 게 다르다는 걸 인정하자"],
+      open_questions: ["원하는 사람만 해 볼 때 나머지 사람은 어떻게 느낄까?"],
+      closing: "(모의 모드) 오늘 이야기 재밌었어요. 생각이 더 나면 다음에 또 이어 가요.",
+      private_notes: "근거 따지지 않으니 오히려 솔직한 얘기가 많이 나왔다.",
+    };
+  }
   if (!document?.text) {
     const t = cut(String(topic || "이 주제").split("\n\n[")[0].trim(), 30);
     return {
