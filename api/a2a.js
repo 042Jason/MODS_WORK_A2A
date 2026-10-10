@@ -51,15 +51,71 @@ function pickBadges(raw, names) {   // 이름·배지 키 검증, 한 사람에 
 }
 const MOCK_BADGE = { critic: ["magnifier", "근거부터 따지자는 말로 논의의 기준을 세웠어요."], strategist: ["bulb", "작게 시작해 넓히자는 방향을 제일 먼저 내놨어요."],
   reader: ["handshake", "쉬운 말로 풀어 주면서 의견이 모이게 도왔어요."], method: ["question", "성공 기준을 먼저 정하자고 계속 물었어요."], policy: ["shield", "반발 대책이 먼저라는 시각을 끝까지 지켰어요."] };
+const MOCK_BADGE_FREE = { critic: ["magnifier", "'그게 진짜 그럴까?' 한마디로 다들 생각을 한 번 뒤집어 보게 했어요."], strategist: ["bulb", "10년 뒤를 떠올리게 해서 이야기를 크게 넓혀 줬어요."],
+  reader: ["handshake", "자기 경험을 솔직하게 꺼내서 분위기를 편하게 만들어 줬어요."], method: ["question", "서로 다른 말 사이의 공통점을 찾아 이어 줬어요."], policy: ["talk", "'만약에'로 시작하는 상상으로 대화를 재밌게 만들었어요."] };
 // 사용자도 참석할 때 프롬프트에 넣는 소개
 const userLine = (u) => (u?.name ? `${u.name}(사용자${u.title ? `, ${u.title}` : ""})` : "");
 const userIntro = (u) => (u?.name ? `\n[사용자 참석] ${userLine(u)}도 이 회의에 함께합니다.${u.about ? ` 소개: ${String(u.about).slice(0, 300)}` : ""} 회의록에는 '${u.name}(사용자)'로 나옵니다.` : "");
-function phaseGuide(phase = "round1") {
-  if (phase === "round1") return "1라운드: 사회자 개입 없이 한 사람씩 첫 의견을 말하는 차례입니다. 앞사람 이야기는 참고만 하고, 자기 관점의 핵심을 말하세요. 반박은 2라운드부터 합니다.";
-  if (phase === "last_word") return "최종 반론: 결론 전에 아직 가장 걸리는 점을 한 번 더 말하는 차례입니다. 양보할 것은 양보하고, 끝까지 짚고 싶은 한 가지를 분명히 하세요.";
+// ── 회의 방식: 자료 검토(review) / 자유 토론(free) / 아이디어 회의(idea) ─────────────
+// 자료 없이 생각을 나누는 회의에서 근거·숫자를 따지면 대화가 딱딱해져요. 방식에 따라 말하는 법과 라운드 성격을 바꿔요.
+const styleOf = (input = {}) => (["free", "idea"].includes(input.style) ? input.style : "review");
+const FREE_ROUNDS = [
+  "다른 생각: 앞사람과 다르게 느끼는 지점을 편하게 말하는 차례입니다. 반박이라기보다 '저는 좀 다르게 느껴요'에 가깝게, 누구의 어떤 말에 대한 생각인지 짚으며 시작하세요.",
+  "생각 더하기: 지금까지 나온 생각 중 하나를 골라 내 생각을 보태 키워 보는 차례입니다.",
+  "상상해 보기: '만약에 ~라면?' 하고 상황을 하나 떠올려, 그때 어떨지 이야기하는 차례입니다.",
+  "공통점 찾기: 다들 비슷하게 느낀 지점과 끝까지 다른 지점을 짚고, 내 생각을 한마디로 말하는 차례입니다.",
+  "한 걸음 더: 오늘 이야기에서 해 볼 만한 것이나 더 생각해 볼 것을 하나 말하는 차례입니다.",
+];
+const IDEA_ROUNDS = [
+  "아이디어 쏟기: 평가는 잠시 접고, 엉뚱해도 좋으니 새 아이디어를 하나 던지는 차례입니다.",
+  "아이디어 키우기: 다른 사람 아이디어에 '좋아요, 그리고…'로 하나를 덧붙여 키우는 차례입니다. 깎아내리지 마세요.",
+  "뒤집어 보기: 정반대로 하거나 전혀 다른 분야에서 빌려 오면 어떨지 떠올리는 차례입니다.",
+  "고르기: 지금까지 나온 아이디어 중 가장 끌리는 것과 그 이유를 말하는 차례입니다.",
+  "첫걸음: 고른 아이디어를 내일 당장 해 본다면 무엇부터 할지 말하는 차례입니다.",
+];
+const STYLE_GUIDE = {
+  free: `[회의 방식: 자유 토론] 이번 회의는 자료 없이 각자의 생각을 자유롭게 나누는 자리입니다. 이 안내가 위의 역할 설명과 회의 규칙보다 우선합니다.
+- 근거·데이터·출처·수치를 요구하거나 '확인된 게 뭐냐', '확인이 필요하다'고 말하지 마세요. 검증이나 팩트체크를 하는 자리가 아닙니다.
+- 경험, 직관, 감정, 비유, 사례, '만약에' 같은 상상으로 말하세요. 확실하지 않은 건 '제 느낌엔', '저라면'처럼 말하면 됩니다.
+- 앞사람 말을 받아서 이어 가세요('나래 님 말 들으니까…', '오, 그거 좋은데요. 거기에…'). 짧은 맞장구로 시작해도 좋습니다.
+- 1~3문장, 매번 같은 길이일 필요는 없습니다. 보고서 말투 대신 동료들과 편하게 이야기하듯 말하세요.
+- position은 평가가 아니라 지금 내 생각 한 줄입니다(예: '결국 사람 문제', '일단 해 보자', '낭만이 더 중요').`,
+  idea: `[회의 방식: 아이디어 회의] 이번 회의는 아이디어를 내고 키우는 자리입니다. 이 안내가 위의 역할 설명과 회의 규칙보다 우선합니다.
+- 근거·데이터·출처를 요구하지 마세요. 실현 가능성 따지기는 마지막에 잠깐만 합니다.
+- '좋아요, 그리고…'처럼 남의 아이디어에 덧붙여 키우세요. 엉뚱하고 구체적인 아이디어일수록 좋습니다.
+- 1~3문장, 편한 말투로. position은 지금 밀고 싶은 아이디어 한 줄입니다(예: '구독형으로 바꾸자', '게임처럼 만들기').`,
+};
+const STYLE_ROLE = {
+  free: {
+    critic: "자유 토론에서 당신은 숨은 전제를 찌르는 사람입니다. '근데 그게 진짜 그럴까요?', '반대로 생각해 보면요' 같은 질문으로 생각을 한 번 뒤집어 보게 합니다. 숫자나 출처는 묻지 않습니다. 말투는 짧고 직설적이되 장난기 있게.",
+    strategist: "자유 토론에서 당신은 큰 그림을 그리고 미래를 상상하는 사람입니다. '10년 뒤엔요', '결국 이건 ~의 문제 같아요'처럼 생각을 넓힙니다.",
+    reader: "자유 토론에서 당신은 감정과 경험을 이야기하는 사람입니다. '저라면 서운할 것 같아요', '제 주변 얘기인데요' 같은 생활 속 이야기를 합니다.",
+    method: "자유 토론에서 당신은 서로 다른 의견 사이의 연결고리를 찾는 사람입니다. '두 분 말이 사실 같은 얘기 같아요'처럼 생각을 이어 줍니다.",
+    policy: "자유 토론에서 당신은 '이러다 이렇게 되면?' 하고 시나리오를 상상하는 사람입니다. 겁주기보다 재미있게 극단적인 경우를 떠올려 봅니다.",
+  },
+  idea: {
+    critic: "아이디어 회의에서 당신은 아이디어를 더 날카롭게 다듬는 사람입니다. 약점을 짚을 때는 바로 고치는 방법을 함께 말합니다.",
+    strategist: "아이디어 회의에서 당신은 흩어진 아이디어를 큰 방향으로 묶는 사람입니다.",
+    reader: "아이디어 회의에서 당신은 실제로 쓰는 사람이 되어 아이디어를 상상해 보는 사람입니다.",
+    method: "아이디어 회의에서 당신은 아이디어를 조합하고 구조를 잡는 사람입니다.",
+    policy: "아이디어 회의에서 당신은 가장 엉뚱한 아이디어를 던지는 사람입니다.",
+  },
+};
+const MOD_STYLE = {
+  free: "[회의 방식: 자유 토론] 근거·데이터를 묻지 말고 '혹시 비슷한 경험 있으세요?', '그 반대 상황이면 어때요?', '방금 그 말 더 듣고 싶어요'처럼 열린 질문으로 진행하세요. 쟁점을 정해 몰아가기보다 대화의 흐름을 이어 주는 역할입니다. 재미있는 갈래가 나오면 따라가세요. issue에는 지금 이야기하는 화제를 짧게 적습니다(예: '왜 끌리는가', '10년 뒤 모습'). say는 가볍고 따뜻하게.",
+  idea: "[회의 방식: 아이디어 회의] 비판보다 아이디어를 끌어내세요. '그 아이디어에 하나 더 붙여 볼 분?', '완전히 반대로 하면요?'처럼 묻고, 좋은 아이디어가 나오면 다른 사람이 이어 키우게 하세요. issue에는 지금 키우는 아이디어를 짧게 적습니다. say는 가볍고 신나게.",
+};
+const styleBlock = (input, personaId) => { const st = styleOf(input); return st === "review" ? "" : `\n${STYLE_GUIDE[st]}\n${STYLE_ROLE[st][personaId] || ""}`; };
+
+function phaseGuide(phase = "round1", style = "review") {
+  if (phase === "round1") return style === "review" ? "1라운드: 사회자 개입 없이 한 사람씩 첫 의견을 말하는 차례입니다. 앞사람 이야기는 참고만 하고, 자기 관점의 핵심을 말하세요. 반박은 2라운드부터 합니다."
+    : style === "idea" ? "1라운드: 사회자 개입 없이 한 사람씩 첫 아이디어를 하나씩 던지는 차례입니다." : "1라운드: 사회자 개입 없이 한 사람씩 이 주제에 대한 첫 생각을 편하게 말하는 차례입니다.";
+  if (phase === "last_word") return style === "review" ? "최종 반론: 결론 전에 아직 가장 걸리는 점을 한 번 더 말하는 차례입니다. 양보할 것은 양보하고, 끝까지 짚고 싶은 한 가지를 분명히 하세요."
+    : "마지막 한마디: 오늘 이야기 중 가장 마음에 남는 생각을 한두 문장으로 말하는 차례입니다.";
   if (String(phase).startsWith("more")) return "추가 토론: 사용자가 회의 뒤에 새 요청이나 자료를 줬습니다. [토론 주제]의 [추가 요청]과 [앞선 결론]을 보고, 새 요청을 중심으로 무엇이 바뀌거나 더해지는지 말하세요. 앞선 회의에서 한 말은 반복하지 마세요.";
   const n = parseInt(String(phase).replace("round", ""), 10) || 2;
-  return `${n}라운드 · ${ROUND_GUIDE[(n - 2) % ROUND_GUIDE.length]}`;
+  const R = style === "free" ? FREE_ROUNDS : style === "idea" ? IDEA_ROUNDS : ROUND_GUIDE;
+  return `${n}라운드 · ${R[(n - 2) % R.length]}`;
 }
 const attendeeLine = (ids = MEMBER_IDS) => ids.filter((id) => PERSONAS[id]).map((id) => `${PERSONAS[id].name}(${PERSONAS[id].title})`).join(", ");
 
@@ -194,7 +250,7 @@ async function moderate(llm, persona, input, state) {
     input.roundStart && transcript.length ? "이번이 이 라운드의 첫 차례입니다. say에서 지금까지 흐름을 한 문장으로 짚고, 이번 라운드에 무엇을 할지 소개한 뒤 첫 사람을 부르세요." : "",
   ].filter(Boolean).join("\n");
   const A = agendaParts(input, 10000, { query: `${(state.issues || []).slice(-2).join(" ")} ${recentText(transcript, 3)}`, k: 2 });
-  const out = llm.mock ? mockModerate({ transcript, phase, eligible: pool, hasDoc: !!document?.text, roundStart: input.roundStart, standing: input.standing || {} }) : await chatJSON({
+  const out = llm.mock ? mockModerate({ transcript, phase, eligible: pool, hasDoc: !!document?.text, roundStart: input.roundStart, standing: input.standing || {}, style: styleOf(input) }) : await chatJSON({
     ...llm, system: persona.system, temperature: 0.4, maxTokens: 1200, cachePrefixLen: A.stable.length,
     user: `${A.stable}${A.varying}
 
@@ -202,7 +258,7 @@ async function moderate(llm, persona, input, state) {
 ${transcriptText(transcript)}
 
 [이번 회의 참석자] ${attendeeLine(attendees)}${input.user?.name ? `, ${userLine(input.user)}` : ""}${userIntro(input.user)}
-[진행 상황] 전체 ${totalTurns}턴 중 ${turn}번째 발언 차례. ${phaseGuide(phase)}
+[진행 상황] 전체 ${totalTurns}턴 중 ${turn}번째 발언 차례. ${phaseGuide(phase, styleOf(input))}${styleOf(input) === "review" ? "" : `\n${MOD_STYLE[styleOf(input)]}`}
 ${flow}
 이번에 말할 수 있는 사람(eligible): ${pool.map((id) => `${id}(${PERSONAS[id].name})`).join(", ")}
 ${hint ? `참고: ${hint}` : ""}
@@ -236,7 +292,7 @@ async function summarize(llm, persona, input, state) {
     ? `회의를 전체 ${totalTurns}턴 중 ${doneTurns}턴까지만 하고 여기서 일찍 마무리합니다. 지금까지 나온 의견만 담아 결론을 정리하세요. 아직 다루지 못한 쟁점은 open_questions에 남기세요.`
     : `이제 마지막(${totalTurns}번째) 턴, 결론입니다. 회의에서 나온 의견만 담아 정리하세요.`;
   const A = agendaParts(input, 30000, { query: `${(state.issues || []).join(" ")} ${recentText(transcript, 12)}`, k: 8 });
-  const review = llm.mock ? mockSummary({ document, topic: input.topic }) : await chatJSON({
+  const review = llm.mock ? mockSummary({ document, topic: input.topic, style: styleOf(input) }) : await chatJSON({
     ...llm, system: persona.system, temperature: 0.3, maxTokens: 3500, cachePrefixLen: A.stable.length,
     user: `${A.stable}${A.varying}
 
@@ -244,7 +300,9 @@ async function summarize(llm, persona, input, state) {
 ${transcriptText(transcript)}
 
 ${when}${prevNote}
-찬반 토론이면 모인 결론과 근거를, 아이디어 회의면 고른 아이디어와 실행 방법을, 자료 검토면 고칠 점과 제안을 key_points에 담습니다.
+${styleOf(input) === "free" ? "이번 회의는 자유 토론이었습니다. 판정하지 마세요. verdict는 오늘 대화를 한마디로(10자 이내, 예: '생각이 모인 곳', '낭만 vs 현실', '의견이 다양함'), headline은 오늘 대화의 흐름을 한두 문장으로 씁니다. key_points에는 나온 생각들(detail에는 왜 그런지), concerns에는 엇갈린 시각, agreements에는 모두 비슷하게 느낀 점, open_questions에는 더 생각해 볼 질문을 담습니다. 근거나 데이터 부족을 지적하지 마세요. tone은 보통 mixed입니다."
+  : styleOf(input) === "idea" ? "이번 회의는 아이디어 회의였습니다. verdict는 가장 끌린 아이디어를 짧게(10자 이내), headline은 고른 아이디어와 이유를 씁니다. key_points에는 고른 아이디어들(detail에는 해 보는 방법), concerns에는 다듬을 점, agreements에는 모두 끌린 점, open_questions에는 다음에 해 볼 것을 담습니다. tone은 보통 positive입니다."
+  : "찬반 토론이면 모인 결론과 근거를, 아이디어 회의면 고른 아이디어와 실행 방법을, 자료 검토면 고칠 점과 제안을 key_points에 담습니다."}
 의견이 갈린 부분은 concerns나 open_questions에 남기고, 누가 제기했는지 raised_by에 이름을 적습니다.
 JSON 하나만 출력합니다.
 {
@@ -267,10 +325,11 @@ JSON 하나만 출력합니다.
   const thoughts = cleanNote(review.private_notes); delete review.private_notes;
   const names = [...(input.attendees || []).map((id) => PERSONAS[id]?.name).filter(Boolean), ...(input.user?.name && transcript.some((t) => t.role === "me") ? [input.user.name] : [])];
   review.badges = llm.mock
-    ? [...(input.attendees || []).filter((id) => MOCK_BADGE[id]).map((id) => ({ to: PERSONAS[id].name, badge: MOCK_BADGE[id][0], reason: MOCK_BADGE[id][1] })),
+    ? [...(input.attendees || []).filter((id) => MOCK_BADGE[id]).map((id) => { const MB = styleOf(input) === "review" ? MOCK_BADGE : MOCK_BADGE_FREE; return { to: PERSONAS[id].name, badge: MB[id][0], reason: MB[id][1] }; }),
        ...(names.includes(input.user?.name) ? [{ to: input.user.name, badge: "talk", reason: "현장 이야기를 직접 들려줘서 토론이 훨씬 구체적이 됐어요." }] : [])]
     : pickBadges(review.badges, names);
   if (early) review.early = { doneTurns, totalTurns };
+  review.style = styleOf(input);
   return {
     text: review.closing || "오늘 토론의 결론을 정리했습니다.",
     data: { thoughts },
@@ -310,7 +369,7 @@ async function reviewTurn(llm, persona, input, state) {
   const { document, transcript = [], request, turn = 1, totalTurns = 12, phase = "round1", attendees = MEMBER_IDS } = input;
   const myTurn = (state.turns || 0) + 1;
   const A = agendaParts(input, 36000, { query: `${input.issue || ""} ${request?.text || ""} ${recentText(transcript, 3)}`, k: persona.id === "critic" ? 7 : 4 });
-  const out = llm.mock ? mockMember(persona.id, { document, myTurn, phase, topic: input.topic }) : await chatJSON({
+  const out = llm.mock ? mockMember(persona.id, { document, myTurn, phase, topic: input.topic, style: styleOf(input) }) : await chatJSON({
     ...llm, system: persona.system, temperature: 0.8, maxTokens: 2500, cachePrefixLen: A.stable.length,
     user: `${A.stable}${A.varying}
 
@@ -321,9 +380,9 @@ ${transcriptText(transcript)}
 ${state.notes || "(아직 없음)"}
 
 [이번 회의 참석자] ${attendeeLine(attendees)}${input.user?.name ? `, ${userLine(input.user)}` : ""}${userIntro(input.user)}${input.user?.name ? `\n사용자 ${input.user.name}에게는 직접 질문하지 마세요(발언 안에서도, ask에서도). 사용자 의견이 꼭 필요하면 JSON에 "user_question": "사용자에게 듣고 싶은 것 한 문장"을 덧붙이세요. 사회자가 판단해서 대신 물어봅니다.` : ""}
-[지금 차례] 전체 ${totalTurns}턴 중 ${turn}번째. ${phaseGuide(phase)}
+[지금 차례] 전체 ${totalTurns}턴 중 ${turn}번째. ${phaseGuide(phase, styleOf(input))}${styleBlock(input, persona.id)}
 사회자가 당신에게: "${request?.text || "의견 부탁드립니다."}"
-${myTurn === 1 ? "주제와 자료를 보고 당신 관점에서 가장 중요한 한 가지부터 말하세요." : "지난 메모와 다른 사람 발언을 참고해, 이미 한 말은 반복하지 마세요."}`,
+${myTurn === 1 ? (styleOf(input) === "review" ? "주제와 자료를 보고 당신 관점에서 가장 중요한 한 가지부터 말하세요." : "주제를 듣고 가장 먼저 떠오른 생각을 편하게 말하세요.") : "지난 메모와 다른 사람 발언을 참고해, 이미 한 말은 반복하지 마세요."}`,
   });
   const utterance = String(out.utterance || "").trim() || "잠시 생각을 정리해 볼게요.";
   const stance = ["동의", "우려", "보류"].includes(out.stance) ? out.stance : "보류";
@@ -375,7 +434,7 @@ ${state.notes || "(없음)"}
 [지금 할 일]
 회의가 끝났고, 사용자가 ${isMod ? "사회자인 당신" : `${persona.name} 님(당신)`}에게 직접 질문했습니다: "${String(question).slice(0, 1000)}"
 ${isMod ? "사회자로서 회의 전체 의견을 종합해 답하세요. 누가 어떤 의견이었는지 이름을 들어 설명해도 좋습니다." : "당신의 역할과 관점, 말투를 유지하세요."}
-회의 발언 형식은 잊고 질문에 바로 답하세요. 3~6문장, 필요하면 근거가 된 자료 위치를 짚고, 모르는 것은 모른다고 말하세요.
+${styleOf(input) === "review" ? "" : "근거나 데이터를 따지지 말고 편하게 이야기하듯 답하세요. "}회의 발언 형식은 잊고 질문에 바로 답하세요. 3~6문장, 필요하면 근거가 된 자료 위치를 짚고, 모르는 것은 모른다고 말하세요.
 JSON 하나만 출력합니다: {"answer": "질문에 대한 답", "private_notes": "속마음 (1~2문장)"}`,
   });
   const answer = String(out.answer || out.utterance || "").trim() || "잠시 생각을 정리해 볼게요.";
