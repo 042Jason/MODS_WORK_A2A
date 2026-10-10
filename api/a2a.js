@@ -39,6 +39,14 @@ const BADGE_GUIDE = {
   magnifier: "날카로운 지적: 다들 놓친 문제를 짚음",
   handshake: "합의 도우미: 의견을 모으는 데 기여함",
   bulb: "아이디어 뱅크: 좋은 제안이나 대안을 냄",
+  siren: "경고등: 아무도 못 본 결정적인 위험을 처음 짚음 (레드팀이 제 몫을 했을 때)",
+  scale: "균형추: 너무 빨리 모이던 합의에 반대편 논리를 세워 균형을 잡음",
+  key: "해결사: 열린 반론을 근거로 가장 많이 정리(반박·수용)함",
+  compass: "길잡이: 논점이 흐르거나 반복될 때 원래 질문으로 되돌림",
+  link: "연결고리: 서로 다른 의견 사이의 공통점을 찾아 이어 줌",
+  map: "설계자: 선택지·장단점·실행 계획을 가장 구체적으로 그림",
+  ear: "경청왕: 실제로 영향받는 사람들의 입장을 가장 잘 대변함",
+  rocket: "엉뚱한 상상: 아무도 생각 못 한 기발한 아이디어를 냄 (자유 토론·아이디어 회의에서)",
 };
 function pickBadges(raw, names) {   // 이름·배지 키 검증, 한 사람에 2개까지
   const out = [], count = {};
@@ -51,9 +59,9 @@ function pickBadges(raw, names) {   // 이름·배지 키 검증, 한 사람에 
   return out;
 }
 const MOCK_BADGE = { critic: ["magnifier", "근거부터 따지자는 말로 논의의 기준을 세웠어요."], strategist: ["bulb", "작게 시작해 넓히자는 방향을 제일 먼저 내놨어요."],
-  reader: ["handshake", "쉬운 말로 풀어 주면서 의견이 모이게 도왔어요."], method: ["question", "성공 기준을 먼저 정하자고 계속 물었어요."], policy: ["shield", "반발 대책이 먼저라는 시각을 끝까지 지켰어요."] };
+  reader: ["ear", "영향받는 사람들의 입장을 끝까지 대신 말해 줬어요."], method: ["key", "열린 반론을 근거로 차근차근 정리했어요."], policy: ["siren", "다들 놓친 되돌리기 기준의 공백을 처음 짚었어요."] };
 const MOCK_BADGE_FREE = { critic: ["magnifier", "'그게 진짜 그럴까?' 한마디로 다들 생각을 한 번 뒤집어 보게 했어요."], strategist: ["bulb", "10년 뒤를 떠올리게 해서 이야기를 크게 넓혀 줬어요."],
-  reader: ["handshake", "자기 경험을 솔직하게 꺼내서 분위기를 편하게 만들어 줬어요."], method: ["question", "서로 다른 말 사이의 공통점을 찾아 이어 줬어요."], policy: ["talk", "'만약에'로 시작하는 상상으로 대화를 재밌게 만들었어요."] };
+  reader: ["handshake", "자기 경험을 솔직하게 꺼내서 분위기를 편하게 만들어 줬어요."], method: ["link", "서로 다른 말 사이의 공통점을 찾아 이어 줬어요."], policy: ["rocket", "'만약에'로 시작하는 엉뚱한 상상으로 대화를 넓혔어요."] };
 // 사용자도 참석할 때 프롬프트에 넣는 소개
 const userLine = (u) => (u?.name ? `${u.name}(사용자${u.title ? `, ${u.title}` : ""})` : "");
 const userIntro = (u) => (u?.name ? `\n[사용자 참석] ${userLine(u)}도 이 회의에 함께합니다.${u.about ? ` 소개: ${String(u.about).slice(0, 300)}` : ""} 회의록에는 '${u.name}(사용자)'로 나옵니다.` : "");
@@ -512,6 +520,10 @@ async function ping(llm, persona) {
   return { text: String(out.hello || "연결됐어요."), data: { ok: true, model: llm.model, ms: Date.now() - started } };
 }
 
+// 공통 대체 모델 (쉼표로 여러 개). 기본: Gemini → GPT → Claude 순서로 회사를 섞어요. 중국 계열은 넣지 않아요
+const FALLBACK_MODELS = () => (process.env.FALLBACK_MODELS || process.env.FALLBACK_MODEL || "google/gemini-3.8-flash,openai/gpt-6-luna,anthropic/claude-haiku-5.5")
+  .split(",").map((x) => x.trim()).filter(Boolean);
+
 // ── 요청 처리 ─────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   const persona = PERSONAS[req.query.agent];
@@ -544,9 +556,11 @@ export default async function handler(req, res) {
   // 내 키: 고른 모델(없으면 기본 모델). 공용 키: 고른 저렴한 모델(없으면 운영자가 정한 가벼운 모델).
   const model = userKey ? (wanted || defaultModelOf(persona)) : apiKey ? (wanted || sharedModelOf(persona)) : defaultModelOf(persona);
   // 모델이 지원 종료되면 그 에이전트의 기본 모델 → FALLBACK_MODEL 순서로 대신 불러요
-  const fallbacks = [userKey || !apiKey ? defaultModelOf(persona) : sharedModelOf(persona), process.env.FALLBACK_MODEL || "google/gemini-3.8-flash"];   // 공용 키는 비싼 기본 모델로 넘어가지 않게
+  // 대체 모델 순서: 이 에이전트의 기본 모델 → 공통 대체 모델들(회사를 섞어 둬서 한 회사가 막혀도 이어져요). 공용 키는 비싼 기본 모델로 넘어가지 않게
+  const fallbacks = [userKey || !apiKey ? defaultModelOf(persona) : sharedModelOf(persona), ...FALLBACK_MODELS()];
   const usage = { in: 0, out: 0, cost: 0 };
-  const llm = { apiKey, model, mock: !apiKey, fallbacks, onModel: (m) => { llm.model = m; }, onUsage: (u) => { usage.in += u.in; usage.out += u.out; usage.cost += u.cost; } };
+  const llm = { apiKey, model, mock: !apiKey, fallbacks, onModel: (m) => { llm.model = m; }, onUsage: (u) => { usage.in += u.in; usage.out += u.out; usage.cost += u.cost; },
+    onFallback: (f) => { llm.fallback = f; } };
 
   const input = msg.parts.find((p) => p.data)?.data || {};
   // 공용 키로는 회의를 SHARED_MAX_TURNS턴까지만 (토큰 비용 보호)
@@ -579,7 +593,7 @@ export default async function handler(req, res) {
     else return rpcError(res, body.id, -32602, `${persona.name}은(는) '${input.type}' 요청을 처리하지 않아요.`);
 
     const result = taskResult(ctx, {
-      text: r.text, data: { ...r.data, model: llm.mock ? "mock" : llm.model, usage },
+      text: r.text, data: { ...r.data, model: llm.mock ? "mock" : llm.model, usage, ...(llm.fallback ? { fallbackFrom: llm.fallback.from, fallbackWhy: llm.fallback.reason } : {}) },
       artifacts: r.artifacts, stateToken: sealState(persona.id, r.newState),
     });
     return res.status(200).json({ jsonrpc: "2.0", id: body.id, result });
