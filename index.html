@@ -458,6 +458,10 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .tp-file .fnote:focus{border-color:var(--select);outline:none}
 .tp-hint{margin:8px 0 0;font-size:12.5px;color:var(--muted);line-height:1.55}
 .tp-foot{display:flex;align-items:center;gap:8px;margin-top:16px}
+.tp-style{margin-top:16px}
+.tp-style .seg{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.tp-style .seg button{border:1px solid var(--hair);background:#fff;border-radius:999px;padding:6px 14px 7px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.tp-style .seg button.on{background:#0A0A0A;color:#fff;border-color:#0A0A0A}
 .tp-foot .eyebrow{color:var(--muted)}
 .t-head.t-topic{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .vblock[data-tone="positive"],.verdict-tag[data-tone="positive"]{background:var(--lime)}
@@ -827,7 +831,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
     <section class="sec" id="sec-members">
       <div class="sec-h"><h3>참석자와 모델</h3><span class="eyebrow" id="members-count"></span></div>
       <p class="desc" id="models-desc">최대 5명, 최소 2명이에요. 모델 칸을 비우면 기본 모델을 써요.</p>
-      <div class="lockbox" id="models-lock" hidden><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 10V8a6 6 0 1 1 12 0v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1h1Zm2 0h8V8a4 4 0 1 0-8 0v2Z"/></svg><span>공용 키로 회의할 때는 운영자가 정한 가벼운 모델로 진행돼요. 모델을 고르려면 위에 내 API 키를 넣어 주세요.</span></div>
+      <div class="lockbox" id="models-lock" hidden><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 10V8a6 6 0 1 1 12 0v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1h1Zm2 0h8V8a4 4 0 1 0-8 0v2Z"/></svg><span id="models-lock-text">공용 키로는 저렴한 모델만 고를 수 있어요.</span></div>
       <div id="model-rows"></div>
 
       <div class="row" style="margin-top:12px"><button class="pill sm" id="test-all">모두 연결 확인</button><button class="pill sm ghost" id="reset-models">모델 기본값으로</button></div>
@@ -860,7 +864,10 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
       <div id="tp-list"></div>
       <p class="tp-hint">PDF, HWPX, Word, Excel, CSV, 텍스트를 읽어요. 자료는 합쳐서 약 55쪽(10만 자)까지 넣을 수 있어요. 20쪽이 넘으면 사회자가 요약 카드를 먼저 만들고, 발언마다 필요한 부분만 골라 읽어요.</p>
     </div>
-    <div class="tp-foot"><span id="tp-count" class="eyebrow ko"></span><div class="spacer"></div><button class="pill" id="tp-save">저장</button><button class="pill dark" id="tp-start">회의 시작</button></div>
+    <div class="tp-style"><span class="tp-label" style="margin:0">회의 방식</span><div class="seg" id="tp-style" role="radiogroup">
+          <button type="button" data-v="auto" class="on">자동</button><button type="button" data-v="review">자료 검토</button><button type="button" data-v="free">자유 토론</button><button type="button" data-v="idea">아이디어 회의</button></div>
+        <p class="tp-hint" id="tp-style-hint" style="margin:6px 0 0"></p></div>
+      <div class="tp-foot"><span id="tp-count" class="eyebrow ko"></span><div class="spacer"></div><button class="pill" id="tp-save">저장</button><button class="pill dark" id="tp-start">회의 시작</button></div>
   </div>
 </dialog>
 <dialog id="dlg-me" class="newdlg" aria-label="내 프로필 카드">
@@ -968,9 +975,11 @@ function setPass(v, where) { try { sessionStorage.removeItem("meetingroom.pass")
 const storeChoice = () => document.querySelector("input[name=keystore]:checked")?.value || "session";
 function passHeader() { const p = getPass(); return p ? { "x-meeting-passcode": encodeURIComponent(p) } : {}; }
 async function refreshRegistry() { S.registry = await (await fetch("api/registry", { headers: passHeader() })).json(); updateMode(); return S.registry; }
-// 공용 키(운영자 키)로 회의할 때는 운영자가 정한 모델로 고정해요. 모델을 바꾸려면 내 API 키가 필요해요.
+// 공용 키(운영자 키)로 회의할 때는 저렴한 모델 중에서만 고를 수 있어요(고른 값은 내 키용과 따로 저장). 비싼 모델은 내 API 키로.
 const sharedMode = () => !getKey() && Boolean(S.registry?.serverKey);
-const modelFor = (id) => (sharedMode() ? S.agents[id]?.sharedModel || S.agents[id]?.defaultModel : (loadSettings().models || {})[id] || S.agents[id]?.defaultModel) || "";
+const pickedModels = () => (sharedMode() ? loadSettings().sharedModels : loadSettings().models) || {};
+const modelFor = (id) => (pickedModels()[id] || (sharedMode() ? S.agents[id]?.sharedModel || S.agents[id]?.defaultModel : S.agents[id]?.defaultModel)) || "";
+const isCheap = (m) => m.priceOut != null && m.priceOut <= (S.sharedMaxOut || 5);
 // 자리는 사회자 포함 6개예요. 나도 참여하면 에이전트 참석자는 최대 4명
 function maxMembers() { return meOn() ? ALL_MEMBERS.length - 1 : ALL_MEMBERS.length; }
 function members() {
@@ -1010,10 +1019,25 @@ const ROUND_KIND = [
   { label: "합의점 찾기", short: "합의점", cast: "합의점 찾기! 같은 점과 갈리는 점을 추려 봐요." },
   { label: "실행 계획", short: "실행 계획", cast: "실행 계획 타임! 그래서 무엇부터 할까요?" },
 ];
+const ROUND_KIND_FREE = [
+  { label: "다른 생각", short: "다른 생각", cast: "다른 생각 타임! 저는 좀 다르게 느껴요, 들어 볼까요?" },
+  { label: "생각 더하기", short: "더하기", cast: "생각 더하기! 나온 얘기에 내 생각을 하나씩 보태요." },
+  { label: "상상해 보기", short: "상상", cast: "상상해 보기! 만약에 이렇다면 어떨까요?" },
+  { label: "공통점 찾기", short: "공통점", cast: "공통점 찾기! 다들 비슷하게 느낀 건 뭘까요?" },
+  { label: "한 걸음 더", short: "한 걸음", cast: "한 걸음 더! 해 볼 만한 걸 하나씩 꺼내요." },
+];
+const ROUND_KIND_IDEA = [
+  { label: "아이디어 쏟기", short: "쏟기", cast: "아이디어 쏟기! 평가는 잠시 접어 둬요." },
+  { label: "아이디어 키우기", short: "키우기", cast: "아이디어 키우기! '좋아요, 그리고…'로 이어 가요." },
+  { label: "뒤집어 보기", short: "뒤집기", cast: "뒤집어 보기! 정반대로 하면 어떨까요?" },
+  { label: "고르기", short: "고르기", cast: "고르기! 가장 끌리는 아이디어는?" },
+  { label: "첫걸음", short: "첫걸음", cast: "첫걸음! 내일 당장 해 본다면 무엇부터?" },
+];
 function roundKind(p) {
   const n = Number(String(p || "").replace("round", ""));
   if (!(n >= 2)) return null;
-  const k = ROUND_KIND[(n - 2) % ROUND_KIND.length], lap = Math.floor((n - 2) / ROUND_KIND.length) + 1;
+  const st = S.doc ? meetingStyle() : "review", K = st === "free" ? ROUND_KIND_FREE : st === "idea" ? ROUND_KIND_IDEA : ROUND_KIND;
+  const k = K[(n - 2) % K.length], lap = Math.floor((n - 2) / K.length) + 1;
   return lap > 1 ? { ...k, label: `${k.label} ${lap}`, short: `${k.short} ${lap}` } : k;
 }
 function shortPhase(p) {
@@ -1031,7 +1055,7 @@ const stanceChip = (st, conf, position) => `<span class="stance-chip" data-s="${
 function phaseLabel(p) {
   if (roundKind(p)) return roundKind(p).label;
   if (isMore(p)) return moreLap(p) > 1 ? `추가 토론 ${moreLap(p)}바퀴째` : "추가 토론";
-  if (p === "round1") return "첫인상 토크";
+  if (p === "round1") return ({ review: "첫인상 토크", free: "첫 생각", idea: "첫 아이디어" })[S.doc ? meetingStyle() : "review"];
   if (p === "round2") return "반박 타임";
   if (p === "last_word") return "마지막 한마디";
   if (p === "conclusion") return "결론 정리";
@@ -1043,7 +1067,7 @@ function phaseEyebrow(p) {
   if (p === "conclusion") return "마무리";
   return `${p.replace("round", "")}라운드`;
 }
-function groupLabel(p) { if (roundKind(p)) return `${p.replace("round", "")}R ${roundKind(p).label}`; return isMore(p) ? (moreLap(p) > 1 ? `추가 ${moreLap(p)}바퀴` : "추가 토론") : p === "last_word" ? "한마디" : p === "conclusion" ? "결론" : p === "round1" ? "1R 첫인상 토크" : `${p.replace("round", "")}R 반박 타임`; }
+function groupLabel(p) { if (roundKind(p)) return `${p.replace("round", "")}R ${roundKind(p).label}`; return isMore(p) ? (moreLap(p) > 1 ? `추가 ${moreLap(p)}바퀴` : "추가 토론") : p === "last_word" ? "한마디" : p === "conclusion" ? "결론" : p === "round1" ? `1R ${phaseLabel("round1")}` : `${p.replace("round", "")}R 반박 타임`; }
 function planGroups(plan) { const g = []; plan.forEach((p, i) => { if (!g.length || g.at(-1).phase !== p) g.push({ phase: p, idx: [] }); g.at(-1).idx.push(i); }); return g; }
 
 /* ───────────── A2A 호출 ───────────── */
@@ -1051,7 +1075,7 @@ function headers(id) {
   const h = { "Content-Type": "application/json" };
   const k = getKey(); if (k) h["x-openrouter-key"] = k;
   Object.assign(h, passHeader());
-  if (!sharedMode()) { const m = modelFor(id); if (m) h["x-agent-model"] = m; }
+  { const m = modelFor(id); if (m) h["x-agent-model"] = m; }
   return h;
 }
 async function send(id, text, data, signal) {
@@ -1191,7 +1215,7 @@ function renderTableInner(state, info = {}) {
     t.innerHTML = `<div class="t-crew">${crew()}</div><div class="eyebrow ko">2단계 · 회의 시작</div>
       <div class="t-head t-topic">${esc(S.doc.prompt?.trim() || S.doc.name)}</div>
       <div class="t-actions"><button class="pill light sm" id="tb-run">회의 시작</button><button class="pill on-dark sm" id="tb-edit">주제 고치기</button></div>
-      <div class="t-meta">${headsLabel()} · ${T}턴${nf ? ` · 자료 ${nf}개` : ""}<button id="tb-cfg2">구성 바꾸기</button><button id="tb-me" class="${meOn() ? "on" : ""}">${meOn() ? "나도 참여 중 ✓" : "나도 참여하기"}</button></div>`;
+      <div class="t-meta">${headsLabel()} · ${T}턴 · ${STYLE_NAME[meetingStyle()]}${nf ? ` · 자료 ${nf}개` : ""}<button id="tb-cfg2">구성 바꾸기</button><button id="tb-me" class="${meOn() ? "on" : ""}">${meOn() ? "나도 참여 중 ✓" : "나도 참여하기"}</button></div>`;
     $("#tb-me").onclick = () => { const on = !meOn(); setMe({ on }); toast(on ? "사회자가 필요할 때 나에게도 물어볼게요. 프로필은 설정에서 적을 수 있어요." : "에이전트끼리만 토론해요."); };
     $("#tb-run").onclick = runMeeting; $("#tb-edit").onclick = openTopic; $("#tb-cfg2").onclick = openMembers;
   } else if (state === "live") {
@@ -1270,7 +1294,7 @@ function castPhase(phase) {
   if (roundKind(phase)) return cast(roundKind(phase).cast, "moderator");
   if (phase === "round1") return cast("회의 시작! 사회자가 마이크를 잡았어요.", "moderator");
   if (phase === "round2") return cast("반박 타임 시작! 이제부터 본격 티키타카예요.", "moderator");
-  if (phase === "last_word") return cast("결론 직전, 마지막 한마디 타임이에요.", "moderator");
+  if (phase === "last_word") return cast(meetingStyle() === "review" ? "결론 직전, 마지막 한마디 타임이에요." : "마지막 한마디! 오늘 가장 마음에 남는 생각은?", "moderator");
   if (phase === "conclusion") return cast("사회자가 오늘 회의를 한 장으로 정리하고 있어요…", "moderator");
   if (n >= 3) return cast(`${n}라운드! 아직 할 말이 남았대요.`, "moderator");
 }
@@ -1408,7 +1432,7 @@ async function resumeMeeting() {   // 멈춘 턴부터 다시
 }
 async function runFrom() {
   const m = S.meeting, team = m.team, total = m.plan.length, ss = m.sessionStart || 0;
-  const base = (i) => ({ attendees: team, totalTurns: total - ss, turn: i - ss + 1, topic: topicForAgents(), user: meForAgents() });
+  const base = (i) => ({ attendees: team, totalTurns: total - ss, turn: i - ss + 1, topic: topicForAgents(), user: meForAgents(), style: meetingStyle() });
   S.running = true; S.abort = new AbortController(); updateRunButton(); updateComposer();
   let i = m.i, wrap = false;
   try {
@@ -1446,7 +1470,7 @@ async function runFrom() {
         const next = m.r1order.find((id) => eligible.includes(id)) || eligible[0];
         if (!m.opened) {
           const p = S.doc?.prompt?.trim() || S.doc?.name || "오늘 주제";
-          const opening = `회의를 시작할게요. 오늘 주제는 "${p.length > 60 ? `${p.slice(0, 60)}…` : p}"예요. 먼저 한 분씩 첫 의견을 들어 볼게요. ${m.r1order.map((id) => S.agents[id].name).join(" → ")} 순서로 이야기해 주세요.`;
+          const opening = `회의를 시작할게요. 오늘 주제는 "${p.length > 60 ? `${p.slice(0, 60)}…` : p}"예요. ${{ review: "먼저 한 분씩 첫 의견을 들어 볼게요.", free: "오늘은 정답을 찾기보다 편하게 생각을 나눠 봐요. 먼저 한 분씩 첫 생각을 들어 볼게요.", idea: "오늘은 아이디어 회의예요. 엉뚱해도 좋으니 한 분씩 첫 아이디어를 던져 주세요." }[meetingStyle()]} ${m.r1order.map((id) => S.agents[id].name).join(" → ")} 순서로 이야기해 주세요.`;
           S.transcript.push({ role: "moderator", speaker: "사회자", text: opening });
           logMsg({ id: "moderator", text: opening, label: "여는 말" });
           renderTable("live", { id: "moderator", text: opening, phase, turn }); setSpeaking("moderator"); showBubble("moderator", opening);
@@ -1457,7 +1481,7 @@ async function runFrom() {
         moveCursor(next);
         cast(`${josa(`${nm(next)} 님`, "이/가")} 첫 의견을 말하는 중이에요. ${pick(FLAVOR[next] || ["생각하는 중이에요"])}…`, next);
         const r = await call(next, `[회의실→${S.agents[next].name}] 1라운드 첫 의견`, { type: "review_turn", document: docForAgents(), transcript: publicTranscript(),
-          request: { from: "사회자", text: "1라운드는 사회자 개입 없이 한 사람씩 첫 의견을 말해요. 주제에 대한 당신의 첫 의견을 말해 주세요. 반박은 2라운드부터 해요." }, phase, ...base(i) });
+          request: { from: "사회자", text: { review: "1라운드는 사회자 개입 없이 한 사람씩 첫 의견을 말해요. 주제에 대한 당신의 첫 의견을 말해 주세요. 반박은 2라운드부터 해요.", free: "1라운드는 한 사람씩 첫 생각을 편하게 말해요. 이 주제를 듣고 가장 먼저 떠오른 생각을 들려주세요.", idea: "1라운드는 한 사람씩 첫 아이디어를 던져요. 떠오르는 아이디어를 하나 말해 주세요." }[meetingStyle()] }, phase, ...base(i) });
         if (r.failed) throw failErr(r.text);
         await afterMemberTurn(m, i, phase, turn, total, next, r);
         continue;
@@ -1552,7 +1576,7 @@ async function concludeMeeting(m, i, { early = false } = {}) {
   moveCursor(null);
   const r = await call("moderator", early ? "[회의실→사회자] 여기서 마무리, 결론 정리 요청" : "[회의실→사회자] 결론 정리 요청", {
     type: "summarize", document: docForAgents(), transcript: publicTranscript(), attendees: m.team, totalTurns: total - ss,
-    topic: topicForAgents(), turn: i - ss + 1, early, doneTurns: m.i - ss, previousReview: ss ? S.reviews?.at(-1) : undefined, user: meForAgents() });
+    topic: topicForAgents(), turn: i - ss + 1, early, doneTurns: m.i - ss, previousReview: ss ? S.reviews?.at(-1) : undefined, user: meForAgents(), style: meetingStyle() });
   if (r.failed) throw failErr(r.text);
   const review = r.artifacts[0]?.parts?.find((p) => p.data)?.data, thought = r.data?.thoughts || "";
   S.transcript.push({ role: "moderator", speaker: "사회자", text: r.text });
@@ -1944,7 +1968,7 @@ async function buildResultPage() {
     <h1>${esc(title.length > 140 ? `${title.slice(0, 140)}…` : title)}</h1>
     <div class="rp-meta">${esc(when)} · ${esc(headsLabel())} · ${turns}턴${m.early ? ` 중 ${m.early.doneTurns}턴에서 마무리` : ""} · 발언 ${said}개</div>
     <div class="rp-people">${who}</div>
-    <div class="vblock rp-verdict" data-tone="${toneOf(v)}"><span class="eyebrow ko">판정</span><h2>${esc(v.verdict)}</h2><p>${esc(v.headline)}</p></div>
+    <div class="vblock rp-verdict" data-tone="${toneOf(v)}"><span class="eyebrow ko">${reviewLabels(v.style).verdict}</span><h2>${esc(v.verdict)}</h2><p>${esc(v.headline)}</p></div>
   </div>
   <input type="radio" name="rp-t" id="rp-t1" class="rp-r" checked><input type="radio" name="rp-t" id="rp-t2" class="rp-r"><input type="radio" name="rp-t" id="rp-t3" class="rp-r"><input type="radio" name="rp-t" id="rp-t4" class="rp-r">
   <nav class="rp-tabs"><label for="rp-t1">결론</label><label for="rp-t2">회의록 <small>${S.transcript.length}</small></label><label for="rp-t3">속마음</label><label for="rp-t4">상황판</label></nav>
@@ -2093,7 +2117,7 @@ async function askFollowup() {
   S.fuBusy = true; $("#cp-send").disabled = true; S.abort = new AbortController();
   cast(`${josa(`${name} 님`, "이/가")} 질문에 답하고 있어요…`, to);
   try {
-    const r = await call(to, `[사용자→${name}] ${q}`, { type: "followup", topic: S.doc.prompt, document: docForAgents(), transcript: publicTranscript(), review: S.review, question: q,
+    const r = await call(to, `[사용자→${name}] ${q}`, { type: "followup", style: meetingStyle(), topic: S.doc.prompt, document: docForAgents(), transcript: publicTranscript(), review: S.review, question: q,
       thread: S.followups.map((f) => ({ to: S.agents[f.to].name, question: f.question, answer: f.answer })) });
     if (r.failed) throw failErr(r.text);
     S.followups.push({ to, question: q, answer: r.text });
@@ -2257,8 +2281,12 @@ function reviewParts(v) {   // 예전 형식(must_fix 등)도 읽어요
     open: v.open_questions || [],
   };
 }
+// 결론 칸 이름: 자유 토론·아이디어 회의는 '판정'하지 않아요
+const reviewLabels = (st) => st === "free" ? { verdict: "한 줄 정리", keys: "나온 생각들", worries: "엇갈린 시각", agree: "모두 비슷하게 느낀 점", open: "더 생각해 볼 질문" }
+  : st === "idea" ? { verdict: "가장 끌린 아이디어", keys: "고른 아이디어", worries: "다듬을 점", agree: "모두 끌린 점", open: "다음에 해 볼 것" }
+  : { verdict: "판정", keys: "핵심 결론과 제안", worries: "우려와 반대 의견", agree: "합의된 점", open: "남은 질문" };
 function renderReview(v) {
-  const tint = (n) => S.agents[nameToId(n)]?.tint || "var(--soft)";
+  const tint = (n) => S.agents[nameToId(n)]?.tint || "var(--soft)", L = reviewLabels(v.style);
   const { keys, worries, agree, open } = reviewParts(v);
   const items = (arr) => arr.map((x) => typeof x === "string" ? { title: x } : x).map((x) => `<div class="ritem">${x.where ? `<div class="where eyebrow">${esc(x.where)}</div>` : ""}
       <div class="issue">${esc(x.title || x.issue || "")}</div>${x.raised_by ? `<span class="by" style="--t:${tint(x.raised_by)}">${esc(x.raised_by)}</span>` : "<span></span>"}
@@ -2268,14 +2296,14 @@ function renderReview(v) {
   $("#pane-review").innerHTML = `
     ${S.reviews?.length ? `<div class="prev-reviews"><span class="eyebrow ko">추가 회의까지 반영한 ${S.reviews.length + 1}차 결론</span>
       <details><summary>앞선 결론 보기</summary>${S.reviews.map((r, k) => `<p><b>${k + 1}차 · ${esc(r.verdict)}</b> ${esc(r.headline)}</p>`).join("")}</details></div>` : ""}
-    <div class="vblock" data-tone="${toneOf(v)}"><span class="eyebrow ko">판정</span><h2>${esc(v.verdict)}</h2><p>${esc(v.headline)}</p></div>
-    <div class="rsec"><h3>핵심 결론과 제안 ${cnt(keys)}</h3>${items(keys)}</div>
+    <div class="vblock" data-tone="${toneOf(v)}"><span class="eyebrow ko">${L.verdict}</span><h2>${esc(v.verdict)}</h2><p>${esc(v.headline)}</p></div>
+    <div class="rsec"><h3>${L.keys} ${cnt(keys)}</h3>${items(keys)}</div>
     ${v.badges?.length ? `<div class="rsec"><h3>오늘의 배지 <span class="eyebrow ko">사회자가 줬어요</span></h3><div class="awards">${v.badges.filter((b) => BADGES[b.badge]).map((b) => {
       const id = badgeOwner(b.to), t = id === "me" ? "#E9E9EC" : S.agents[id]?.tint || "#fff";
       return `<div class="award"><img src="vendor/badges/${b.badge}.webp" alt=""><div><b>${esc(BADGES[b.badge].name)}</b><span class="who" style="--t:${t}">${esc(b.to)}</span><p>${esc(b.reason || BADGES[b.badge].desc)}</p></div></div>`; }).join("")}</div></div>` : ""}
-    <div class="rsec"><h3>우려와 반대 의견 ${cnt(worries)}</h3>${items(worries)}</div>
-    <div class="rsec"><h3>합의된 점</h3>${list(agree)}</div>
-    <div class="rsec"><h3>남은 질문</h3>${list(open)}</div>
+    <div class="rsec"><h3>${L.worries} ${cnt(worries)}</h3>${items(worries)}</div>
+    <div class="rsec"><h3>${L.agree}</h3>${list(agree)}</div>
+    <div class="rsec"><h3>${L.open}</h3>${list(open)}</div>
     <div class="ractions"><button class="pill dark" id="rv-share">링크로 공유</button><button class="pill" id="rv-save">결과 페이지 저장</button><button class="pill" id="dl-md">마크다운</button><button class="pill" id="copy-md">복사</button></div>`;
   $("#rv-share").onclick = shareResult;
   $("#rv-save").onclick = saveResult;
@@ -2292,7 +2320,7 @@ function reviewMarkdown(v) {
   const models = seatIds().map((id) => `${S.agents[id].name}=${modelFor(id)}`).join(", ");
   const adds = (S.doc.addenda || []).map((a, k) => `- 추가 요청 ${k + 1}${a.after ? ` (${a.after}번째 발언 뒤)` : " (회의 뒤 추가 회의)"}: ${a.prompt || "(요청 없음)"}${a.files?.length ? ` · 자료: ${a.files.map((f) => f.name).join(", ")}` : ""}`).join("\n");
   const prevs = (S.reviews || []).map((r, k) => `- ${k + 1}차 결론 · ${r.verdict}: ${r.headline}`).join("\n");
-  return `# ${S.doc.name} 회의 결론\n\n${S.doc.prompt ? `## 토론 주제\n${S.doc.prompt}\n\n` : ""}${adds ? `## 추가 요청과 자료\n${adds}\n\n` : ""}${prevs ? `## 앞선 결론\n${prevs}\n\n` : ""}${files ? `## 첨부 자료\n${files}\n\n` : ""}> ${v.verdict}: ${v.headline}\n\n## 핵심 결론과 제안\n${it(keys)}\n\n## 우려와 반대 의견\n${it(worries)}\n\n## 합의된 점\n${li(agree)}\n\n## 남은 질문\n${li(open)}${v.badges?.length ? `\n\n## 오늘의 배지 (사회자)\n${v.badges.filter((b) => BADGES[b.badge]).map((b) => `- ${b.to}: ${BADGES[b.badge].name} — ${b.reason || BADGES[b.badge].desc}`).join("\n")}` : ""}\n\n## 회의록\n${log}\n${fu ? `\n## 후속 질문\n${fu}\n` : ""}\n---\n참석자 ${members().length}명, ${S.meeting?.early ? `${S.meeting.early.doneTurns}턴에서 일찍 마무리(계획 ${S.plan.length}턴)` : `${S.plan.length}턴`}. 모델: ${models}\n생성: ${new Date().toLocaleString("ko-KR")}\n`;
+  return `# ${S.doc.name} 회의 결론\n\n${S.doc.prompt ? `## 토론 주제\n${S.doc.prompt}\n\n` : ""}${adds ? `## 추가 요청과 자료\n${adds}\n\n` : ""}${prevs ? `## 앞선 결론\n${prevs}\n\n` : ""}${files ? `## 첨부 자료\n${files}\n\n` : ""}> ${v.verdict}: ${v.headline}\n\n## ${reviewLabels(v.style).keys}\n${it(keys)}\n\n## ${reviewLabels(v.style).worries}\n${it(worries)}\n\n## ${reviewLabels(v.style).agree}\n${li(agree)}\n\n## ${reviewLabels(v.style).open}\n${li(open)}${v.badges?.length ? `\n\n## 오늘의 배지 (사회자)\n${v.badges.filter((b) => BADGES[b.badge]).map((b) => `- ${b.to}: ${BADGES[b.badge].name} — ${b.reason || BADGES[b.badge].desc}`).join("\n")}` : ""}\n\n## 회의록\n${log}\n${fu ? `\n## 후속 질문\n${fu}\n` : ""}\n---\n참석자 ${members().length}명, ${S.meeting?.early ? `${S.meeting.early.doneTurns}턴에서 일찍 마무리(계획 ${S.plan.length}턴)` : `${S.plan.length}턴`}. 모델: ${models}\n생성: ${new Date().toLocaleString("ko-KR")}\n`;
 }
 function download(name, text, type = "text/markdown;charset=utf-8") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
 
@@ -2342,14 +2370,30 @@ const EXAMPLES = [
   "우리 팀 정기 회의를 주 1회로 줄여도 괜찮을까요?",
   "첨부한 제안서 초안에서 보완할 점을 찾아 주세요.",
 ];
-const copyDraft = () => (S.doc ? { prompt: S.doc.prompt ?? "", files: (S.doc.files || []).map((f) => ({ ...f })) } : S.draft || { prompt: "", files: [] });
+const copyDraft = () => (S.doc ? { prompt: S.doc.prompt ?? "", files: (S.doc.files || []).map((f) => ({ ...f })), style: S.doc.style || "auto" } : S.draft || { prompt: "", files: [], style: "auto" });
 function ensureDraft() { if (!$("#dlg-topic").open) S.draft = copyDraft(); }
 function openTopic() {
   if (S.running) return toast("회의 중에는 주제를 바꿀 수 없어요.");
   ensureDraft();
-  $("#tp-text").value = S.draft.prompt; drawDraftFiles();
+  $("#tp-text").value = S.draft.prompt; drawDraftFiles(); drawStyle();
   if (!$("#dlg-topic").open) $("#dlg-topic").showModal();
   setTimeout(() => $("#tp-text").focus(), 60);
+}
+// 회의 방식: 자동이면 자료가 있으면 '자료 검토', 없으면 주제를 보고 '자유 토론'이나 '아이디어 회의'
+const STYLE_NAME = { review: "자료 검토", free: "자유 토론", idea: "아이디어 회의" };
+const STYLE_HINT = { review: "자료를 근거로 짚어 가며 검토해요.", free: "근거를 따지지 않고 경험·직관·상상으로 편하게 생각을 나눠요.", idea: "비판보다 아이디어를 내고 키워요. 엉뚱해도 좋아요." };
+const IDEA_RE = /아이디어|브레인스토밍|이름\s?(을|좀)?\s?지어|네이밍|슬로건|콘셉트|컨셉|기획안?\s?(좀|을)?\s?(내|짜)|이벤트|어떻게 하면|방법(이|을)?\s?(있|없|찾)/;
+function autoStyle(prompt, hasFiles) { return hasFiles ? "review" : IDEA_RE.test(prompt || "") ? "idea" : "free"; }
+function meetingStyle() {
+  const s = S.doc?.style || "auto";
+  if (s !== "auto") return s;
+  return autoStyle(S.doc?.prompt, !!docForAgents().text);
+}
+function drawStyle() {
+  const v = S.draft.style || "auto";
+  $("#tp-style").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+  const eff = v === "auto" ? autoStyle($("#tp-text").value, S.draft.files.length > 0) : v;
+  $("#tp-style-hint").textContent = `${v === "auto" ? `지금은 '${STYLE_NAME[eff]}'${eff === "free" ? "으로" : "로"} 진행해요. ` : ""}${STYLE_HINT[eff]}`;
 }
 function drawDraftFiles() {
   const box = $("#tp-list");
@@ -2362,6 +2406,7 @@ function drawDraftFiles() {
   box.querySelectorAll(".x").forEach((b) => (b.onclick = () => { S.draft.files.splice(+b.dataset.i, 1); drawDraftFiles(); }));
   box.querySelectorAll(".fnote").forEach((n) => (n.oninput = () => { S.draft.files[+n.dataset.i].note = n.value; }));
   updateTopicCount();
+  if ($("#tp-style")) drawStyle();
 }
 function updateTopicCount() {
   const n = $("#tp-text").value.trim().length, m = S.draft.files.filter((f) => !f.loading).length, busy = S.draft.files.some((f) => f.loading);
@@ -2393,7 +2438,7 @@ function buildDoc(d) {
   const cut = text.length > MAX_CHARS; if (cut) text = text.slice(0, MAX_CHARS);
   const first = prompt.split("\n").map((l) => l.trim()).find(Boolean) || "";
   const name = first ? (first.length > 60 ? `${first.slice(0, 60)}…` : first) : files[0]?.name || "제목 없는 주제";
-  return { name, prompt, files, text, cut, meta: files.length ? `자료 ${files.length}개` : "주제만" };
+  return { name, prompt, files, text, cut, style: d.style || "auto", meta: files.length ? `자료 ${files.length}개` : "주제만" };
 }
 async function saveTopic(start) {
   S.draft.prompt = $("#tp-text").value;
@@ -2453,40 +2498,40 @@ async function ensureDigest() {
 let modelCatalog = [];
 async function loadModels() {
   try {
-    const r = await (await fetch("api/models")).json(); modelCatalog = r.models || []; S.modelsLive = r.live;
+    const r = await (await fetch("api/models")).json(); modelCatalog = r.models || []; S.modelsLive = r.live; S.sharedMaxOut = r.sharedMaxOut || 5;
   } catch { S.modelsLive = false; }
   if ($("#drawer").classList.contains("on")) drawModelRows();   // 목록이 늦게 오면 열린 설정 화면을 다시 그려요
 }
 // 모델 고르기: 회사별로 묶은 목록(드롭다운). 입력칸+자동완성은 값이 있으면 그 값과 맞는 항목만 보여서 다른 모델을 고를 수 없었어요.
 const price = (m) => (m.priceIn != null ? ` · $${m.priceIn.toFixed(2)}/$${m.priceOut.toFixed(2)}` : "");
-function modelSelectHtml(id, current, locked) {
-  const a = S.agents[id], def = locked ? modelFor(id) : a.defaultModel;
+function modelSelectHtml(id, current, shared) {
+  const a = S.agents[id], def = shared ? a.sharedModel || a.defaultModel : a.defaultModel;
   let html = `<option value="">기본값 · ${esc(shortModel(def))}</option>`;
-  if (!locked) {
+  {
     const groups = {};
-    for (const m of modelCatalog) (groups[m.vendor] ||= []).push(m);
+    for (const m of modelCatalog) if (!shared || isCheap(m)) (groups[m.vendor] ||= []).push(m);   // 공용 키면 저렴한 모델만
     if (current && !modelCatalog.some((m) => m.id === current))
       html += `<optgroup label="목록에 없는 모델"><option value="${esc(current)}">${esc(current)} (지원 종료됐을 수 있어요)</option></optgroup>`;
     for (const [v, list] of Object.entries(groups))
       html += `<optgroup label="${esc(v)}">${list.map((m) => `<option value="${esc(m.id)}">${esc(m.name)}${esc(price(m))}</option>`).join("")}</optgroup>`;
-    html += `<option value="__custom">직접 입력…</option>`;
+    if (!shared) html += `<option value="__custom">직접 입력…</option>`;
   }
   return html;
 }
 function drawModelRows() {
   const box = $("#model-rows"); box.innerHTML = "";
-  const saved = loadSettings().models || {}, on = members(), locked = sharedMode();
-  $("#models-lock").hidden = !locked; $("#reset-models").hidden = locked;
+  const shared = sharedMode(), saved = pickedModels(), on = members(), key = shared ? "sharedModels" : "models";
+  $("#models-lock").hidden = !shared; $("#models-lock-text").textContent = `공용 키로는 출력 100만 토큰당 $${S.sharedMaxOut || 5} 이하의 저렴한 모델만 고를 수 있어요. 더 좋은 모델은 위에 내 API 키를 넣으면 쓸 수 있어요.`;
   for (const id of ["moderator", ...ALL_MEMBERS]) {
     const a = S.agents[id]; if (!a) continue;
     const isMod = id === "moderator", active = isMod || on.includes(id);
     const row = document.createElement("div"); row.className = `mrow ${isMod ? "mod" : ""} ${active ? "" : "off"}`; row.setAttribute("style", styleVars(id));
     row.innerHTML = `${isMod ? `<span class="fixed eyebrow">Host</span>` : `<label class="tg"><input type="checkbox" ${active ? "checked" : ""} aria-label="${esc(a.name)} 참석"><span></span></label>`}
       ${face(id)}<div class="who">${esc(a.name)}<small>${esc(a.title)}</small></div>
-      <select class="inp dd" aria-label="${esc(a.name)} 모델" ${locked ? 'disabled title="공용 키에서는 모델을 바꿀 수 없어요"' : ""}>${modelSelectHtml(id, saved[id] || "", locked)}</select>
+      <select class="inp dd" aria-label="${esc(a.name)} 모델">${modelSelectHtml(id, saved[id] || "", shared)}</select>
       <button class="pill sm">확인</button><div class="res" id="res-${id}"></div>`;
     const inp = row.querySelector("select.inp");
-    inp.value = locked ? "" : saved[id] || "";
+    inp.value = saved[id] || "";
     let prev = inp.value;
     inp.onchange = () => {
       if (inp.value === "__custom") {   // 목록에 없는 OpenRouter 모델 ID를 직접 넣기
@@ -2496,9 +2541,9 @@ function drawModelRows() {
         inp.value = typed;
       }
       prev = inp.value;
-      const models = { ...(loadSettings().models || {}) }, v = inp.value.trim();
+      const models = { ...(loadSettings()[key] || {}) }, v = inp.value.trim();
       if (v) models[id] = v; else delete models[id];
-      saveSettings({ models }); refreshSeats();
+      saveSettings({ [key]: models }); refreshSeats();
       const known = !v || !S.modelsLive || modelCatalog.some((m) => m.id === v);
       $(`#res-${id}`).className = "res" + (known ? "" : " bad");
       $(`#res-${id}`).textContent = known ? "" : "목록에 없는 모델이에요. '확인'으로 연결을 점검해 보세요. 안 되면 기본 모델로 대신 불러요.";
@@ -2690,7 +2735,8 @@ $("#doc-change").onclick = openTopic;
 $("#file").onchange = (e) => { const fs = [...e.target.files]; e.target.value = ""; if (fs.length) addFiles(fs); };
 $("#doc-view").onclick = viewTopic;
 $("#tp-add").onclick = () => $("#file").click();
-$("#tp-text").addEventListener("input", updateTopicCount);
+$("#tp-text").addEventListener("input", () => { updateTopicCount(); drawStyle(); });
+$("#tp-style").addEventListener("click", (e) => { const b = e.target.closest("button[data-v]"); if (!b) return; S.draft.style = b.dataset.v; drawStyle(); });
 $("#tp-text").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveTopic(true); } });
 $("#tp-save").onclick = () => saveTopic(false);
 $("#tp-start").onclick = () => saveTopic(true);
@@ -2711,7 +2757,7 @@ $("#pass-check").onclick = checkPass;
 $("#pass").addEventListener("keydown", (e) => { if (e.key === "Enter") checkPass(); });
 $("#pass-clear").onclick = async () => { setPass(""); $("#pass").value = ""; await refreshRegistry(); $("#pass-res").className = "help"; $("#pass-res").textContent = "인증키를 지웠어요."; };
 $("#test-all").onclick = () => seatIds().forEach(testAgent);
-$("#reset-models").onclick = () => { saveSettings({ models: {} }); drawModelRows(); refreshSeats(); toast("기본 모델로 되돌렸어요."); };
+$("#reset-models").onclick = () => { saveSettings({ [sharedMode() ? "sharedModels" : "models"]: {} }); drawModelRows(); refreshSeats(); toast("기본 모델로 되돌렸어요."); };
 $("#t-minus").onclick = () => setTurns(turns() - 1);
 $("#t-plus").onclick = () => setTurns(turns() + 1);
 $("#t-reset").onclick = () => setTurns(null);
