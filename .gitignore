@@ -1,0 +1,8 @@
+# 비밀값·로컬 설정은 저장소에 올리지 않아요
+.env
+.env.*
+!.env.example
+.vercel/
+node_modules/
+.DS_Store
+*.log
