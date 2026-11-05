@@ -325,7 +325,7 @@ JSON 하나만 출력합니다.
   "tone": "positive (대체로 찬성하거나 진행해도 좋음)" | "mixed (조건부, 보완 필요)" | "negative (반대 우세이거나 다시 봐야 함)" 중 영어 단어 하나,
   "headline": "결론 한두 문장",
   "key_points": [{"title": "핵심 결론이나 제안", "detail": "근거나 방법", "where": "자료 위치(있을 때만)", "raised_by": "이름"}],
-  "concerns": [{"title": "우려나 반대 의견", "detail": "보완 방법", "raised_by": "이름"}],
+  "concerns": [{"title": "우려나 반대 의견 자체 (해결책이 아니라 무엇이 걱정인지)", "detail": "보완 방법", "raised_by": "이름"}],
   "agreements": ["모두 동의한 점"],
   "open_questions": ["결론 나지 않은 질문"],
   "options": [{"name": "선택지 이름 (예: A안 시범 도입)", "pros": ["장점"], "cons": ["단점"], "risks": ["위험"]}],
@@ -450,7 +450,7 @@ ${myTurn === 1 ? (styleOf(input) === "review" ? "주제와 자료를 보고 당�
   if (redTeamBlocked) stance = "우려";
   const objections = (Array.isArray(out.objections) ? out.objections : []).map((o) => ({ text: String(o?.text || "").trim().slice(0, 140), why: String(o?.why || "").trim().slice(0, 180) }))
     .filter((o) => decisionMode && o.text.length >= 6).slice(0, persona.id === "policy" ? 3 : 2);
-  const openIds = new Set(ledger.filter((o) => o.status === "open").map((o) => o.id));
+  const openIds = new Set(ledger.filter((o) => o.status === "open" && o.by !== persona.name).map((o) => o.id));   // 자기가 낸 반론은 스스로 정리할 수 없어요
   const resolves = (Array.isArray(out.resolves) ? out.resolves : []).map((r) => ({ id: String(r?.id || "").trim().toUpperCase(), how: r?.how === "수용" ? "수용" : "반박", why: String(r?.why || "").trim().slice(0, 180) }))
     .filter((r) => decisionMode && openIds.has(r.id) && r.why.length >= 4).slice(0, 3);
   const criterion = String(out.criterion || "").trim().slice(0, 16);
