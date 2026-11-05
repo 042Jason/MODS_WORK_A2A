@@ -442,16 +442,17 @@ ${myTurn === 1 ? (styleOf(input) === "review" ? "주제와 자료를 보고 당�
   const changedBecause = String(out.changed_because || "").trim().slice(0, 200);
   const shifted = prevStance && (stance !== prevStance.stance || Math.abs(confidence - prevStance.confidence) > 20);
   let unjustified = false;
-  if (shifted && changedBecause.length < 8) { stance = prevStance.stance; confidence = prevStance.confidence; unjustified = true; }
+  const decisionMode = styleOf(input) !== "free";   // 자유 토론은 편한 대화라 입장 변경 검사·반론 장부를 쓰지 않아요
+  if (decisionMode && shifted && changedBecause.length < 8) { stance = prevStance.stance; confidence = prevStance.confidence; unjustified = true; }
   // 레드팀은 자기가 낸 반론이 열려 있는 동안 '동의'로 돌아서지 않아요
   const ledger = Array.isArray(input.ledger) ? input.ledger : [];
-  const redTeamBlocked = persona.id === "policy" && stance === "동의" && ledger.some((o) => o.status === "open" && o.by === persona.name);
+  const redTeamBlocked = decisionMode && persona.id === "policy" && stance === "동의" && ledger.some((o) => o.status === "open" && o.by === persona.name);
   if (redTeamBlocked) stance = "우려";
   const objections = (Array.isArray(out.objections) ? out.objections : []).map((o) => ({ text: String(o?.text || "").trim().slice(0, 140), why: String(o?.why || "").trim().slice(0, 180) }))
-    .filter((o) => o.text.length >= 6).slice(0, persona.id === "policy" ? 3 : 2);
+    .filter((o) => decisionMode && o.text.length >= 6).slice(0, persona.id === "policy" ? 3 : 2);
   const openIds = new Set(ledger.filter((o) => o.status === "open").map((o) => o.id));
   const resolves = (Array.isArray(out.resolves) ? out.resolves : []).map((r) => ({ id: String(r?.id || "").trim().toUpperCase(), how: r?.how === "수용" ? "수용" : "반박", why: String(r?.why || "").trim().slice(0, 180) }))
-    .filter((r) => openIds.has(r.id) && r.why.length >= 4).slice(0, 3);
+    .filter((r) => decisionMode && openIds.has(r.id) && r.why.length >= 4).slice(0, 3);
   const criterion = String(out.criterion || "").trim().slice(0, 16);
   const position = String(out.position || "").replace(/^["'“‘]|["'”’]$/g, "").trim().slice(0, 30);
   const names = attendees.map((id) => PERSONAS[id]?.name).filter(Boolean);
