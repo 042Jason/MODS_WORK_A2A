@@ -1467,7 +1467,12 @@ function noteFallback(id, from, to, why) {
   toast(msg); if (S.running) cast(msg, id);
 }
 const isNetErr = (e) => !!e && (e.name === "TypeError" || /Failed to fetch|NetworkError|network|Load failed/i.test(e.message || ""));
-function failErr(text) { const e = new Error(text); e.kind = "failed"; return e; }
+function failErr(text) { const e = new Error(keyHint(text)); e.kind = "failed"; return e; }
+// OpenRouter가 키를 거부했을 때(401): 화면에는 키가 있어 보여도 실제로는 비었거나 틀린 경우예요
+function keyHint(text) {
+  if (!/\b401\b|auth/i.test(String(text || ""))) return text;
+  return getKey() ? `저장된 내 OpenRouter 키가 거부됐어요(401). 설정에서 키를 다시 붙여 넣고 저장하거나, 키를 지우면 공용 키로 회의해요. (${text})` : `공용 키 인증이 거부됐어요(401). 인증키를 다시 확인해 주세요. (${text})`;
+}
 function logDivider(phase) { addDivider(phase); S.history.push({ t: "divider", phase }); }
 function logMsg(args) { const el = addMsg(args); S.history.push({ t: "msg", a: { ...args, raw: undefined } }); el.dataset.h = S.history.length - 1; $("#btn-wrap").hidden = !canWrapUp(); return S.history.length - 1; }
 function voidMsg(histIndex) {   // 끊긴 턴의 사회자 지목은 기록에서 빼고 화면에서는 흐리게
@@ -2451,7 +2456,7 @@ function computeScores(v) {
   const comp = completeness(v);
   const rows = [
     ["관점 다양성", diversity, "1라운드 첫 의견끼리 얼마나 다른가 (낱말 겹침이 적을수록 높음)"],
-    ["비판의 유효성", critique, `반론 ${L.length}개 제기 · ${settled}개 정리 (반박·수용)`],
+    ["비판의 유효성", critique, `반론 ${L.length}개 제기 · 반박 ${L.filter((o) => o.status === "반박").length} · 수용 ${L.filter((o) => o.status === "수용").length} · 미해결 ${L.length - settled} (수용 = 반론이 맞다고 인정해 보완점으로 반영)`],
     ["동조 저항", conform, `${m.convergeTurn ? `${m.convergeTurn}턴에 80% 합의` : "끝까지 80% 합의 없음"} · 근거 없는 입장 변경 ${m.unjustified || 0}번 차단`],
     ["반복 억제", repetition, "발언이 앞선 발언과 얼마나 덜 겹치는가"],
     ["논점 집중", focus, "주제·결론과 이어진 발언의 비율"],
@@ -2512,10 +2517,15 @@ async function runCompare(v) {
   } finally { setSpeaking(null); refreshSeats(); }
 }
 // 블라인드 채점: 결과 안의 참석자 이름·발언자 표시를 지워서 어느 쪽이 회의인지 드러나지 않게 해요
+// 이름을 '참석자 A'처럼 바꾸되, 받침 있는 이름에는 받침 있는 글자(L·M·N)를 써서 뒤의 조사(이/가, 은/는)가 어색해지지 않게 해요
 function blindReview(r) {
-  const names = [...Object.values(S.agents).map((a) => a.name), meProfile().name, "사회자", "레드팀"].filter(Boolean).sort((a, b) => b.length - a.length);
-  const re = new RegExp(names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
-  const clean = (x) => typeof x === "string" ? x.replace(re, "한 참석자") : Array.isArray(x) ? x.map(clean) : x && typeof x === "object" ? Object.fromEntries(Object.entries(x).filter(([k]) => !["raised_by", "badges", "early", "style", "decision", "compare"].includes(k)).map(([k, v]) => [k, clean(v)])) : x;
+  const names = [...new Set([...Object.values(S.agents).map((a) => a.name), meProfile().name].filter(Boolean))];
+  const hasBatchim = (w) => { const c = w.slice(-1).charCodeAt(0); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 > 0; };
+  const plain = ["A", "B", "C", "D", "E", "F"], closed = ["L", "M", "N", "R"];
+  const label = {}; names.forEach((n) => { label[n] = `참석자 ${(hasBatchim(n) ? closed : plain).shift() || "X"}`; });
+  const order = [...names].sort((a, b) => b.length - a.length);
+  const re = new RegExp(order.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
+  const clean = (x) => typeof x === "string" ? x.replace(re, (m) => label[m]) : Array.isArray(x) ? x.map(clean) : x && typeof x === "object" ? Object.fromEntries(Object.entries(x).filter(([k]) => !["raised_by", "badges", "early", "style", "decision", "compare"].includes(k)).map(([k, v]) => [k, clean(v)])) : x;
   return clean(r);
 }
 function renderReview(v) {
@@ -2833,7 +2843,7 @@ async function testAgent(id) {
   const res = $(`#res-${id}`); res.className = "res"; res.textContent = "연결을 확인하는 중…";
   try {
     const r = await send(id, "[회의실] 연결 확인", { type: "ping" }); delete S.tokens[id]; delete S.contexts[id];
-    if (r.failed) { res.className = "res bad"; res.textContent = r.text; return; }
+    if (r.failed) { res.className = "res bad"; res.textContent = keyHint(r.text); return; }
     res.className = "res ok";
     if (r.data.fallbackFrom) { res.className = "res bad"; res.textContent = `고른 모델(${r.data.fallbackFrom})이 응답하지 않아 ${r.data.model}로 대신 연결됐어요. 회의 중에도 자동으로 대체돼요.${r.data.fallbackWhy ? ` (${r.data.fallbackWhy})` : ""}`; return; }
     res.textContent = r.data.mock ? "모의 모드예요. API 키를 넣으면 실제 모델로 확인해요." : `연결됐어요 · ${r.data.model} · ${(r.data.ms / 1000).toFixed(1)}초`;
