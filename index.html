@@ -418,6 +418,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .pc-me-art > span:first-child{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:#fff;font-size:44px;font-weight:700;box-shadow:0 0 0 5px #fff,0 6px 18px rgba(0,0,0,.12)}
 /* 회의 결과 공유 */
 .sh-link{display:flex;gap:8px}
+.meta .eyebrow.fbk{color:#B54708}
 .row2 .refs{font-size:11.5px;color:var(--muted);font-family:var(--mono);letter-spacing:.01em}
 /* 판단 기준·반론·입장 변경 근거 */
 .row2 .crit{font-size:11.5px;font-weight:650;color:var(--ink);background:#F1F0EC;border-radius:999px;padding:2px 9px}
@@ -1201,7 +1202,9 @@ function placeSeats() {
 function refreshSeats() {
   for (const id of seatIds()) {
     if (!$(`#md-${id}`)) continue;
-    const m = modelFor(id); $(`#md-${id}`).textContent = shortModel(m); $(`#md-${id}`).title = m;
+    const m = modelFor(id), fb = S.fbNow?.[id];
+    $(`#md-${id}`).textContent = fb ? `${shortModel(fb.to)} · 대체` : shortModel(m);
+    $(`#md-${id}`).title = fb ? `${m} 대신 ${fb.to}가 답하는 중 (${fb.n}번)${fb.why ? ` · ${fb.why}` : ""}` : m;
     const l = S.last[id];
     $(`#st-${id}`).innerHTML = l ? `<span class="stance" data-s="${esc(l.stance)}" title="${esc(posOf(l))} · ${esc(stanceWord(l.stance))}">${esc(posOf(l))}</span><span class="meter" title="확신 ${l.confidence}%"><i style="width:${l.confidence}%"></i></span>` : "";
   }
@@ -1389,7 +1392,7 @@ function addMsg({ id, to, text, ask, stance, confidence, position, thought, raw,
   el.innerHTML = `${face(id)}<div>
     <div class="meta"><b>${esc(a.name)}</b>${to ? `<span class="to">→ ${esc(to === "me" ? meProfile().name : S.agents[to]?.name)}</span>` : ""}
       ${turn && !isMod ? `<span class="phase">${esc(shortPhase(phaseOfTurn(turn)))}</span>` : ""}${label ? `<span class="phase">${esc(label === "Answer" ? "후속 답변" : label)}</span>` : ""}
-      ${model ? `<span class="eyebrow" ${fallbackFrom ? `title="${esc(shortModel(fallbackFrom))}이(가) 응답하지 않아 대신 답했어요"` : ""}>${esc(model === "mock" ? "모의" : shortModel(model))}${fallbackFrom ? " · 대체" : ""}</span>` : ""}
+      ${model ? `<span class="eyebrow${fallbackFrom ? " fbk" : ""}" ${fallbackFrom ? `title="${esc(shortModel(fallbackFrom))}이(가) 응답하지 않아 대신 답했어요"` : ""}>${esc(model === "mock" ? "모의" : shortModel(model))}${fallbackFrom ? " · 대체" : ""}</span>` : ""}
       ${raw ? `<button class="jsonbtn eyebrow ko">원본</button>` : ""}</div>
     <div class="text">${esc(text)}</div>
     ${stance || ask || refs?.length || criterion ? `<div class="row2">${stance ? stanceChip(stance, confidence, position) : ""}${ask ? `<span class="tag">${esc(ask.to)} 님께 질문 · ${esc(ask.question)}</span>` : ""}${refs?.length ? `<span class="refs" title="이번 발언에 함께 넣은 자료 구간">참고 구간 ${refs.map((x) => `${x.n}(${x.page}쪽)`).join(" · ")}</span>` : ""}${criterion ? `<span class="crit" title="이번 발언에서 적용한 판단 기준">기준 · ${esc(criterion)}</span>` : ""}</div>` : ""}
@@ -1428,7 +1431,7 @@ function drawMinds() {
 /* ───────────── 회의 진행: 끊겨도 멈춘 턴부터 이어서 ───────────── */
 const publicTranscript = () => S.transcript.map(({ role, speaker, text, ask }) => ({ role, speaker, text, ask }));
 // 지금 무엇을 하는 중인지 (회의록 '…하는 중', 자리 위 이름표)
-const busyLabel = (id, type) => type === "digest" ? ["자료를 정리하는 중", "자료 읽는 중"] : type === "summarize" ? ["회의를 마무리하는 중", "마무리 중"] : id === "moderator" ? ["순서를 정하는 중", "진행 중"] : ["생각하는 중", "생각 중"];
+const busyLabel = (id, type) => type === "baseline" ? ["단일 LLM 결과를 만드는 중", "비교 중"] : type === "judge" ? ["두 결과를 채점하는 중", "채점 중"] : type === "digest" ? ["자료를 정리하는 중", "자료 읽는 중"] : type === "summarize" ? ["회의를 마무리하는 중", "마무리 중"] : id === "moderator" ? ["순서를 정하는 중", "진행 중"] : ["생각하는 중", "생각 중"];
 async function call(id, text, data) {
   const [logLabel, tag] = busyLabel(id, data?.type);
   setSpeaking(id, "thinking"); const tg = $(`#seat-${id} .sel span`); if (tg) tg.textContent = tag;
@@ -1450,10 +1453,18 @@ async function call(id, text, data) {
   } finally { done(); }
 }
 // 고른 모델이 응답하지 않아 대체 모델이 답했을 때: 같은 사람·같은 모델은 회의마다 한 번만 알려요
+// 받침이 있으면 '이에요', 없으면 '예요' (한글이 아니면 '이에요')
+function josaIeyo(w) { const c = String(w || "").trim().slice(-1).charCodeAt(0); return c >= 0xac00 && c <= 0xd7a3 ? ((c - 0xac00) % 28 ? "이에요" : "예요") : "이에요"; }
+// 대체 응답은 숨기지 않아요: 자리 카드에 '대체' 표시, 첫 번에는 알림과 중계, 결론 점수표에 횟수
 function noteFallback(id, from, to, why) {
+  const fb = (S.fbNow ||= {}), m = S.meeting;
+  fb[id] = { from, to, why, n: (fb[id]?.n || 0) + 1 };
+  if (m && S.running) { (m.fallbacks ||= {})[id] = (m.fallbacks[id] || 0) + 1; }
+  refreshSeats();
   const k = `${id}:${from}`, seen = (S.fbSeen ||= new Set());
   if (seen.has(k)) return; seen.add(k);
-  toast(`${S.agents[id]?.name || id} 님 모델(${shortModel(from)})이 응답하지 않아 ${shortModel(to)}이(가) 대신 답했어요.`);
+  const msg = `${S.agents[id]?.name || id} 님 모델(${shortModel(from)})이 응답하지 않아 ${shortModel(to)}이(가) 대신 답했어요.`;
+  toast(msg); if (S.running) cast(msg, id);
 }
 const isNetErr = (e) => !!e && (e.name === "TypeError" || /Failed to fetch|NetworkError|network|Load failed/i.test(e.message || ""));
 function failErr(text) { const e = new Error(text); e.kind = "failed"; return e; }
@@ -1633,8 +1644,9 @@ async function afterMemberTurn(m, i, phase, turn, total, next, r) {
   const done = [];
   for (const x of r.data.resolves || []) { const o = L.find((y) => y.id === x.id && y.status === "open"); if (o) { Object.assign(o, { status: x.how, resolvedBy: S.agents[next].name, resolveWhy: x.why, resolvedTurn: turn }); done.push({ ...x, text: o.text }); } }
   if (r.data.unjustified) m.unjustified = (m.unjustified || 0) + 1;
+  const dm = meetingStyle() !== "free";   // 자유 토론은 편한 대화라 기준 칩·반론·입장 변경 표시를 빼요
   logMsg({ id: next, text: r.text, ask, stance, confidence, position, thought: thoughts, raw: r.raw, model, turn, refs: r.data.refs,
-    criterion: r.data.criterion, changedBecause: r.data.changedBecause, unjustified: r.data.unjustified, objections: newObj, resolves: done, fallbackFrom: r.data.fallbackFrom });
+    criterion: dm ? r.data.criterion : "", changedBecause: dm ? r.data.changedBecause : "", unjustified: dm && r.data.unjustified, objections: dm ? newObj : [], resolves: dm ? done : [], fallbackFrom: r.data.fallbackFrom });
   drawLedger();
   renderTable("live", { id: next, text: r.text, phase, turn, issue: m.issue }); setSpeaking(next); showBubble(next, r.text);
   markCell(i, "done", next); m.cells[i] = next; refreshSeats(); drawMinds(); drawMood();
@@ -1655,7 +1667,7 @@ function textSim(a, b) { const A = bigrams(a), B = bigrams(b); if (!A.size || !B
 const autoStopOn = () => loadSettings().autoStop !== false;
 function drawLedger() {
   const L = S.meeting?.ledger || [], box = $("#ledger");
-  box.hidden = !L.length; if (!L.length) return;
+  box.hidden = !L.length || (S.doc && meetingStyle() === "free"); if (box.hidden) return;
   const open = L.filter((o) => o.status === "open");
   $("#ledger-open").textContent = open.length; $("#ledger-done").textContent = L.length - open.length;
   $("#ledger-list").innerHTML = [...open, ...L.filter((o) => o.status !== "open")].map((o) => `<div class="lg"><span class="id">${o.id}</span>
@@ -1680,8 +1692,9 @@ async function concludeMeeting(m, i, { early = false } = {}) {
   m.i = total; m.status = "done"; clearSnapshot();
   if (review) {
     S.review = review; renderReview(review); renderTable("done", { review }); showTab("review");
-    cast(early ? `여기서 마무리했어요. 판정은 '${esc(review.verdict)}'이에요. 이제 후속 질문도 할 수 있어요.`
-               : `회의 끝! 판정은 '${esc(review.verdict)}'이에요. 이제 사회자나 참석자에게 후속 질문도 할 수 있어요.`, "moderator");
+    const vd = `'${esc(review.verdict)}'${josaIeyo(review.verdict)}`, head = review.style && review.style !== "review" ? "한 줄 정리는" : "판정은";
+    cast(early ? `여기서 마무리했어요. ${head} ${vd}. 이제 후속 질문도 할 수 있어요.`
+               : `회의 끝! ${head} ${vd}. 이제 사회자나 참석자에게 후속 질문도 할 수 있어요.`, "moderator");
     if (review.badges?.length) setTimeout(() => { if (S.meeting === m && m.status === "done" && S.review === review) cast(`사회자가 오늘의 배지 ${review.badges.length}개를 나눠 줬어요. 카드를 뒤집어 확인해 보세요.`, "moderator"); }, 2500);   // 그사이 추가 회의를 열었으면 띄우지 않아요
   }
 }
@@ -1763,7 +1776,7 @@ function restoreSnapshot(snap) {
 function newMeeting() {
   if (S.running && S.abort) { S.abort.abort(); S.running = false; }
   hideBubbles(); S.hand = false;
-  Object.assign(S, { transcript: [], tokens: {}, contexts: {}, last: {}, thoughts: {}, trail: {}, review: null, reviews: [], meeting: null, history: [], followups: [], fbSeen: new Set() });
+  Object.assign(S, { transcript: [], tokens: {}, contexts: {}, last: {}, thoughts: {}, trail: {}, review: null, reviews: [], meeting: null, history: [], followups: [], fbSeen: new Set(), fbNow: {} });
   clearSnapshot();
   emptyLog();
   $("#pane-review").innerHTML = `<div class="empty"><img class="bust" src="${esc(S.agents.moderator?.bust || "")}" alt=""><strong>결론이 아직 없어요</strong>마지막 턴에서 사회자가 핵심 결론과 남은 쟁점을 정리해 드려요.</div>`;
@@ -2396,10 +2409,11 @@ const reviewLabels = (st) => st === "free" ? { verdict: "한 줄 정리", keys: 
 // ── 결론 화면: 미해결 반론 · 결정 카드 · 회의 품질 점수표 · 단일 LLM 비교 ──
 function unresolvedHtml() {
   const open = (S.meeting?.ledger || []).filter((o) => o.status === "open");
-  if (!S.meeting?.ledger?.length) return "";
+  if (!S.meeting?.ledger?.length || meetingStyle() === "free") return "";
   return `<div class="rsec"><h3>미해결 반론 <span class="eyebrow ko">${open.length}개 · 반론 장부</span></h3>${open.length ? `<div class="objs">${open.map((o) => `<span class="obj"><b>${o.id}</b>${esc(o.text)} <small>(${esc(o.by)})</small></span>`).join("")}</div>` : `<p class="help">제기된 반론 ${S.meeting.ledger.length}개가 모두 정리됐어요.</p>`}</div>`;
 }
 function decisionHtml(v) {
+  if (v.style === "free") return "";
   const opts = (v.options || []).filter((o) => o && o.name);
   if (!opts.length && !v.recommendation && !v.decision_points?.length) return "";
   const li = (a) => (a || []).filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join("");
@@ -2443,8 +2457,10 @@ function computeScores(v) {
     ["논점 집중", focus, "주제·결론과 이어진 발언의 비율"],
     ["결정 완성도", comp.score, comp.items.map(([k, ok]) => `${ok ? "✓" : "✗"} ${k}`).join(" · ")],
   ].filter((r) => r[1] != null);
-  const total = Math.round(rows.reduce((x, r) => x + r[1], 0) / rows.length);
-  return { rows, total, usage: m.usage, autoStop: m.autoStop };
+  const rows2 = v?.style === "free" ? rows.filter((r) => !["비판의 유효성", "동조 저항"].includes(r[0])) : rows;
+  const total = Math.round(rows2.reduce((x, r) => x + r[1], 0) / rows2.length);
+  const fbs = Object.entries(m.fallbacks || {}).map(([id, n]) => `${S.agents[id]?.name || id} ${n}`);
+  return { rows: rows2, total, usage: m.usage, autoStop: m.autoStop, fallbacks: fbs };
 }
 function scoreHtml(v) {
   if (!S.meeting) return "";
@@ -2452,7 +2468,8 @@ function scoreHtml(v) {
   return `<div class="rsec"><h3>회의 품질 점수표 <span class="eyebrow ko">코드로 계산 · AI 자평 아님</span></h3>
     <div class="score-total"><b>${sc.total}</b><span class="help" style="margin:0">/ 100 · 아래 ${sc.rows.length}개 지표 평균</span></div>
     <div class="score">${sc.rows.map(([k, val, why]) => `<span>${k}</span><span class="bar"><i style="width:${val}%"></i></span><span class="v">${val}</span><small>${esc(why)}</small>`).join("")}</div>
-    ${u ? `<p class="help" style="margin-top:8px">비용 · 입력 ${u.in.toLocaleString()} + 출력 ${u.out.toLocaleString()} 토큰${u.cost ? ` · 약 $${u.cost.toFixed(3)}` : ""} · AI 응답 대기 ${Math.round(u.ms / 1000)}초 · 호출 ${u.calls}번${sc.autoStop ? ` · ${sc.autoStop.turn}턴에서 자동 마무리` : ""}</p>` : ""}</div>`;
+    ${u ? `<p class="help" style="margin-top:8px">비용 · 입력 ${u.in.toLocaleString()} + 출력 ${u.out.toLocaleString()} 토큰${u.cost ? ` · 약 $${u.cost.toFixed(3)}` : ""} · AI 응답 대기 ${Math.round(u.ms / 1000)}초 · 호출 ${u.calls}번${sc.autoStop ? ` · ${sc.autoStop.turn}턴에서 자동 마무리` : ""}</p>` : ""}
+    ${sc.fallbacks.length ? `<p class="help" style="margin-top:4px;color:#B54708">대체 응답 · ${esc(sc.fallbacks.join(", "))}번은 고른 모델이 응답하지 않아 대체 모델이 답했어요. 모델 다양성 해석에 참고하세요.</p>` : ""}</div>`;
 }
 function compareHtml(v) {
   if (!S.meeting || (v.style && v.style !== "review" && !v.compare)) return v.style && v.style !== "review" ? "" : "";
@@ -2485,14 +2502,21 @@ async function runCompare(v) {
     if (r.failed) throw failErr(r.text);
     const base = r.data.review, flip = Math.random() < 0.5;
     if (b) b.textContent = "두 결과를 가린 채 채점하는 중…";
-    const j = await call("moderator", "[회의실→사회자] 두 결과 채점 요청", { type: "judge", topic: topicForAgents(), a: flip ? base : v, b: flip ? v : base });
+    const j = await call("moderator", "[회의실→사회자] 두 결과 채점 요청", { type: "judge", topic: topicForAgents(), a: blindReview(flip ? base : v), b: blindReview(flip ? v : base) });
     if (j.failed) throw failErr(j.text);
     v.compare = { base, flip, judge: j.data, at: Date.now(), revealed: false, vote: null };
     renderReview(v); toast("비교를 마쳤어요. 어느 쪽이 더 유용했는지 골라 주세요.");
   } catch (e) {
     toast(`비교하지 못했어요. ${e.message || ""}`.trim());
     if (b) { b.disabled = false; b.textContent = "단일 LLM과 비교하기"; }
-  }
+  } finally { setSpeaking(null); refreshSeats(); }
+}
+// 블라인드 채점: 결과 안의 참석자 이름·발언자 표시를 지워서 어느 쪽이 회의인지 드러나지 않게 해요
+function blindReview(r) {
+  const names = [...Object.values(S.agents).map((a) => a.name), meProfile().name, "사회자", "레드팀"].filter(Boolean).sort((a, b) => b.length - a.length);
+  const re = new RegExp(names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
+  const clean = (x) => typeof x === "string" ? x.replace(re, "한 참석자") : Array.isArray(x) ? x.map(clean) : x && typeof x === "object" ? Object.fromEntries(Object.entries(x).filter(([k]) => !["raised_by", "badges", "early", "style", "decision", "compare"].includes(k)).map(([k, v]) => [k, clean(v)])) : x;
+  return clean(r);
 }
 function renderReview(v) {
   const tint = (n) => S.agents[nameToId(n)]?.tint || "var(--soft)", L = reviewLabels(v.style);
@@ -2610,7 +2634,8 @@ function openTopic() {
 const STYLE_NAME = { review: "자료 검토", free: "자유 토론", idea: "아이디어 회의" };
 const STYLE_HINT = { review: "자료를 근거로 짚어 가며 검토해요.", free: "근거를 따지지 않고 경험·직관·상상으로 편하게 생각을 나눠요.", idea: "비판보다 아이디어를 내고 키워요. 엉뚱해도 좋아요." };
 const IDEA_RE = /아이디어|브레인스토밍|이름\s?(을|좀)?\s?지어|네이밍|슬로건|콘셉트|컨셉|기획안?\s?(좀|을)?\s?(내|짜)|이벤트|어떻게 하면|방법(이|을)?\s?(있|없|찾)/;
-function autoStyle(prompt, hasFiles) { return hasFiles ? "review" : IDEA_RE.test(prompt || "") ? "idea" : "free"; }
+const REVIEW_RE = /검토|평가|도입|정책|계획|보완|문제점|장단점|찬반|해야\s?(할까|하나|하는지)|타당|효과|개선|규정|제도|예산|추진|시행|결정/;
+function autoStyle(prompt, hasFiles) { const p = prompt || ""; return hasFiles ? "review" : IDEA_RE.test(p) ? "idea" : REVIEW_RE.test(p) ? "review" : "free"; }
 function meetingStyle() {
   const s = S.doc?.style || "auto";
   if (s !== "auto") return s;
@@ -2800,7 +2825,10 @@ function drawTurns() {
 }
 function setTurns(v) { saveSettings({ turns: v }); applyConfig(); }
 function applyConfig() { if (S.running) return toast("회의가 끝난 뒤에 바꿀 수 있어요.");
-  if (S.meeting?.status === "paused") return toast("멈춘 회의를 끝내거나 새로 시작한 뒤에 바꿀 수 있어요."); drawTurns(); $("#members-count").textContent = `${members().length}/${maxMembers()} attending`; newMeeting(); }
+  if (S.meeting?.status === "paused") return toast("멈춘 회의를 끝내거나 새로 시작한 뒤에 바꿀 수 있어요."); drawTurns(); $("#members-count").textContent = `${members().length}/${maxMembers()} attending`;
+  // 끝난 회의(회의록·결론·비교)는 설정을 바꿔도 지우지 않아요. 바뀐 구성은 '새 회의'부터 적용돼요
+  if (S.meeting?.status === "done" || S.transcript.length) { S.pendingConfig = true; describeConfig(); if (!applyConfig.told) { applyConfig.told = true; toast("바뀐 구성은 '새 회의'를 열 때부터 적용돼요. 지금 회의 결과는 그대로 둘게요."); } return; }
+  newMeeting(); }
 async function testAgent(id) {
   const res = $(`#res-${id}`); res.className = "res"; res.textContent = "연결을 확인하는 중…";
   try {
