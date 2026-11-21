@@ -11,7 +11,7 @@
 |---|---|---|
 | 사회자 | 발언 순서를 정하고 결론을 정리 | Gemini (`google/gemini-3.8-flash`) |
 | 민서 | 깐깐한 검증가: 주장의 근거, 사실관계, 숫자와 계산 | Claude (`anthropic/claude-sonnet-5.5`) |
-| 나래 | 큰 그림 전략가: 목표, 핵심 쟁점, 우선순위, 대안 | GPT (`openai/gpt-6.1-sol`) |
+| 나래 | 큰 그림 전략가: 목표, 핵심 쟁점, 우선순위, 대안 | GPT (`openai/gpt-6.2-sol`) |
 | 도윤 | 공감 대변인: 실제로 영향을 받는 사람의 이해와 체감, 오해 소지 | Nemotron (`nvidia/nemotron-3.5-super-vl`) |
 | 현우 | 논리 점검가: 정의, 숨은 전제, 비교의 공정성, 인과 비약 | Mistral (`mistralai/mistral-large-4-0`) |
 | 하율 | 레드팀(비판 전담): 미해결 위험, 누락, 모순, 반대편의 가장 강한 논리 | Nova (`amazon/nova-2-lite-v1`) |

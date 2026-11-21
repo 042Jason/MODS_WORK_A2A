@@ -115,7 +115,7 @@ export const PERSONAS = {
     tint: "#C5B0F4",
     vendor: "OpenAI",
     modelEnv: "MODEL_STRATEGIST",
-    defaultModel: "openai/gpt-6.1-sol",
+    defaultModel: "openai/gpt-6.2-sol",
     sharedModel: "openai/gpt-6-luna",
     description: "무엇이 핵심인지, 목표와 우선순위를 보는 전략 담당입니다.",
     skills: [{ id: "frame", name: "핵심 정리", description: "목표와 핵심 쟁점, 우선순위, 빠진 관점과 현실적인 대안을 정리합니다." }],
