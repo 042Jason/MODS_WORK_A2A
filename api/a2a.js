@@ -547,7 +547,8 @@ export default async function handler(req, res) {
   const apiKey = resolveKey(userKey, passcodeOk(req));
   // 내 키: 어떤 허용 모델이든 고를 수 있어요. 공용 키: 저렴한 모델(출력 100만 토큰당 SHARED_MAX_OUT_PRICE달러 이하)만 고를 수 있어요.
   const wanted = String(req.headers["x-agent-model"] || "").trim();
-  if (wanted && !isAllowedModel(wanted)) {
+  // 내 키: 허용된 회사 + 추가 회사(MORE_VENDORS)의 모델을 고를 수 있어요. 공용 키: 허용된 회사만.
+  if (wanted && !isAllowedModel(wanted, Boolean(userKey))) {
     return rpcError(res, body.id, -32602, `허용되지 않은 모델이에요: ${wanted}`);
   }
   const sharedPick = !userKey && apiKey && wanted && wanted !== sharedModelOf(persona);

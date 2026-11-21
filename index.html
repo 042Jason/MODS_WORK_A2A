@@ -871,6 +871,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
       <div class="sec-h"><h3>참석자와 모델</h3><span class="eyebrow" id="members-count"></span></div>
       <p class="desc" id="models-desc">최대 5명, 최소 2명이에요. 모델 칸을 비우면 기본 모델을 써요.</p>
       <div class="lockbox" id="models-lock" hidden><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 10V8a6 6 0 1 1 12 0v2h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1h1Zm2 0h8V8a4 4 0 1 0-8 0v2Z"/></svg><span id="models-lock-text">공용 키로는 저렴한 모델만 고를 수 있어요.</span></div>
+      <p class="desc" id="models-more" hidden><span id="models-more-text"></span></p>
       <div id="model-rows"></div>
 
       <div class="row" style="margin-top:12px"><button class="pill sm" id="test-all">모두 연결 확인</button><button class="pill sm ghost" id="reset-models">모델 기본값으로</button></div>
@@ -2771,7 +2772,7 @@ function modelSelectHtml(id, current, shared) {
   let html = `<option value="">기본값 · ${esc(shortModel(def))}</option>`;
   {
     const groups = {};
-    for (const m of modelCatalog) if (!shared || isCheap(m)) (groups[m.vendor] ||= []).push(m);   // 공용 키면 저렴한 모델만
+    for (const m of modelCatalog) if (!shared || (m.tier !== "more" && isCheap(m))) (groups[m.vendor] ||= []).push(m);   // 공용 키면 허용 회사의 저렴한 모델만, 내 키면 전체
     if (current && !modelCatalog.some((m) => m.id === current))
       html += `<optgroup label="목록에 없는 모델"><option value="${esc(current)}">${esc(current)} (지원 종료됐을 수 있어요)</option></optgroup>`;
     for (const [v, list] of Object.entries(groups))
@@ -2784,6 +2785,9 @@ function drawModelRows() {
   const box = $("#model-rows"); box.innerHTML = "";
   const shared = sharedMode(), saved = pickedModels(), on = members(), key = shared ? "sharedModels" : "models";
   $("#models-lock").hidden = !shared; $("#models-lock-text").textContent = `공용 키로는 출력 100만 토큰당 $${S.sharedMaxOut || 5} 이하의 저렴한 모델만 고를 수 있어요. 더 좋은 모델은 위에 내 API 키를 넣으면 쓸 수 있어요.`;
+  const own = getKey() && S.modelsLive;
+  $("#models-more").hidden = !own;
+  if (own) $("#models-more-text").textContent = `내 키로는 OpenRouter의 대화 모델 ${modelCatalog.length}개(회사 ${new Set(modelCatalog.map((m) => m.vendor)).size}곳)를 고를 수 있어요. 아주 비싼 모델(출력 100만 토큰당 $30 초과)과 커뮤니티 파인튜닝은 목록에 넣지 않았어요.`;
   for (const id of ["moderator", ...ALL_MEMBERS]) {
     const a = S.agents[id]; if (!a) continue;
     const isMod = id === "moderator", active = isMod || on.includes(id);

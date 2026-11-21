@@ -194,8 +194,15 @@ export const ID_BY_NAME = Object.fromEntries(Object.values(PERSONAS).map((p) => 
 export const ALLOWED_VENDORS = () =>
   (process.env.ALLOWED_VENDORS || "openai,anthropic,google,x-ai,upstage,deepseek,mistralai,qwen,meta-llama,moonshotai,z-ai,cohere,amazon,minimax,microsoft,nvidia,baidu,tencent").split(",").map((s) => s.trim()).filter(Boolean);
 
-export function isAllowedModel(model) {
-  return typeof model === "string" && ALLOWED_VENDORS().some((v) => model.startsWith(`${v}/`));
+// 내 키로만 고를 수 있는 추가 회사. 커뮤니티 파인튜닝(롤플레이용 등)·도구 전용 회사는 넣지 않아요.
+export const MORE_VENDORS = () =>
+  (process.env.MORE_VENDORS || "perplexity,meta,xiaomi,bytedance-seed,kt,stepfun,liquid,ibm-granite,writer,sakana,thinkingmachines,nousresearch,rekaai,inclusionai").split(",").map((s) => s.trim()).filter(Boolean);
+
+// ownKey=true(내 키)면 추가 회사까지 허용
+export function isAllowedModel(model, ownKey = false) {
+  if (typeof model !== "string" || !/^[a-z0-9-]+\/[\w.:-]+$/i.test(model)) return false;
+  const vendors = ownKey ? [...ALLOWED_VENDORS(), ...MORE_VENDORS()] : ALLOWED_VENDORS();
+  return vendors.some((v) => model.startsWith(`${v}/`));
 }
 
 export function defaultModelOf(persona) {

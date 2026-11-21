@@ -16,8 +16,9 @@
 | 현우 | 논리 점검가: 정의, 숨은 전제, 비교의 공정성, 인과 비약 | Mistral (`mistralai/mistral-large-4-0`) |
 | 하율 | 레드팀(비판 전담): 미해결 위험, 누락, 모순, 반대편의 가장 강한 논리 | Nova (`amazon/nova-2-lite-v1`) |
 
-모델은 웹 화면의 설정에서 바꿀 수 있어요. OpenRouter 목록에서 18개 회사의 대화 모델을 회사별 최신순으로 보여 주고,
-지원 종료(예정) 모델, 배치·무료·검색·코딩 전용·이미지/음성 모델, 문맥이 짧은 모델, 출력 100만 토큰당 30달러가 넘는 모델은 목록에서 뺍니다(`api/models.js`).
+모델은 웹 화면의 설정에서 바꿀 수 있어요. OpenRouter 목록에서 대화 모델을 회사별 최신순으로 보여 주고,
+지원 종료(예정) 모델, 배치·무료·검색·코딩 전용·이미지/음성 모델, 문맥이 짧은 모델, 출력 100만 토큰당 30달러가 넘는 모델(Astra·Fable 급)은 목록에서 뺍니다(`api/models.js`).
+공용 키로는 허용된 18개 회사의 최신 12개 중 저렴한 모델(`SHARED_MAX_OUT_PRICE`)만, 내 API 키로는 같은 회사의 최신 30개 + 추가 회사(`MORE_VENDORS`: Perplexity, Meta, Xiaomi, ByteDance Seed, KT, StepFun, Liquid AI, IBM Granite, Writer, Sakana AI, Thinking Machines, Nous Research, Reka, inclusionAI)까지 고를 수 있어요(2026-11-21 기준 128개 → 228개).
 
 ## 회의 진행 (기본 12턴)
 
@@ -107,6 +108,7 @@
 | `MEETING_PASSCODE` | 인증키. 이 값을 넣은 사람만 공용 키를 써요. 비워 두면 누구나 공용 키를 쓰니 공개 주소라면 꼭 설정 |
 | `STATE_SECRET` | 개인 메모 암호화용 비밀값. 아무 긴 문자열 |
 | `ALLOWED_VENDORS` | 고를 수 있는 모델 회사. 기본 18곳: OpenAI, Anthropic, Google, xAI, Upstage, DeepSeek, Mistral, Qwen, Meta Llama, Kimi, GLM, Cohere, Amazon Nova, MiniMax, Microsoft, NVIDIA, Baidu, Tencent |
+| `MORE_VENDORS` | 내 API 키로만 고를 수 있는 추가 회사. 기본 14곳(위 참고). 커뮤니티 파인튜닝·도구 전용 회사는 넣지 않았어요 |
 | `MODEL_MODERATOR` 등 | 에이전트별 기본 모델 (`.env.example` 참고) |
 
 ## 사용하는 방법
@@ -228,7 +230,7 @@ GET  /api/models                                     설정 화면용 모델 목
 index.html            회의실 화면 (주제와 자료 입력, 설정, 회의 진행, 결론, 후속 질문)
 api/a2a.js            에이전트 여섯의 A2A 엔드포인트
 api/registry.js       주소록
-api/models.js         모델 목록 (허용 회사만)
+api/models.js         모델 목록 (허용 회사 + 내 키용 추가 회사)
 api/_lib/personas.js  페르소나와 명함
 api/_lib/llm.js       OpenRouter 호출
 api/_lib/state.js     개인 메모 암호화
