@@ -8,6 +8,7 @@
 | SheetJS Community Edition | `vendor/xlsx.full.min.js` | 엑셀·CSV 자료 읽기 | SheetJS LLC | Apache License 2.0 |
 | mammoth.js | `vendor/mammoth.browser.min.js` | 워드(.docx) 자료 읽기 | Michael Williamson | BSD 2-Clause |
 | JSZip 3.10.1 (pako 포함) | `vendor/jszip.min.js` | HWPX 압축 풀기 | Stuart Knightley 외 / Vitaly Puzrin, Andrei Tuputcyn | MIT (이중 라이선스 중 MIT 선택) |
+| QR Code Generator for JavaScript (1.4.4 이후 저장소판) | `vendor/qrcode.js` | 폰 참여 주소 QR 그리기 | Kazuhiko Arase | MIT |
 | Pretendard Variable | `vendor/fonts/PretendardVariable.woff2` | 본문 글꼴 | Kil Hyung-jin | SIL Open Font License 1.1 |
 | JetBrains Mono | `vendor/fonts/JetBrainsMono-500.woff2` | 고정폭 글꼴 | The JetBrains Mono Project Authors | SIL Open Font License 1.1 |
 | @vercel/blob | `package.json` 의존성 (배포 때 설치) | 결과 공유 링크 저장 | Vercel, Inc. | Apache License 2.0 |

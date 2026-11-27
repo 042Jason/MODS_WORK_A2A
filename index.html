@@ -786,6 +786,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
     <div class="frame-label"><i></i><span class="eyebrow">Meeting Board</span><span class="eyebrow">·</span><span class="eyebrow" id="frame-meta"></span></div>
     <div class="stage" id="stage">
       <button class="me-seat" id="me-seat" hidden title="내 프로필 카드"><span class="ava-fb me-ava" id="me-seat-ava">나</span><span><b id="me-seat-name">나</b><small>참석 중</small></span></button>
+      <button class="me-seat" id="room-pill" hidden title="폰으로 참여 방 보기"><span class="ava-fb me-ava" aria-hidden="true">📱</span><span><b id="room-pill-code"></b><small id="room-pill-n"></small></span></button>
       <div class="table" id="table"></div>
       <div class="cursor" id="cursor" aria-hidden="true">
         <svg width="18" height="20" viewBox="0 0 18 20"><path d="M1 1l6.5 17 2.6-7.1L17 8.3 1 1z" fill="#0A0A0A" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>
@@ -894,6 +895,8 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
         <div class="row" style="margin-top:10px"><b style="font-size:13px">함께 앉는 사람</b><span class="spacer"></span><span id="me-count" role="radiogroup" aria-label="함께 앉는 사람 수" style="display:inline-flex;gap:6px"></span></div>
         <p class="help">한 화면을 같이 보며 최대 3명까지 참여해요. 2명이면 에이전트는 최대 4명, 3명이면 최대 3명이에요. 말할 때 입력창에서 이름을 고르면 돼요.</p>
         <div class="row" id="me-people" style="margin-top:6px;flex-wrap:wrap;gap:6px"></div>
+        <div class="row" style="margin-top:14px"><b style="font-size:13px">각자 폰으로 참여</b><span class="spacer"></span><button class="pill sm" id="room-open">방 열기</button></div>
+        <p class="help" id="room-help"></p>
       </div>
     </section>
     <section class="sec" id="sec-answer">
@@ -932,6 +935,22 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
           <button type="button" data-v="auto" class="on">자동</button><button type="button" data-v="review">자료 검토</button><button type="button" data-v="free">자유 토론</button><button type="button" data-v="idea">아이디어 회의</button></div>
         <p class="tp-hint" id="tp-style-hint" style="margin:6px 0 0"></p></div>
       <div class="tp-foot"><span id="tp-count" class="eyebrow ko"></span><div class="spacer"></div><button class="pill" id="tp-save">저장</button><button class="pill dark" id="tp-start">회의 시작</button></div>
+  </div>
+</dialog>
+<dialog id="dlg-room" class="newdlg" aria-label="폰으로 참여">
+  <div class="dh"><h2>폰으로 참여</h2><button class="pill sm" data-close>닫기</button></div>
+  <div class="db">
+    <p class="tp-hint" style="margin:2px 0 12px">이 화면이 회의를 진행하고, 각자 폰은 QR이나 방 코드로 들어와 자기 자리에서 답하고 말해요. 폰에서 보낸 말은 2초쯤 뒤에 반영돼요.</p>
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      <div id="room-qr" style="width:148px;height:148px;border:1.5px solid var(--ink);border-radius:12px;padding:6px;background:#fff;flex:none"></div>
+      <div style="min-width:0;flex:1"><span class="eyebrow ko">방 코드</span>
+        <div id="room-code" style="font-family:var(--mono);font-size:30px;letter-spacing:.14em;line-height:1.2"></div>
+        <div id="room-url" style="font-size:12.5px;color:var(--muted);overflow-wrap:anywhere;margin:4px 0 10px"></div>
+        <button class="pill sm" id="room-copy">주소 복사</button></div>
+    </div>
+    <label class="tp-label" style="margin-top:16px">자리</label>
+    <div id="room-seats" style="display:grid;gap:6px"></div>
+    <div class="tp-foot"><button class="pill sm ghost" id="room-close">방 닫기</button><span class="spacer"></span><button class="pill dark" data-close>확인</button></div>
   </div>
 </dialog>
 <dialog id="dlg-me" class="newdlg" aria-label="내 프로필 카드">
@@ -1002,6 +1021,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 <dialog id="dlg-view"><div class="dh"><h2 id="view-title">보기</h2><button class="pill sm" data-close>닫기</button></div><div class="db"><div id="view-head"></div><pre id="view-body"></pre></div></dialog>
 <div class="toast" id="toast" role="status"></div>
 
+<script src="vendor/qrcode.js" defer></script>
 <script>
 /* ───────────── 기본값 ───────────── */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1889,7 +1909,98 @@ function drawMe() {
   $("#me-count").querySelectorAll("button").forEach((b) => (b.onclick = () => setHumanCount(+b.dataset.n)));
   $("#me-people").innerHTML = n > 1 ? hs.map((h) => `<button type="button" class="pill sm" data-id="${h.id}">${esc(h.name)} 프로필</button>`).join("") : "";
   $("#me-people").querySelectorAll("button").forEach((b) => (b.onclick = () => openMe(b.dataset.id)));
+  const ready = !!S.registry?.rooms;
+  $("#room-open").disabled = !ready; $("#room-open").textContent = room ? `방 ${room.code} 보기` : "방 열기";
+  $("#room-help").textContent = ready ? "방을 열면 QR과 방 코드가 떠요. 각자 폰으로 들어와 자기 자리를 고르고, 폰에서 답하고 말할 수 있어요. 이 화면은 그대로 진행 화면이 돼요."
+    : "운영자가 저장소(Upstash Redis)를 연결하면 쓸 수 있어요. 지금은 한 화면에서 이름을 골라 말하는 방식으로 참여해요.";
   drawAnswer(); updateLive();
+}
+// ───── 각자 폰으로 참여 (방 코드): 이 화면이 회의를 돌리고, 폰에서 온 말을 2초마다 가져와 반영해요 ─────
+const ROOM_KEY = "meetingroom.room";
+let room = null, roomTimer = null, roomBusy = false, roomKick = null;
+function roomState() {   // 폰에 보여 줄 지금 상황 (키·속마음·설정은 보내지 않아요)
+  const m = S.meeting, st = !m ? (S.doc?.prompt ? "ready" : "idle") : m.status === "done" ? "done" : m.status === "paused" ? "paused" : "running";
+  return { topic: String(S.doc?.prompt || "").slice(0, 160), status: st, turn: m && st !== "done" ? `${Math.min(m.i + 1, m.plan.length)}/${m.plan.length}턴` : "",
+    seats: humans().map((h) => ({ id: h.id, name: h.name })),
+    ask: pendingAsk ? { who: pendingAsk.who, from: S.agents[pendingAsk.fromId]?.name || "사회자", q: $("#live-q-text").textContent } : null,
+    hand: S.hand || null, last: S.transcript.slice(-6).map((t) => ({ speaker: t.speaker, text: t.text })), headline: S.review?.headline || "" };
+}
+async function roomApi(op, extra = {}) {
+  const r = await fetch("api/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op, code: room?.code, hostToken: room?.hostToken, ...extra }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(j.error || "방에 연결하지 못했어요."); e.gone = j.gone; throw e; }
+  return j;
+}
+function saveRoom() { try { room ? sessionStorage.setItem(ROOM_KEY, JSON.stringify({ code: room.code, hostToken: room.hostToken })) : sessionStorage.removeItem(ROOM_KEY); } catch {} }
+const roomUrl = () => `${location.origin}/j/${room.code}`;
+async function openRoom() {
+  if (!meOn()) return toast("먼저 '회의에 나도 참여하기'를 켜 주세요.");
+  if (!room) {
+    try { const r = await roomApi("create", { state: roomState() }); room = { code: r.code, hostToken: r.hostToken, taken: {} }; saveRoom(); startRoom(); if ($("#drawer").classList.contains("on")) drawMe(); }
+    catch (e) { return toast(e.message); }
+  }
+  drawRoom(); if (!$("#dlg-room").open) $("#dlg-room").showModal();
+}
+function startRoom() { clearInterval(roomTimer); roomTimer = setInterval(syncRoom, 2000); syncRoom(); drawRoomPill(); }
+function closeRoom(silent) {
+  if (!room) return;
+  if (!silent) roomApi("close").catch(() => {});
+  room = null; saveRoom(); clearInterval(roomTimer); roomTimer = null; drawRoomPill();
+  if ($("#dlg-room").open) $("#dlg-room").close();
+  if ($("#drawer").classList.contains("on")) drawMe();
+}
+async function syncRoom() {
+  if (!room || roomBusy || document.hidden && !S.running && !pendingAsk) return;
+  roomBusy = true;
+  try {
+    const kick = roomKick; roomKick = null;
+    const r = await roomApi("sync", { state: roomState(), kick });
+    if (!room) return;
+    const before = JSON.stringify(room.taken); room.taken = r.taken || {};
+    if (before !== JSON.stringify(room.taken)) { drawRoom(); drawRoomPill(); }
+    for (const it of r.items || []) { try { roomMessage(it); } catch (e) { console.error(e); } }
+  } catch (e) { if (e.gone) { closeRoom(true); toast("방이 닫혔어요. 필요하면 다시 열어 주세요."); } }
+  finally { roomBusy = false; }
+}
+function setHumanName(id, name) {   // 폰에서 적은 이름을 자리에 반영 (회의 전만, 겹치는 이름은 받지 않아요)
+  const k = HUMAN_IDS.indexOf(id), nm = String(name || "").trim().slice(0, 12);
+  if (!nm || k < 0 || meProfile(id).name === nm) return false;
+  if (humans().some((h) => h.id !== id && h.name === nm) || Object.values(S.agents).some((a) => a.name === nm) || nm === "사회자") return false;
+  if (k) { const all = loadSettings().me || {}, mates = [...(all.mates || [])]; while (mates.length < k) mates.push({}); mates[k - 1] = { ...mates[k - 1], name: nm }; setMe({ mates }); }
+  else setMe({ name: nm });
+  return true;
+}
+function roomMessage(it) {   // 폰에서 온 말 하나를 회의에 반영
+  const id = it.seat; if (!humanIds().includes(id)) return;
+  const live = !!S.meeting && S.meeting.status !== "done", text = String(it.text || "").trim().slice(0, 300);
+  if (it.kind === "name") { if (!S.meeting && !S.running && setHumanName(id, text)) drawRoom(); toast(`${meProfile(id).name} 님이 폰으로 들어왔어요.`); return; }
+  if (it.kind === "hand") {
+    if (!live) return;
+    if (it.on) { const prev = S.speaker; S.speaker = id; raiseHand(true); S.speaker = prev; } else if (S.hand === id) raiseHand(false);
+    return;
+  }
+  if (pendingAsk && pendingAsk.who === id) {   // 질문을 받은 사람이 폰으로 답하거나 넘김
+    const p = pendingAsk;
+    if (it.kind === "skip") { endAsk(); cast("이번 질문은 넘겼어요.", p.fromId); p.resolve(null); }
+    else if (text) { endAsk(); meSays(text, "답변", S.agents[p.fromId]?.name, p.who); p.resolve(text); }
+    return;
+  }
+  if (it.kind === "skip" || !live || !text) return;
+  meSays(text, "한마디", undefined, id);
+}
+function drawRoomPill() {
+  const n = room ? humanIds().filter((id) => room.taken?.[id]).length : 0;
+  $("#room-pill").hidden = !room;
+  if (room) { $("#room-pill-code").textContent = `방 ${room.code}`; $("#room-pill-n").textContent = `폰 ${n}/${humans().length || 1}명 연결`; }
+}
+function drawRoom() {
+  if (!room) return;
+  $("#room-code").textContent = room.code; $("#room-url").textContent = roomUrl();
+  try { const q = qrcode(0, "M"); q.addData(roomUrl()); q.make(); $("#room-qr").innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); const svg = $("#room-qr svg"); if (svg) { svg.style.width = "100%"; svg.style.height = "100%"; svg.setAttribute("aria-label", "폰 참여 주소 QR"); } }
+  catch { $("#room-qr").innerHTML = `<p class="help" style="margin:8px">QR을 그리지 못했어요. 주소나 방 코드로 들어와 주세요.</p>`; }
+  $("#room-seats").innerHTML = humans().map((h) => `<div class="row" style="border:1px solid var(--hair);border-radius:12px;padding:8px 10px">${meFace("", h.id)}<b style="font-size:14px">${esc(h.name)}</b><span style="font-size:12.5px;color:var(--muted)">${room.taken?.[h.id] ? "폰 연결됨" : "아직 안 들어왔어요"}</span><span class="spacer"></span>${room.taken?.[h.id] ? `<button class="pill sm" data-kick="${h.id}">자리 비우기</button>` : ""}</div>`).join("")
+    || `<p class="help">'회의에 나도 참여하기'를 켜면 자리가 생겨요.</p>`;
+  $("#room-seats").querySelectorAll("[data-kick]").forEach((b) => (b.onclick = () => { roomKick = b.dataset.kick; b.disabled = true; syncRoom(); }));
 }
 // 자리가 모자라면 맨 뒤 에이전트부터 이번엔 빠져요
 function fitMembers(before) {
@@ -1901,6 +2012,7 @@ function fitMembers(before) {
 const savedMembers = () => { const saved = loadSettings().members; return Array.isArray(saved) ? ALL_MEMBERS.filter((id) => saved.includes(id)) : ALL_MEMBERS.slice(); };
 function afterHumansChange() {
   drawMe();
+  if (room) { drawRoomPill(); if ($("#dlg-room").open) drawRoom(); }
   if (S.agents.moderator && !S.running) { if (!S.meeting) applyConfig(); else drawSeats(); }
   if (S.table === "ready" || S.table === "idle") renderTable(S.table);
   if ($("#drawer").classList.contains("on")) { drawModelRows(); drawTurns(); }
@@ -2978,7 +3090,7 @@ function updateMode() {
   $("#pass-field").hidden = !(r.serverKey && r.requiresPasscode);
   $("#btn-settings").classList.toggle("nudge", m === "mock" || m === "locked");
   refreshSeats();
-  if ($("#drawer").classList.contains("on")) { drawModelRows(); drawTurns(); drawAnswer(); }
+  if ($("#drawer").classList.contains("on")) { drawModelRows(); drawTurns(); drawMe(); }
   if (S.agents.moderator && !S.running && !S.meeting) { describeConfig(); drawTracker(); if (S.table === "idle" || S.table === "ready") renderTable(S.table); }   // 키 종류가 바뀌면 턴 상한도 다시 반영
 }
 async function checkPass() {
@@ -3001,7 +3113,7 @@ function openSettings(warn) {
   if (!$("#drawer").classList.contains("on")) S.setSnap = settingsState();   // '취소'하면 이 상태로 되돌려요
   $("#set-warn").hidden = !warn; $("#set-warn").textContent = warn || "";
   $("#drawer").classList.add("on"); $("#scrim").classList.add("on"); $("#drawer").setAttribute("aria-hidden", "false");
-  $("#key").value = getKey(); $("#pass").value = getPass();
+  $("#key").value = getKey(); $("#pass").value = getPass(); drawMe();   // 방 열기 버튼·답변 형식 칸을 지금 상태로
   let stored = "session"; try { if (localStorage.getItem("meetingroom.key") || localStorage.getItem("meetingroom.pass")) stored = "local"; } catch {}
   const r = S.registry || {};
   $("#pass-res").className = "help" + (getPass() && r.passcodeOk ? " ok" : "");
@@ -3084,6 +3196,10 @@ $("#btn-wrap").onclick = wrapUpMeeting;
 $("#me-mbti").insertAdjacentHTML("beforeend", MBTI.map((t) => `<option value="${t}">${t}</option>`).join(""));
 $("#me-on").onchange = () => setMe({ on: $("#me-on").checked });
 $("#me-edit").onclick = () => openMe("me");
+$("#room-open").onclick = openRoom; $("#room-pill").onclick = openRoom;
+$("#room-close").onclick = () => { closeRoom(); toast("방을 닫았어요. 폰에서는 더 들어올 수 없어요."); };
+$("#room-copy").onclick = async () => { try { await navigator.clipboard.writeText(roomUrl()); toast("주소를 복사했어요."); } catch { toast(roomUrl()); } };
+try { const r = JSON.parse(sessionStorage.getItem(ROOM_KEY) || "null"); if (r?.code && r?.hostToken) { room = { ...r, taken: {} }; startRoom(); } } catch {}   // 새로고침해도 열어 둔 방은 이어져요
 $("#ans-format").oninput = () => { saveSettings({ answer: { ...(loadSettings().answer || {}), format: $("#ans-format").value.slice(0, 300) } }); drawAnswer(); };
 $("#ans-cite").onchange = () => { const on = $("#ans-cite").checked; setAnswer(on ? { cite: true } : { cite: false, web: false }); };
 $("#ans-web").onchange = () => setAnswer({ web: $("#ans-web").checked });

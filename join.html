@@ -1,0 +1,202 @@
+<!doctype html>
+<!-- Ensembly (AI 회의실) · Copyright (c) 2026 박재현. All rights reserved. 무단 복제·수정·배포 금지 (LICENSE 참고) -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Ensembly · 폰으로 참여</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+@font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("/vendor/fonts/PretendardVariable.woff2") format("woff2-variations")}
+@font-face{font-family:"JetBrains Mono";font-weight:500;font-style:normal;font-display:swap;src:url("/vendor/fonts/JetBrainsMono-500.woff2") format("woff2")}
+:root{--ink:#0A0A0A;--muted:#737373;--hair:#E6E6E6;--soft:#F7F7F5;--board:#F5F5F3;--select:#0D99FF;--navy:#1F1D3D;
+  --sans:"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;--mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font-family:var(--sans);color:var(--ink);background:var(--board);background-image:radial-gradient(#DCDCD8 1px,transparent 1px);background-size:18px 18px;font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding:14px 16px calc(16px + env(safe-area-inset-bottom))}
+.top{display:flex;align-items:center;gap:10px;padding:4px 2px 12px}
+.top b{font-size:18px;letter-spacing:-.01em}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.chip{font-family:var(--mono);font-size:12px;border:1px solid var(--ink);border-radius:999px;padding:2px 10px;background:#fff}
+.spacer{flex:1}
+.card{background:#fff;border:1.5px solid var(--ink);border-radius:18px;padding:16px;box-shadow:0 2px 0 var(--ink)}
+.card + .card{margin-top:12px}
+h1{font-size:22px;line-height:1.3;letter-spacing:-.02em;margin-bottom:6px}
+p.help{color:var(--muted);font-size:14px}
+.pill{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid var(--ink);background:#fff;border-radius:999px;padding:10px 18px;font-weight:650;font-size:15px;min-height:44px}
+.pill.dark{background:var(--ink);color:#fff}
+.pill:disabled{opacity:.35;cursor:default}
+.pill.on{background:#FFD43B}
+.inp{width:100%;border:1.5px solid var(--hair);border-radius:14px;padding:12px 14px;background:#fff;font-size:16px;outline:none}
+.inp:focus{border-color:var(--select);box-shadow:0 0 0 3px rgba(13,153,255,.18)}
+textarea.inp{resize:none;min-height:88px}
+.seats{display:grid;gap:8px;margin:12px 0}
+.seat{display:flex;align-items:center;gap:12px;border:1.5px solid var(--ink);border-radius:14px;padding:10px 12px;background:#fff;text-align:left;min-height:56px}
+.seat[aria-pressed="true"]{background:var(--navy);color:#fff}
+.seat:disabled{opacity:.4}
+.ava{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;flex:none;border:1.5px solid var(--ink)}
+.seat small{display:block;font-size:12.5px;opacity:.7}
+.status{background:var(--navy);color:#fff;border-radius:18px;padding:14px 16px}
+.status .eyebrow{color:#B9B6E0}
+.status p{font-size:15px;margin-top:4px;overflow-wrap:anywhere}
+.ask{border-color:var(--select);box-shadow:0 0 0 3px rgba(13,153,255,.18)}
+.ask .who{font-size:13.5px;color:var(--muted)}
+.ask .q{font-size:17px;font-weight:650;margin:4px 0 12px;overflow-wrap:anywhere}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.quick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:10px}
+.quick::-webkit-scrollbar{display:none}
+.quick button{flex:none;border:1px solid var(--hair);background:#fff;border-radius:999px;padding:8px 13px;font-size:14px;white-space:nowrap;min-height:40px}
+.quick button.on{background:#FFD43B;border-color:var(--ink);font-weight:650}
+.log{display:grid;gap:10px;margin-top:6px}
+.log div{font-size:14.5px;overflow-wrap:anywhere}
+.log b{display:block;font-size:12.5px;color:var(--muted);font-weight:600}
+.log .mine{background:var(--soft);border-radius:12px;padding:8px 10px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:999px;padding:10px 16px;font-size:14px;max-width:88vw;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><b>Ensembly</b><span class="eyebrow">폰으로 참여</span><span class="spacer"></span><span class="chip" id="code-chip" hidden></span></div>
+
+  <!-- 1. 방 코드 -->
+  <section class="card" id="v-code" hidden>
+    <h1>방 코드를 적어 주세요</h1>
+    <p class="help">진행 화면에 보이는 여섯 글자예요.</p>
+    <div class="row" style="margin-top:12px"><input class="inp" id="code-in" maxlength="6" autocapitalize="characters" autocomplete="off" placeholder="예) K7M2QX" style="flex:1;font-family:var(--mono);letter-spacing:.2em;text-transform:uppercase" aria-label="방 코드"><button class="pill dark" id="code-go">들어가기</button></div>
+  </section>
+
+  <!-- 2. 자리 고르기 -->
+  <section class="card" id="v-seat" hidden>
+    <h1>어느 자리에 앉을까요?</h1>
+    <p class="help">진행 화면에 준비된 자리예요. 내 자리를 골라 주세요.</p>
+    <div class="seats" id="seats"></div>
+    <label class="eyebrow" for="name-in" style="display:block;margin-bottom:6px">이름 (선택)</label>
+    <input class="inp" id="name-in" maxlength="12" placeholder="비워 두면 자리에 적힌 이름을 써요" autocomplete="off">
+    <p class="help" style="margin-top:6px">이름은 회의를 시작하기 전에만 바꿀 수 있어요.</p>
+    <div class="row" style="margin-top:14px"><span class="spacer"></span><button class="pill dark" id="seat-go" disabled>이 자리로 참여</button></div>
+  </section>
+
+  <!-- 3. 회의 -->
+  <section id="v-room" hidden>
+    <div class="status"><span class="eyebrow" id="st-eyebrow">대기 중</span><p id="st-topic">진행 화면에서 회의를 시작하면 여기에 보여요.</p></div>
+    <div class="card ask" id="ask" hidden style="margin-top:12px">
+      <div class="who"><b id="ask-from">사회자</b> 님이 <b id="ask-me">나</b> 님께 물어요</div>
+      <div class="q" id="ask-q"></div>
+      <textarea class="inp" id="ask-text" maxlength="300" placeholder="답을 적어 주세요" enterkeyhint="send"></textarea>
+      <div class="row" style="margin-top:10px"><button class="pill" id="ask-skip">이번엔 넘기기</button><span class="spacer"></span><button class="pill dark" id="ask-send">답하기</button></div>
+    </div>
+    <div class="card" id="say" style="margin-top:12px">
+      <div class="row" style="margin-bottom:8px"><span class="ava" id="me-ava">나</span><b id="me-name">나</b><span class="spacer"></span><button class="pill" id="leave" style="min-height:36px;padding:6px 12px;font-size:13px">자리 바꾸기</button></div>
+      <div class="quick" id="quick">
+        <button type="button" data-say="좋아요, 그 방향에 동의해요.">👍 동의해요</button>
+        <button type="button" data-say="그 부분은 근거가 조금 더 궁금해요.">🤔 근거가 궁금해요</button>
+        <button type="button" data-say="저는 그 부분이 조금 걱정돼요.">😟 걱정돼요</button>
+        <button type="button" data-say="다른 관점도 한번 들어 보고 싶어요.">🔄 다른 관점도</button>
+        <button type="button" id="hand">✋ 발언 신청</button>
+      </div>
+      <textarea class="inp" id="say-text" maxlength="300" placeholder="회의에 한마디 하기" enterkeyhint="send"></textarea>
+      <div class="row" style="margin-top:10px"><p class="help" id="say-help" style="flex:1"></p><button class="pill dark" id="say-send">말하기</button></div>
+    </div>
+    <div class="card" style="margin-top:12px"><span class="eyebrow">최근 발언</span><div class="log" id="log"><p class="help">아직 발언이 없어요.</p></div></div>
+  </section>
+
+  <section class="card" id="v-gone" hidden>
+    <h1>방이 닫혔어요</h1>
+    <p class="help" id="gone-text">진행 화면에서 방을 다시 열면 새 코드로 들어올 수 있어요.</p>
+    <div class="row" style="margin-top:14px"><button class="pill" id="gone-retry">다른 코드로 들어가기</button></div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+// 폰 참여 화면: 방 코드로 들어와 자리를 고르고, 답하기·한마디·발언 신청을 진행 화면으로 보내요. 키나 비밀값은 다루지 않아요.
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const COLOR = { me: "#3B3486", me2: "#1F5F4A", me3: "#8A4B14" };
+const STATUS = { idle: "주제를 정하는 중", ready: "곧 시작해요", running: "회의 중", paused: "잠시 멈춤", done: "회의가 끝났어요" };
+let code = (location.pathname.match(/^\/j\/([A-Za-z0-9]+)/)?.[1] || new URLSearchParams(location.search).get("room") || "").toUpperCase();
+let token = "", seat = null, pick = null, state = null, taken = {}, timer = null, answered = "", busy = false;
+const KEY = () => `ensembly.room.${code}`;
+function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 2600); }
+async function api(op, extra = {}) {
+  const r = await fetch("/api/room", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op, code, token, ...extra }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(j.error || "연결이 잠시 끊겼어요."); e.gone = j.gone; e.rejoin = j.rejoin; e.status = r.status; throw e; }
+  return j;
+}
+function show(id) { for (const v of ["v-code", "v-seat", "v-room", "v-gone"]) $(`#${v}`).hidden = v !== id; $("#code-chip").hidden = !code || id === "v-code"; $("#code-chip").textContent = code; }
+function save() { try { localStorage.setItem(KEY(), JSON.stringify({ token })); } catch {} }
+function load() { try { token = JSON.parse(localStorage.getItem(KEY()) || "{}").token || ""; } catch { token = ""; } }
+
+function drawSeats() {
+  const list = state?.seats || [];
+  $("#seats").innerHTML = list.length ? list.map((s) => `<button type="button" class="seat" data-id="${s.id}" aria-pressed="${pick === s.id}" ${taken[s.id] ? "disabled" : ""}><span class="ava" style="background:${COLOR[s.id]}">${esc(s.name.slice(0, 1))}</span><span><b>${esc(s.name)}</b><small>${taken[s.id] ? "다른 분이 앉았어요" : "비어 있어요"}</small></span></button>`).join("")
+    : `<p class="help">진행 화면에서 '나도 참여'를 켜면 자리가 생겨요.</p>`;
+  $("#seats").querySelectorAll("button").forEach((b) => (b.onclick = () => { pick = b.dataset.id; drawSeats(); }));
+  if (pick && (taken[pick] || !list.some((s) => s.id === pick))) pick = null;
+  $("#seat-go").disabled = !pick;
+  $("#name-in").disabled = !["idle", "ready"].includes(state?.status || "idle");
+}
+function drawRoom() {
+  const st = state || {}, me = (st.seats || []).find((s) => s.id === seat) || { name: "나" };
+  $("#st-eyebrow").textContent = `${STATUS[st.status] || "대기 중"}${st.turn ? ` · ${st.turn}` : ""}`;
+  $("#st-topic").textContent = st.status === "done" && st.headline ? st.headline : st.topic || "진행 화면에서 회의를 시작하면 여기에 보여요.";
+  $("#me-name").textContent = me.name; $("#me-ava").textContent = me.name.slice(0, 1); $("#me-ava").style.background = COLOR[seat] || "#0A0A0A";
+  const ask = st.ask && st.ask.who === seat && answered !== st.ask.q ? st.ask : null;
+  if (!st.ask || st.ask.who !== seat) answered = "";
+  const wasHidden = $("#ask").hidden;
+  $("#ask").hidden = !ask; $("#say").hidden = !!ask;
+  if (ask) { $("#ask-from").textContent = ask.from || "사회자"; $("#ask-me").textContent = me.name; $("#ask-q").textContent = ask.q; if (wasHidden) { try { navigator.vibrate?.(120); } catch {} $("#ask").scrollIntoView({ block: "start", behavior: "smooth" }); } }
+  const live = st.status === "running" || st.status === "paused";
+  $("#say-send").disabled = !live; $("#hand").disabled = !live; $("#quick").querySelectorAll("[data-say]").forEach((b) => (b.disabled = !live));
+  $("#say-help").textContent = live ? "" : st.status === "done" ? "회의가 끝났어요." : "회의가 시작되면 말할 수 있어요.";
+  $("#hand").classList.toggle("on", st.hand === seat);
+  const last = st.last || [];
+  $("#log").innerHTML = last.length ? last.slice().reverse().map((t) => `<div class="${t.speaker.startsWith(me.name + "(") ? "mine" : ""}"><b>${esc(t.speaker)}</b>${esc(t.text)}</div>`).join("") : `<p class="help">아직 발언이 없어요.</p>`;
+}
+async function refresh() {
+  if (!code || busy || document.hidden) return;
+  try {
+    const r = await api("state");
+    state = r.state; taken = r.taken || {};
+    if (r.you) { seat = r.you; show("v-room"); drawRoom(); }
+    else { if (seat) toast("자리가 비워졌어요. 다시 골라 주세요."); seat = null; show("v-seat"); drawSeats(); }
+  } catch (e) {
+    if (e.gone) { stop(); $("#gone-text").textContent = e.message; show("v-gone"); }
+  }
+}
+function start() { stop(); refresh(); timer = setInterval(refresh, 2500); }
+function stop() { clearInterval(timer); timer = null; }
+async function send(kind, text, extra) {
+  if (busy) return false; busy = true;
+  try { await api("send", { kind, text, ...extra }); return true; }
+  catch (e) { toast(e.message); if (e.rejoin) { seat = null; token = ""; } if (e.gone) { stop(); show("v-gone"); } return false; }
+  finally { busy = false; }
+}
+
+$("#code-go").onclick = () => { const v = $("#code-in").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""); if (v.length < 4) return toast("방 코드를 확인해 주세요."); code = v; history.replaceState(null, "", `/j/${code}`); load(); start(); };
+$("#code-in").onkeydown = (e) => { if (e.key === "Enter") $("#code-go").click(); };
+$("#seat-go").onclick = async () => {
+  if (!pick || busy) return; busy = true;
+  try { const r = await api("join", { seat: pick, name: $("#name-in").disabled ? "" : $("#name-in").value.trim() }); token = r.token; seat = r.seat; save(); }
+  catch (e) { toast(e.message); }
+  finally { busy = false; refresh(); }
+};
+$("#ask-send").onclick = async () => { const t = $("#ask-text").value.trim(); if (!t) return toast("답을 적거나 '이번엔 넘기기'를 눌러 주세요."); const q = state?.ask?.q || ""; if (await send("answer", t)) { answered = q; $("#ask-text").value = ""; toast("답을 보냈어요."); drawRoom(); } };
+$("#ask-skip").onclick = async () => { const q = state?.ask?.q || ""; if (await send("skip", "")) { answered = q; drawRoom(); } };
+$("#say-send").onclick = async () => { const t = $("#say-text").value.trim(); if (!t) return; if (await send("say", t)) { $("#say-text").value = ""; toast("보냈어요. 곧 회의에 반영돼요."); } };
+$("#quick").querySelectorAll("[data-say]").forEach((b) => (b.onclick = async () => { if (await send("say", b.dataset.say)) toast("보냈어요."); }));
+$("#hand").onclick = async () => { const on = !$("#hand").classList.contains("on"); if (await send("hand", "", { on })) { $("#hand").classList.toggle("on", on); toast(on ? "발언을 신청했어요. 다음 차례에 사회자가 불러 줄 거예요." : "발언 신청을 취소했어요."); } };
+$("#leave").onclick = async () => { try { await api("leave"); } catch {} token = ""; seat = null; pick = null; try { localStorage.removeItem(KEY()); } catch {} refresh(); };
+$("#gone-retry").onclick = () => { code = ""; history.replaceState(null, "", "/join.html"); show("v-code"); };
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+
+if (code) { load(); start(); } else show("v-code");
+</script>
+</body>
+</html>

@@ -11,6 +11,10 @@
     {
       "source": "/s/:id",
       "destination": "/api/share?id=:id"
+    },
+    {
+      "source": "/j/:code",
+      "destination": "/join.html"
     }
   ],
   "functions": {
@@ -22,6 +26,9 @@
     },
     "api/share.js": {
       "maxDuration": 15
+    },
+    "api/room.js": {
+      "maxDuration": 10
     }
   },
   "headers": [

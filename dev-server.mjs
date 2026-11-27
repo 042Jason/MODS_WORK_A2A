@@ -26,6 +26,7 @@ const handlers = {
   registry: (await import(pathToFileURL(path.join(ROOT, "api/registry.js")))).default,
   models: (await import(pathToFileURL(path.join(ROOT, "api/models.js")))).default,
   share: (await import(pathToFileURL(path.join(ROOT, "api/share.js")))).default,
+  room: (await import(pathToFileURL(path.join(ROOT, "api/room.js")))).default,
 };
 
 function wrapRes(res) {
@@ -46,6 +47,8 @@ http.createServer(async (req, rawRes) => {
   else if (url.pathname === "/api/models") fn = "models";
   else if (url.pathname === "/api/a2a") fn = "a2a";
   else if (url.pathname === "/api/share") fn = "share";
+  else if (url.pathname === "/api/room") fn = "room";
+  else if (/^\/j\/[A-Za-z0-9]+$/.test(url.pathname)) url.pathname = "/join.html";   // 폰 참여 주소
   else if ((m = url.pathname.match(/^\/s\/([a-f0-9]+)$/))) { fn = "share"; query.id = m[1]; }
 
   if (fn) {

@@ -1,6 +1,7 @@
 // Ensembly (AI 회의실) · Copyright (c) 2026 박재현. All rights reserved. 무단 복제·수정·배포 금지 (LICENSE 참고)
 // 회의실의 주소록: 어떤 에이전트에게 연락할 수 있는지, 지금 어떤 키로 돌아가는지 알려 줍니다.
 import { SHARED_MAX_TURNS, passcodeOk } from "./_lib/auth.js";
+import { roomsReady } from "./room.js";
 
 export default function handler(req, res) {
   const proto = req.headers["x-forwarded-proto"] || "http";
@@ -12,6 +13,7 @@ export default function handler(req, res) {
     requiresPasscode: Boolean(process.env.MEETING_PASSCODE),
     passcodeOk: passcodeOk(req),
     sharedMaxTurns: SHARED_MAX_TURNS,
+    rooms: roomsReady(),   // 폰으로 함께 참여(방 코드)를 쓸 수 있는지: 저장소가 연결돼 있어야 해요
     sharedWeb: process.env.SHARED_WEB_SEARCH === "1",   // 공용 키로도 웹 검색 증강을 쓸 수 있는지 (기본은 내 키만)
   });
 }
