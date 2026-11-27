@@ -12,5 +12,6 @@ export default function handler(req, res) {
     requiresPasscode: Boolean(process.env.MEETING_PASSCODE),
     passcodeOk: passcodeOk(req),
     sharedMaxTurns: SHARED_MAX_TURNS,
+    sharedWeb: process.env.SHARED_WEB_SEARCH === "1",   // 공용 키로도 웹 검색 증강을 쓸 수 있는지 (기본은 내 키만)
   });
 }

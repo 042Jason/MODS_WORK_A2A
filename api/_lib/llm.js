@@ -28,7 +28,7 @@ function userContent(model, user, cachePrefixLen) {
   ];
 }
 
-async function callOnce({ apiKey, model, system, user, temperature, maxTokens, jsonMode, lightReasoning, cachePrefixLen = 0, onUsage, timeoutMs = 50_000 }) {
+async function callOnce({ apiKey, model, system, user, temperature, maxTokens, jsonMode, lightReasoning, cachePrefixLen = 0, onUsage, web = false, onCitations, timeoutMs = 50_000 }) {
   const ctrl = new AbortController();
   const limit = Math.max(3000, timeoutMs);
   const timer = setTimeout(() => ctrl.abort(), limit);
@@ -53,6 +53,8 @@ async function callOnce({ apiKey, model, system, user, temperature, maxTokens, j
         ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
         // 추론 모델이 생각하느라 시간을 다 쓰지 않도록 가볍게, 추론 내용은 받지 않음
         ...(lightReasoning ? { reasoning: { effort: "low", exclude: true } } : {}),
+        // 웹 검색 증강: OpenRouter 웹 플러그인이 검색 결과를 붙여 주고, 실제로 쓴 문서는 annotations(url_citation)로 돌아와요
+        ...(web ? { plugins: [{ id: "web", max_results: 3 }] } : {}),
       }),
     });
     const text = await res.text();
@@ -66,6 +68,11 @@ async function callOnce({ apiKey, model, system, user, temperature, maxTokens, j
     const data = JSON.parse(text);
     // 회의 품질 점수표의 '비용' 칸에 쓸 실제 토큰 수
     if (data.usage) onUsage?.({ in: Number(data.usage.prompt_tokens) || 0, out: Number(data.usage.completion_tokens) || 0, cost: Number(data.usage.cost) || 0 });
+    if (web) {
+      const cites = (data.choices?.[0]?.message?.annotations || []).filter((a) => a?.type === "url_citation" && /^https?:\/\//i.test(a.url_citation?.url || ""))
+        .map((a) => ({ url: String(a.url_citation.url).slice(0, 500), title: String(a.url_citation.title || "").slice(0, 160) }));
+      onCitations?.(cites);
+    }
     return data.choices?.[0]?.message?.content ?? "";
   } catch (e) {
     if (e.name === "AbortError") { const err = new Error(`모델 응답이 ${Math.round(limit / 1000)}초 안에 오지 않았어요.`); err.status = 408; throw err; }
@@ -110,9 +117,9 @@ export async function chatJSON({ apiKey, model, fallbacks = [], onModel, onFallb
   throw lastErr || new Error("모델들이 제한 시간 안에 응답하지 않았어요.");
 }
 
-async function chatWithModel({ apiKey, model, system, user, temperature = 0.7, maxTokens = 2500, cachePrefixLen = 0, onUsage, timeoutMs = 50_000 }) {
+async function chatWithModel({ apiKey, model, system, user, temperature = 0.7, maxTokens = 2500, cachePrefixLen = 0, onUsage, web = false, onCitations, timeoutMs = 50_000 }) {
   const until = Date.now() + timeoutMs;
-  const base = { apiKey, model, system, user, temperature, maxTokens, cachePrefixLen, onUsage };
+  const base = { apiKey, model, system, user, temperature, maxTokens, cachePrefixLen, onUsage, web, onCitations };
   const left = () => { const t = until - Date.now(); if (t < 3000) { const e = new Error("이 모델에 쓸 시간이 다 됐어요."); e.status = 408; throw e; } return t; };
   let content;
   try {

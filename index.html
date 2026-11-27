@@ -402,6 +402,13 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
 .live-quick button{flex:none;border:1px solid var(--hair);background:#fff;border-radius:999px;padding:5px 11px 6px;font:inherit;font-size:12.5px;cursor:pointer;white-space:nowrap}
 .live-quick button:hover{border-color:var(--ink)}
 .live-quick button.on{background:#FFD43B;border-color:#0A0A0A;font-weight:650}
+.live-who{display:flex;align-items:center;gap:6px;padding-bottom:8px;overflow-x:auto;scrollbar-width:none}
+.live-who > span{flex:none;font-size:12px;color:var(--muted)}
+.srcs{display:flex;flex-direction:column;gap:4px;margin-top:8px;font-size:12px}
+.src{display:flex;gap:7px;align-items:baseline;line-height:1.45;min-width:0}
+.src b{flex:none;font-family:var(--mono);font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:999px;border:1px solid var(--ink);background:#fff}
+.src[data-t="web"] b{background:#D9F2E3}.src[data-t="doc"] b{background:#DDE8FF}.src[data-t="memory"] b{background:#FFF4D6;border-style:dashed}
+.src span{min-width:0;overflow-wrap:anywhere}.src a{color:inherit;text-decoration:underline;text-underline-offset:2px}.src small{color:var(--muted)}
 .me-seat{position:absolute;right:14px;top:12px;z-index:4;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:999px;border:1.5px solid var(--ink);background:#fff;box-shadow:var(--lift);cursor:pointer}
 .me-seat b{display:block;font-size:13px;line-height:1.1}.me-seat small{font-size:11px;color:var(--muted)}
 .me-ava{width:30px;height:30px;font-size:13px;--t:#0A0A0A;--c:#fff}
@@ -823,6 +830,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
         <button type="button" data-say="다른 관점도 한번 들어 보고 싶어요.">🔄 다른 관점도</button>
         <button type="button" id="live-hand">✋ 발언 신청</button>
       </div>
+      <div class="cp-to live-who" id="live-who" role="radiogroup" aria-label="말하는 사람" hidden></div>
       <div class="cp-row"><textarea id="live-text" rows="1" enterkeyhint="send" placeholder="회의에 한마디 하기"></textarea><button class="pill dark" id="live-send">말하기</button></div>
       <button class="cp-more" id="live-skip" type="button" hidden>이번엔 넘기기</button>
     </div>
@@ -882,6 +890,21 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
       <div class="row"><label class="tg"><input type="checkbox" id="me-on" aria-label="회의에 나도 참여하기"><span></span></label><b style="font-size:14px">회의에 나도 참여하기</b>
         <span class="spacer"></span><button class="pill sm" id="me-edit">내 프로필 카드</button></div>
       <p class="help" id="me-summary"></p>
+      <div id="me-more" hidden>
+        <div class="row" style="margin-top:10px"><b style="font-size:13px">함께 앉는 사람</b><span class="spacer"></span><span id="me-count" role="radiogroup" aria-label="함께 앉는 사람 수" style="display:inline-flex;gap:6px"></span></div>
+        <p class="help">한 화면을 같이 보며 최대 3명까지 참여해요. 2명이면 에이전트는 최대 4명, 3명이면 최대 3명이에요. 말할 때 입력창에서 이름을 고르면 돼요.</p>
+        <div class="row" id="me-people" style="margin-top:6px;flex-wrap:wrap;gap:6px"></div>
+      </div>
+    </section>
+    <section class="sec" id="sec-answer">
+      <div class="sec-h"><h3>답변 형식과 근거</h3><span class="eyebrow ko" id="ans-state">기본</span></div>
+      <p class="desc">에이전트가 말하는 형식을 정하고, 근거와 출처를 함께 적게 할 수 있어요. 다음 발언부터 적용돼요.</p>
+      <label class="tp-label" for="ans-format">답변 형식 요청 (선택)</label>
+      <textarea class="inp" id="ans-format" maxlength="300" rows="2" placeholder="예) 결론을 먼저 한 문장으로 말하고, 이어서 근거를 두 가지 들어 주세요."></textarea>
+      <div class="row" style="margin-top:12px"><label class="tg"><input type="checkbox" id="ans-cite" aria-label="근거와 출처 함께 적기"><span></span></label><b style="font-size:14px">근거와 출처 함께 적기</b></div>
+      <p class="help">발언 아래에 출처를 자료·웹·기억으로 나눠 보여 줘요. '기억'은 AI가 학습한 지식에서 나온 것이라 직접 확인이 필요해요.</p>
+      <div class="row" style="margin-top:12px"><label class="tg"><input type="checkbox" id="ans-web" aria-label="웹 검색으로 근거 찾기"><span></span></label><b style="font-size:14px">웹 검색으로 근거 찾기</b></div>
+      <p class="help" id="ans-web-help"></p>
     </section>
     <section class="sec">
       <div class="sec-h"><h3>턴 수</h3><span class="eyebrow" id="turns-eyebrow"></span></div>
@@ -1022,7 +1045,7 @@ const pickedModels = () => (sharedMode() ? loadSettings().sharedModels : loadSet
 const modelFor = (id) => (pickedModels()[id] || (sharedMode() ? S.agents[id]?.sharedModel || S.agents[id]?.defaultModel : S.agents[id]?.defaultModel)) || "";
 const isCheap = (m) => m.priceOut != null && m.priceOut <= (S.sharedMaxOut || 5);
 // 자리는 사회자 포함 6개예요. 나도 참여하면 에이전트 참석자는 최대 4명
-function maxMembers() { return meOn() ? ALL_MEMBERS.length - 1 : ALL_MEMBERS.length; }
+function maxMembers() { const h = humans().length; return h <= 1 ? ALL_MEMBERS.length - h : 6 - h; }   // 사람 1명: 4, 2명: 4, 3명: 3
 function members() {
   const saved = loadSettings().members;
   let list = Array.isArray(saved) ? ALL_MEMBERS.filter((id) => saved.includes(id)) : ALL_MEMBERS.slice();
@@ -1142,15 +1165,15 @@ const vendorOf = (m) => ({ openai: "GPT", anthropic: "Claude", google: "Gemini",
 const shortModel = (m) => `${vendorOf(m)} ${((m || "").split("/")[1] || "").replace(/^(claude|gpt|gemini|grok|solar|deepseek|mistral|qwen|llama|kimi|glm|command|nova|minimax|phi|nemotron|ernie|hunyuan)-?/i, "").replace(/-preview$/, "")}`.trim();
 const seatIds = () => ["moderator", ...members()];
 // 참석자 수: 에이전트 + (참여 중이면) 나
-const heads = () => members().length + (meOn() ? 1 : 0);
-const headsLabel = () => `참석자 ${heads()}명${meOn() ? "(나 포함)" : ""}`;
+const heads = () => members().length + humans().length;
+const headsLabel = () => `참석자 ${heads()}명${humans().length > 1 ? `(사람 ${humans().length}명 포함)` : meOn() ? "(나 포함)" : ""}`;
 function face(id, cls = "") {   // 캐릭터 얼굴 (이미지를 못 불러오면 이름 첫 글자)
-  if (id === "me") return meFace(cls);
+  if (isHuman(id)) return meFace(cls, id);
   const a = S.agents[id]; if (!a) return "";
   return `<img class="ava ${cls}" src="${esc(a.face)}" alt="" style="--t:${a.tint};--c:${a.color}" onerror="this.outerHTML='<span class=&quot;ava-fb ${cls}&quot; style=&quot;--t:${a.tint};--c:${a.color}&quot;>${esc(a.name[0])}</span>'">`;
 }
-const crew = (cls = "") => seatIds().map((id) => face(id, cls)).join("") + (meOn() ? meFace(cls) : "");
-const meFace = (cls = "") => `<span class="ava-fb ${cls}" style="--t:${ME_COLOR};--c:#FFFFFF">${esc(meProfile().name.slice(0, 1))}</span>`;
+const crew = (cls = "") => seatIds().map((id) => face(id, cls)).join("") + humanIds().map((id) => meFace(cls, id)).join("");
+const meFace = (cls = "", id = "me") => `<span class="ava-fb ${cls}" style="--t:${HUMAN_STYLE[id]?.[0] || ME_COLOR};--c:#FFFFFF">${esc(meProfile(id).name.slice(0, 1))}</span>`;
 function styleVars(id) { const a = S.agents[id]; return `--c:${a.color};--t:${a.tint};--rot:${ROT[id] || 0}deg`; }
 
 function drawSeats() {
@@ -1167,28 +1190,29 @@ function drawSeats() {
     b.onclick = () => showCard(id);
     $("#stage").appendChild(b);
   }
-  if (meOn()) {   // 나도 같은 모양의 자리에
-    const p = meProfile(), b = document.createElement("button");
-    b.className = `note mine ${S.hand ? "hand" : ""}`; b.id = "seat-me"; b.setAttribute("style", `--c:${ME_COLOR};--t:${ME_TINT};--rot:-1.5deg`);
-    b.setAttribute("aria-label", `${p.name}, 사용자. 내 카드 보기`);
+  humans().forEach((p, k) => {   // 사람도 같은 모양의 자리에 (최대 3명)
+    const b = document.createElement("button"), [c, t] = HUMAN_STYLE[p.id];
+    b.className = `note mine ${S.hand === p.id ? "hand" : ""}`; b.id = `seat-${p.id}`; b.setAttribute("style", `--c:${c};--t:${t};--rot:${[-1.5, 1.2, -0.8][k]}deg`);
+    b.setAttribute("aria-label", `${p.name}, 사용자. 프로필 카드 보기`);
     b.innerHTML = `<div class="sel"><b></b><b></b><b></b><b></b><span></span></div>
-      <div class="n-top">${meFace("n-av")}<span class="eyebrow" style="opacity:.6">YOU</span></div>
+      <div class="n-top">${meFace("n-av", p.id)}<span class="eyebrow" style="opacity:.6">${p.id === "me" ? "YOU" : "HUMAN"}</span></div>
       <div class="n-name">${esc(p.name)}</div><div class="n-title">${esc(p.title || "사용자")}</div>
-      <div class="n-model eyebrow">${esc(p.mbti ? `${p.mbti} · ${MBTI_NAME[p.mbti] || ""}` : "참석 중")}</div><div class="n-state" id="st-me"></div>`;
-    b.onclick = showMeCard;
+      <div class="n-model eyebrow">${esc(p.mbti ? `${p.mbti} · ${MBTI_NAME[p.mbti] || ""}` : "참석 중")}</div><div class="n-state" id="st-${p.id}"></div>`;
+    b.onclick = () => showMeCard(p.id);
     $("#stage").appendChild(b);
-  }
+  });
   placeSeats(); refreshSeats();
 }
 function placeSeats() {
   // 사회자를 맨 위에 두고 나머지를 타원 둘레에 고르게 앉힌 뒤, 자리와 겹치지 않을 만큼 탁자 폭을 정해요.
-  const ids = ["moderator", ...SEAT_ORDER.filter((id) => members().includes(id)), ...(meOn() ? ["me"] : [])];
+  const ids = ["moderator", ...SEAT_ORDER.filter((id) => members().includes(id)), ...humanIds()];
   const st = $("#stage"), W = st.clientWidth, H = st.clientHeight, n = ids.length;
   const rx = Math.min(W * 0.4, 310), ry = H / 2 - 80, HALF_W = 64, HALF_H = 78, GAP = 14, B = 125;
   let a = Math.min(230, W * 0.36);
   // 자리가 5개(사회자+4명)면 원 둘레에 고르게 앉힐 때 아래 두 자리가 탁자 쪽으로 붙어서 탁자가 좁아져요.
   // 그래서 사회자는 위, 나머지 넷은 탁자 양옆에 위아래로 두 명씩 앉혀요.
-  const PRESET = { 5: [[0, -1], [1, -0.32], [1, 0.8], [-1, 0.8], [-1, -0.32]] };
+  // 자리가 7개(사회자+에이전트·사람 6명)면 양옆에 세 명씩 앉혀요. 원 둘레에 두면 아래 자리들이 탁자에 가려져요.
+  const PRESET = { 5: [[0, -1], [1, -0.32], [1, 0.8], [-1, 0.8], [-1, -0.32]], 7: [[0, -1], [1, -0.86], [1, 0], [1, 0.86], [-1, 0.86], [-1, 0], [-1, -0.86]] };
   ids.forEach((id, k) => {
     const ang = (-90 + (360 / n) * k) * Math.PI / 180;
     const [fx, fy] = PRESET[n]?.[k] || [Math.cos(ang), Math.sin(ang)];
@@ -1295,7 +1319,7 @@ function describeConfig() {
   const n = members().length, T = turns();
   $("#subtitle").innerHTML = `AI 에이전트들이 A2A로 모여 어떤 주제든 토론해요<button class="cfg-chip" id="cfg-chip" title="참석자와 턴 수는 설정에서 바꿀 수 있어요">${headsLabel()} · ${T}턴<svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 17.3V20h2.7L17.8 8.9l-2.7-2.7L4 17.3Zm16.7-11.4a1 1 0 0 0 0-1.4l-1.2-1.2a1 1 0 0 0-1.4 0l-1.1 1.1 2.6 2.6 1.1-1.1Z"/></svg></button>`;
   $("#cfg-chip").onclick = openMembers;
-  $("#frame-meta").textContent = `${n + 1} agents${meOn() ? " + you" : ""} · ${T} turns`;
+  $("#frame-meta").textContent = `${n + 1} agents${humans().length > 1 ? ` + ${humans().length} humans` : meOn() ? " + you" : ""} · ${T} turns`;
 }
 
 /* ───────────── 진행표 ───────────── */
@@ -1362,7 +1386,7 @@ function castReaction(id, prev, now, ask, turn, total) {
 function drawMood() {
   drawMoodInner();
   const n = Object.values(S.meeting?.meCells || {}).reduce((a, b) => a + b, 0);
-  if (n && meOn()) $("#mood").insertAdjacentHTML("beforeend", `<span class="m me">${esc(meProfile().name)} ${n}</span>`);
+  if (n && meOn()) for (const h of humans()) { const c = S.transcript.filter((t) => t.role === "me" && (t.who || "me") === h.id).length; if (c) $("#mood").insertAdjacentHTML("beforeend", `<span class="m me">${esc(h.name)} ${c}</span>`); }
 }
 function drawMoodInner() {
   const vals = members().map((id) => S.last[id]?.stance).filter(Boolean);
@@ -1386,17 +1410,18 @@ function emptyLog() {
 }
 function logPane() { const p = $("#pane-log"); if (p.querySelector(".empty")) p.innerHTML = ""; return p; }
 function addDivider(phase) { logPane().insertAdjacentHTML("beforeend", `<div class="divider"><span class="eyebrow ko">${esc(phaseEyebrow(phase))}</span><span style="font-size:13px">${esc(phaseLabel(phase))}</span></div>`); }
-function addMsg({ id, to, text, ask, stance, confidence, position, thought, raw, model, err, turn, label, thoughtLabel, refs, criterion, changedBecause, unjustified, objections, resolves, fallbackFrom }) {
+function addMsg({ id, to, text, ask, stance, confidence, position, thought, raw, model, err, turn, label, thoughtLabel, refs, criterion, changedBecause, unjustified, objections, resolves, fallbackFrom, sources }) {
   const a = S.agents[id], isMod = id === "moderator";
   const el = document.createElement("article");
   el.className = `cmt ${isMod ? "mod" : ""} ${err ? "err" : ""}`; el.setAttribute("style", styleVars(id));
   el.innerHTML = `${face(id)}<div>
-    <div class="meta"><b>${esc(a.name)}</b>${to ? `<span class="to">→ ${esc(to === "me" ? meProfile().name : S.agents[to]?.name)}</span>` : ""}
+    <div class="meta"><b>${esc(a.name)}</b>${to ? `<span class="to">→ ${esc(isHuman(to) ? meProfile(to).name : S.agents[to]?.name)}</span>` : ""}
       ${turn && !isMod ? `<span class="phase">${esc(shortPhase(phaseOfTurn(turn)))}</span>` : ""}${label ? `<span class="phase">${esc(label === "Answer" ? "후속 답변" : label)}</span>` : ""}
       ${model ? `<span class="eyebrow${fallbackFrom ? " fbk" : ""}" ${fallbackFrom ? `title="${esc(shortModel(fallbackFrom))}이(가) 응답하지 않아 대신 답했어요"` : ""}>${esc(model === "mock" ? "모의" : shortModel(model))}${fallbackFrom ? " · 대체" : ""}</span>` : ""}
       ${raw ? `<button class="jsonbtn eyebrow ko">원본</button>` : ""}</div>
     <div class="text">${esc(text)}</div>
     ${stance || ask || refs?.length || criterion ? `<div class="row2">${stance ? stanceChip(stance, confidence, position) : ""}${ask ? `<span class="tag">${esc(ask.to)} 님께 질문 · ${esc(ask.question)}</span>` : ""}${refs?.length ? `<span class="refs" title="이번 발언에 함께 넣은 자료 구간">참고 구간 ${refs.map((x) => `${x.n}(${x.page}쪽)`).join(" · ")}</span>` : ""}${criterion ? `<span class="crit" title="이번 발언에서 적용한 판단 기준">기준 · ${esc(criterion)}</span>` : ""}</div>` : ""}
+    ${sources?.length ? `<div class="srcs">${sources.map(srcLine).join("")}</div>` : ""}
     ${changedBecause ? `<div class="why-shift">입장 변경 근거 · ${esc(changedBecause)}</div>` : unjustified ? `<div class="why-shift muted">근거 없이 바꾼 입장은 반영하지 않았어요</div>` : ""}
     ${objections?.length || resolves?.length ? `<div class="objs">${(objections || []).map((o) => `<span class="obj"><b>${o.id} 반론</b>${esc(o.text)}</span>`).join("")}${(resolves || []).map((o) => `<span class="obj done"><b>${o.id} ${o.how}</b>${esc(o.why)}</span>`).join("")}</div>` : ""}
     ${thought ? `<details class="inner"><summary><svg width="10" height="10" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>${thoughtLabel || (isMod ? "이렇게 정한 이유" : "속마음")}</summary><div class="ibody">${esc(cleanNote(thought))}</div></details>` : ""}
@@ -1405,6 +1430,14 @@ function addMsg({ id, to, text, ask, stance, confidence, position, thought, raw,
   logPane().appendChild(el); el.scrollIntoView({ block: "end", behavior: "smooth" });
   setLogCount(S.transcript.length);
   return el;
+}
+// 발언 아래 출처 한 줄. 웹은 검색에서 실제로 돌아온 문서만 링크로, 기억은 확인이 필요하다고 표시해요
+const SRC_LABEL = { doc: "자료", web: "웹", memory: "기억 · 확인 필요" };
+function srcLine(x) {
+  const t = SRC_LABEL[x.type] ? x.type : "memory", url = /^https?:\/\//i.test(x.url || "") ? x.url : "";
+  let host = ""; try { host = url ? new URL(url).hostname.replace(/^www\./, "") : ""; } catch {}
+  const title = esc(x.title || host || "출처");
+  return `<div class="src" data-t="${t}"><b>${SRC_LABEL[t]}</b><span>${x.claim ? `${esc(x.claim)} — ` : ""}${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${title}</a>` : title}${host ? ` <small>${esc(host)}</small>` : ""}${x.where ? ` <small>${esc(x.where)}</small>` : ""}</span></div>`;
 }
 function addThinking(id, label) {
   const a = S.agents[id];
@@ -1501,7 +1534,7 @@ async function resumeMeeting() {   // 멈춘 턴부터 다시
 }
 async function runFrom() {
   const m = S.meeting, team = m.team, total = m.plan.length, ss = m.sessionStart || 0;
-  const base = (i) => ({ attendees: team, totalTurns: total - ss, turn: i - ss + 1, topic: topicForAgents(), user: meForAgents(), style: meetingStyle(), ledger: m.ledger || [] });
+  const base = (i) => ({ attendees: team, totalTurns: total - ss, turn: i - ss + 1, topic: topicForAgents(), user: meForAgents(), users: usersForAgents(), ...answerOpts(), style: meetingStyle(), ledger: m.ledger || [] });
   S.running = true; S.abort = new AbortController(); updateRunButton(); updateComposer();
   let i = m.i, wrap = false;
   try {
@@ -1556,14 +1589,18 @@ async function runFrom() {
         continue;
       }
       // 1라운드가 끝나고 2라운드로 넘어갈 때: 나도 참여 중이면 내 첫 생각도 먼저 들어요
-      if (roundStart && meOn() && !m.meOpening && m.plan[i - 1] === "round1") {
-        m.meOpening = true;
-        const q = `${meProfile().name} 님 생각도 들어 볼게요. 지금까지 첫 의견들을 들어 보니 어떠세요?`;
-        const qEntry = { role: "moderator", speaker: "사회자", text: q };
-        S.transcript.push(qEntry);
-        const qHist = logMsg({ id: "moderator", to: "me", text: q, label: "질문" });
-        try { await askUserQuestion("moderator", q); }
-        catch (e) { m.meOpening = false; const k = S.transcript.lastIndexOf(qEntry); if (k >= 0) S.transcript.splice(k, 1); voidMsg(qHist); throw e; }
+      if (roundStart && meOn() && m.plan[i - 1] === "round1") {
+        const hs = humans(); m.meOpened ??= m.meOpening ? hs.length : 0;   // 끊겼다 이어도 이미 들은 사람은 건너뛰어요
+        while (m.meOpened < hs.length) {
+          const h = hs[m.meOpened];
+          const q = m.meOpened === 0 ? `${h.name} 님 생각도 들어 볼게요. 지금까지 첫 의견들을 들어 보니 어떠세요?` : `${h.name} 님은 어떻게 보세요?`;
+          const qEntry = { role: "moderator", speaker: "사회자", text: q };
+          S.transcript.push(qEntry);
+          const qHist = logMsg({ id: "moderator", to: h.id, text: q, label: "질문" });
+          try { await askUserQuestion("moderator", q, h.id); }
+          catch (e) { const k = S.transcript.lastIndexOf(qEntry); if (k >= 0) S.transcript.splice(k, 1); voidMsg(qHist); throw e; }
+          m.meOpened++; m.meOpening = true;
+        }
       }
 
       let next, say, modRaw, modModel, modThought, askUser = "", issue = "";
@@ -1575,13 +1612,14 @@ async function runFrom() {
           cast("의견이 너무 빨리 모였어요. 사회자가 반대편 논리를 청해요.", "moderator");
         }
       }
-      const handUp = S.hand && meOn();
-      if (handUp) hint = `${hint ? `${hint} / ` : ""}사용자 ${meProfile().name} 님이 손을 들었어요. 이번 차례에 ask_user로 먼저 발언 기회를 주세요.`;
+      const handId = meOn() && humanIds().includes(S.hand) ? S.hand : null, handUp = !!handId;
+      let askTo = "";
+      if (handUp) hint = `${hint ? `${hint} / ` : ""}사용자 ${meProfile(handId).name} 님이 손을 들었어요. 이번 차례에 ask_user로 먼저 발언 기회를 주세요.`;
       if (S.userQ && meOn()) { hint = `${hint ? `${hint} / ` : ""}${S.agents[S.userQ.from]?.name} 님이 사용자에게 이걸 듣고 싶어 해요: "${S.userQ.q}". 필요하다고 보면 ask_user로 사회자가 대신 물어 주세요.`; S.userQ = null; }
       try {
         const mm = await call("moderator", `[회의실→사회자] ${turn}번째 턴 진행 요청`, { type: "moderate", document: docForAgents(), transcript: publicTranscript(), phase, eligible, roundStart, standing: S.last, hint: hint || moreHint(phase), ...base(i) });
         if (mm.failed) throw failErr(mm.text);
-        next = mm.data.next; say = mm.text; modRaw = mm.raw; modModel = mm.data.model; modThought = mm.data.thoughts; askUser = mm.data.askUser || ""; issue = mm.data.issue || "";
+        next = mm.data.next; say = mm.text; modRaw = mm.raw; modModel = mm.data.model; modThought = mm.data.thoughts; askUser = mm.data.askUser || ""; askTo = mm.data.askUserTo || ""; issue = mm.data.issue || "";
       } catch (e) {
         if (e.name === "AbortError" || isNetErr(e)) throw e;
         next = eligible[0]; say = `${S.agents[next].name} 님 의견 부탁드려요.`;
@@ -1589,14 +1627,18 @@ async function runFrom() {
       }
       if (!eligible.includes(next)) next = eligible[0];
       // 나도 참여 중이면: 사회자가 필요하다고 볼 때(라운드마다 한 번까지) 먼저 나에게 따로 묻고, 답을 들은 뒤 다음 사람을 불러요
-      if (handUp && !askUser) askUser = `${meProfile().name} 님, 손을 드셨네요. 말씀해 주세요.`;
+      if (handUp && !askUser) askUser = `${meProfile(handId).name} 님, 손을 드셨네요. 말씀해 주세요.`;
       if (handUp) raiseHand(false);
       if (askUser && meOn() && (handUp || !(m.asked ||= {})[phase])) {
         (m.asked ||= {})[phase] = true;
+        // 누구에게 묻는지: 손 든 사람 → 사회자가 지목한 사람 → 아직 가장 덜 말한 사람
+        const said = (id) => S.transcript.filter((t) => t.role === "me" && (t.who || "me") === id).length;
+        const target = handId || humanByName(askTo)?.id || humans().find((h) => askUser.includes(h.name))?.id || [...humanIds()].sort((a, b) => said(a) - said(b))[0] || "me";
+        if (humans().length > 1 && !askUser.includes(meProfile(target).name)) askUser = `${meProfile(target).name} 님, ${askUser}`;
         const qEntry = { role: "moderator", speaker: "사회자", text: askUser };
         S.transcript.push(qEntry);
-        const qHist = logMsg({ id: "moderator", to: "me", text: askUser, label: "질문", model: modModel });
-        try { await askUserQuestion("moderator", askUser); }
+        const qHist = logMsg({ id: "moderator", to: target, text: askUser, label: "질문", model: modModel });
+        try { await askUserQuestion("moderator", askUser, target); }
         catch (e) { m.asked[phase] = false; const k = S.transcript.lastIndexOf(qEntry); if (k >= 0) S.transcript.splice(k, 1); voidMsg(qHist); throw e; }
       }
       const modEntry = { role: "moderator", speaker: "사회자", text: say };
@@ -1651,7 +1693,7 @@ async function afterMemberTurn(m, i, phase, turn, total, next, r) {
   for (const x of r.data.resolves || []) { const o = L.find((y) => y.id === x.id && y.status === "open"); if (o) { Object.assign(o, { status: x.how, resolvedBy: S.agents[next].name, resolveWhy: x.why, resolvedTurn: turn }); done.push({ ...x, text: o.text }); } }
   if (r.data.unjustified) m.unjustified = (m.unjustified || 0) + 1;
   const dm = meetingStyle() !== "free";   // 자유 토론은 편한 대화라 기준 칩·반론·입장 변경 표시를 빼요
-  logMsg({ id: next, text: r.text, ask, stance, confidence, position, thought: thoughts, raw: r.raw, model, turn, refs: r.data.refs,
+  logMsg({ id: next, text: r.text, ask, stance, confidence, position, thought: thoughts, raw: r.raw, model, turn, refs: r.data.refs, sources: r.data.sources,
     criterion: dm ? r.data.criterion : "", changedBecause: dm ? r.data.changedBecause : "", unjustified: dm && r.data.unjustified, objections: dm ? newObj : [], resolves: dm ? done : [], fallbackFrom: r.data.fallbackFrom });
   drawLedger();
   renderTable("live", { id: next, text: r.text, phase, turn, issue: m.issue }); setSpeaking(next); showBubble(next, r.text);
@@ -1687,7 +1729,7 @@ async function concludeMeeting(m, i, { early = false } = {}) {
   moveCursor(null);
   const r = await call("moderator", early ? "[회의실→사회자] 여기서 마무리, 결론 정리 요청" : "[회의실→사회자] 결론 정리 요청", {
     type: "summarize", document: docForAgents(), transcript: publicTranscript(), attendees: m.team, totalTurns: total - ss,
-    topic: topicForAgents(), turn: i - ss + 1, early, doneTurns: m.i - ss, previousReview: ss ? S.reviews?.at(-1) : undefined, user: meForAgents(), style: meetingStyle(), ledger: m.ledger || [] });
+    topic: topicForAgents(), turn: i - ss + 1, early, doneTurns: m.i - ss, previousReview: ss ? S.reviews?.at(-1) : undefined, user: meForAgents(), users: usersForAgents(), ...answerOpts(), style: meetingStyle(), ledger: m.ledger || [] });
   if (r.failed) throw failErr(r.text);
   const review = r.artifacts[0]?.parts?.find((p) => p.data)?.data, thought = r.data?.thoughts || "";
   S.transcript.push({ role: "moderator", speaker: "사회자", text: r.text });
@@ -1801,52 +1843,115 @@ function updateRunButton() {
 // ───── 나도 참여: 내 프로필, 내 카드, 회의 중 한마디와 질문에 답하기 ─────
 const MBTI = ["ISTJ", "ISFJ", "INFJ", "INTJ", "ISTP", "ISFP", "INFP", "INTP", "ESTP", "ESFP", "ENFP", "ENTP", "ESTJ", "ESFJ", "ENFJ", "ENTJ"];
 const ME_COLOR = "#3B3486", ME_TINT = "#E6E3F5";   // 내 자리·카드 색 (다른 참석자처럼 파스텔 바탕)
-function meProfile() {
-  const m = loadSettings().me || {};
-  return { on: !!m.on, name: String(m.name || "").trim() || "나", title: String(m.title || "").trim(), about: String(m.about || "").trim(), mbti: m.mbti || "" };
+// 사람 참석자는 한 화면에서 최대 3명. 첫 사람은 "me", 함께 앉는 사람은 "me2"·"me3" (설정의 me.mates에 저장)
+const HUMAN_IDS = ["me", "me2", "me3"];
+const HUMAN_STYLE = { me: [ME_COLOR, ME_TINT], me2: ["#1F5F4A", "#DDF1E7"], me3: ["#8A4B14", "#FBE8D2"] };
+const isHuman = (id) => HUMAN_IDS.includes(id);
+const humanCount = () => { const m = loadSettings().me || {}; return m.on ? Math.max(1, Math.min(3, parseInt(m.count, 10) || 1)) : 0; };
+function meProfile(id = "me") {
+  const m = loadSettings().me || {}, k = Math.max(0, HUMAN_IDS.indexOf(id)), src = k ? (m.mates || [])[k - 1] || {} : m;
+  return { id: HUMAN_IDS[k], on: !!m.on && k < Math.max(1, humanCount()), name: String(src.name || "").trim() || (k ? `참석자${k + 1}` : "나"), title: String(src.title || "").trim(), about: String(src.about || "").trim(), mbti: src.mbti || "" };
 }
-function meOn() { return meProfile().on; }
+function meOn() { return !!(loadSettings().me || {}).on; }
+const humans = () => HUMAN_IDS.slice(0, humanCount()).map((id) => meProfile(id));
+const humanIds = () => HUMAN_IDS.slice(0, humanCount());
+const humanByName = (name) => humans().find((h) => h.name === name);
+const curSpeaker = () => (humanIds().includes(S.speaker) ? S.speaker : "me");
 const meForAgents = () => { if (!meOn()) return undefined; const p = meProfile(); return { name: p.name, title: p.title, about: p.about }; };
+const usersForAgents = () => (meOn() ? humans().map((p) => ({ name: p.name, title: p.title, about: p.about })) : undefined);
+// 답변 형식·근거 표기·웹 검색 증강 (설정에서 정해요). 웹 검색은 검색 비용이 따로 들어서 내 키일 때만(운영자가 열어 두면 공용 키도)
+const webAllowed = () => !!getKey() || !!(S.registry?.serverKey && S.registry?.passcodeOk && S.registry?.sharedWeb);
+function answerOpts() {
+  const a = loadSettings().answer || {}, web = !!a.web && webAllowed();
+  return { format: String(a.format || "").trim().slice(0, 300), cite: !!a.cite || web, web };
+}
+function drawAnswer() {
+  const a = loadSettings().answer || {}, ok = webAllowed(), o = answerOpts();
+  if (document.activeElement !== $("#ans-format")) $("#ans-format").value = a.format || "";
+  $("#ans-cite").checked = !!a.cite || (!!a.web && ok); $("#ans-web").checked = !!a.web && ok; $("#ans-web").disabled = !ok;
+  $("#ans-web-help").textContent = ok
+    ? "발언마다 웹을 검색하고, 검색에서 실제로 찾은 문서만 '웹' 출처로 링크해요. 검색 비용이 따로 들고 응답이 조금 느려질 수 있어요."
+    : "웹 검색은 검색 비용이 따로 들어서 내 API 키를 넣었을 때만 쓸 수 있어요. 꺼져 있으면 AI가 학습한 지식과 올린 자료로만 답해요.";
+  $("#ans-state").textContent = [o.format && "형식 지정", o.cite && "근거 표기", o.web && "웹 검색"].filter(Boolean).join(" · ") || "기본";
+}
+function setAnswer(patch) {
+  const next = { ...(loadSettings().answer || {}), ...patch };
+  if (patch.web) next.cite = true;   // 웹 검색을 켜면 출처도 함께 보여 줘요
+  saveSettings({ answer: next }); drawAnswer();
+}
 function drawMe() {
-  const p = meProfile();
-  $("#me-on").checked = p.on; $("#me-state").textContent = p.on ? "켜짐" : "꺼짐";
-  $("#me-summary").textContent = p.on ? `'${p.name}'${p.title ? ` (${p.title})` : ""}로 참여해요.` : "";
+  const p = meProfile(), hs = humans(), n = Math.max(1, hs.length);
+  $("#me-on").checked = p.on; $("#me-state").textContent = p.on ? (n > 1 ? `${n}명 참여` : "켜짐") : "꺼짐";
+  $("#me-summary").textContent = !p.on ? "" : n > 1 ? `${hs.map((h) => `'${h.name}'`).join(", ")} ${n}명이 참여해요.` : `'${p.name}'${p.title ? ` (${p.title})` : ""}로 참여해요.`;
   $("#me-seat").hidden = true;
-  updateLive();
+  $("#me-more").hidden = !p.on;
+  $("#me-count").innerHTML = [1, 2, 3].map((k) => `<button type="button" class="pill sm ${k === n ? "dark" : ""}" role="radio" aria-checked="${k === n}" data-n="${k}">${k}명</button>`).join("");
+  $("#me-count").querySelectorAll("button").forEach((b) => (b.onclick = () => setHumanCount(+b.dataset.n)));
+  $("#me-people").innerHTML = n > 1 ? hs.map((h) => `<button type="button" class="pill sm" data-id="${h.id}">${esc(h.name)} 프로필</button>`).join("") : "";
+  $("#me-people").querySelectorAll("button").forEach((b) => (b.onclick = () => openMe(b.dataset.id)));
+  drawAnswer(); updateLive();
+}
+// 자리가 모자라면 맨 뒤 에이전트부터 이번엔 빠져요
+function fitMembers(before) {
+  if (before.length <= maxMembers()) return;
+  const out = before.slice(maxMembers());
+  saveSettings({ members: before.slice(0, maxMembers()) });
+  toast(`자리가 모자라 ${out.map((id) => S.agents[id]?.name || id).join(", ")} 님은 이번엔 빠져요. 설정에서 바꿀 수 있어요.`);
+}
+const savedMembers = () => { const saved = loadSettings().members; return Array.isArray(saved) ? ALL_MEMBERS.filter((id) => saved.includes(id)) : ALL_MEMBERS.slice(); };
+function afterHumansChange() {
+  drawMe();
+  if (S.agents.moderator && !S.running) { if (!S.meeting) applyConfig(); else drawSeats(); }
+  if (S.table === "ready" || S.table === "idle") renderTable(S.table);
+  if ($("#drawer").classList.contains("on")) { drawModelRows(); drawTurns(); }
 }
 function setMe(patch) {
   if ("on" in patch && patch.on !== meOn() && (S.running || S.meeting?.status === "paused")) {
     $("#me-on").checked = meOn(); return toast("회의 중에는 참여 여부를 바꿀 수 없어요. 회의가 끝난 뒤나 새 회의에서 바꿔 주세요.");
   }
-  const saved = loadSettings().members, before = Array.isArray(saved) ? ALL_MEMBERS.filter((id) => saved.includes(id)) : ALL_MEMBERS.slice();
+  const before = savedMembers();
   saveSettings({ me: { ...(loadSettings().me || {}), ...patch } });
   if ("on" in patch) saveSettings({ turns: null });   // 나도 참여를 켜고 끄면 턴 수도 권장값으로
-  if (patch.on && before.length > maxMembers()) {   // 자리가 모자라면 맨 뒤 한 명은 이번엔 빠져요
-    const out = before.slice(maxMembers());
-    saveSettings({ members: before.slice(0, maxMembers()) });
-    toast(`자리는 6개라 ${out.map((id) => S.agents[id]?.name || id).join(", ")} 님은 이번엔 빠져요. 설정에서 바꿀 수 있어요.`);
-  }
-  drawMe();
-  if (S.agents.moderator && !S.running) { if (!S.meeting) applyConfig(); else drawSeats(); }
-  if (S.table === "ready" || S.table === "idle") renderTable(S.table);
+  if (patch.on) fitMembers(before);
+  afterHumansChange();
 }
-function openMe() {
-  const m = loadSettings().me || {};
+function setHumanCount(n) {
+  if (n === humanCount()) return;
+  if (S.running || S.meeting?.status === "paused") return toast("회의 중에는 참여 인원을 바꿀 수 없어요. 회의가 끝난 뒤나 새 회의에서 바꿔 주세요.");
+  const before = savedMembers();
+  saveSettings({ me: { ...(loadSettings().me || {}), count: n }, turns: null });
+  fitMembers(before);
+  if (!humanIds().includes(S.speaker)) S.speaker = "me";
+  afterHumansChange();
+  if (n > 1) toast(`사람 ${n}명이 함께해요. 에이전트는 최대 ${maxMembers()}명이에요. 이름은 '프로필'에서 적어 주세요.`);
+}
+function openMe(id = "me") {
+  id = isHuman(id) ? id : "me"; openMe.id = id;
+  const k = HUMAN_IDS.indexOf(id), all = loadSettings().me || {}, m = k ? (all.mates || [])[k - 1] || {} : all;
   $("#me-name").value = m.name || ""; $("#me-title").value = m.title || ""; $("#me-about").value = m.about || ""; $("#me-mbti").value = m.mbti || "";
+  $("#dlg-me h2").textContent = k ? `참석자 ${k + 1} 프로필 카드` : "내 프로필 카드";
   $("#dlg-me").showModal();
 }
 function saveMe(show) {
-  setMe({ name: $("#me-name").value.trim(), title: $("#me-title").value.trim(), about: $("#me-about").value.trim(), mbti: $("#me-mbti").value });
-  $("#dlg-me").close(); toast("내 프로필을 저장했어요."); if (show) showMeCard();
+  const id = openMe.id || "me", k = HUMAN_IDS.indexOf(id);
+  const v = { name: $("#me-name").value.trim(), title: $("#me-title").value.trim(), about: $("#me-about").value.trim(), mbti: $("#me-mbti").value };
+  // 이름으로 발언자를 구분하니 겹치면 안 돼요 (다른 사람, 에이전트 이름)
+  const nm = v.name || (k ? `참석자${k + 1}` : "나");
+  if (humans().some((h) => h.id !== id && h.name === nm) || Object.values(S.agents).some((a) => a.name === nm) || nm === "사회자") return toast(`'${nm}'은(는) 이미 쓰는 이름이에요. 다른 이름을 적어 주세요.`);
+  if (k) { const all = loadSettings().me || {}, mates = [...(all.mates || [])]; while (mates.length < k) mates.push({}); mates[k - 1] = v; setMe({ mates }); }
+  else setMe(v);
+  $("#dlg-me").close(); toast("프로필을 저장했어요."); if (show) showMeCard(id);
 }
 const MBTI_NAME = { ISTJ: "현실주의자", ISFJ: "수호자", INFJ: "옹호자", INTJ: "전략가", ISTP: "장인", ISFP: "모험가", INFP: "중재자", INTP: "논리술사",
   ESTP: "사업가", ESFP: "연예인", ENFP: "활동가", ENTP: "변론가", ESTJ: "경영자", ESFJ: "집정관", ENFJ: "선도자", ENTJ: "통솔자" };
-function showMeCard() {
-  const p = meProfile(), mine = S.transcript.filter((t) => t.role === "me"), said = mine.length;
+function showMeCard(id = "me") {
+  id = isHuman(id) ? id : "me";
+  const p = meProfile(id), mine = S.transcript.filter((t) => t.role === "me" && (t.who || "me") === id), said = mine.length, [HC, HT] = HUMAN_STYLE[id];
+  const myHist = (label) => S.history.filter((h) => h.t === "me" && (h.a?.who || "me") === id && h.a?.label === label).length;
   const quote = (p.about.split(/(?<=[.!?。])\s|\n/)[0] || "").trim() || "같이 이야기해 봐요.";
   const recent = mine.slice(-3).map((t) => `<li>${esc(t.text.length > 70 ? `${t.text.slice(0, 70)}…` : t.text)}</li>`).join("");
   $("#pc-wrap").innerHTML = `
-    <div class="pcard" id="pcard" style="--c:${ME_COLOR};--t:${ME_TINT};--rot:0deg">
+    <div class="pcard" id="pcard" style="--c:${HC};--t:${HT};--rot:0deg">
       <div class="pc-inner">
         <div class="pc-face pc-front">
           <div class="pc-top"><span class="pc-stage">A2A Human</span><span class="pc-hp"><small>Role</small>${p.on ? "참석자" : "관전"}</span></div>
@@ -1855,7 +1960,7 @@ function showMeCard() {
           <div class="pc-sub">No.000 · ${esc(p.title || "역할을 적어 보세요")} · 사람 참석자</div>
           <div class="pc-move"><div class="pc-move-h"><span class="pc-energy"></span><b>나의 관점</b></div><p>${esc(p.about || "아직 소개가 없어요. 적어 두면 사회자와 참석자들이 나를 알고 이야기해요.")}</p></div>
           <div class="pc-move"><div class="pc-move-h"><span class="pc-energy alt"></span><b>참여 방식</b></div><p>사회자가 물어보면 답하고, 언제든 한마디 해요.</p></div>
-          <div class="pc-stats">${[["발언", said], ["답변", S.history.filter((h) => h.t === "me" && h.a?.label === "답변").length], ["한마디", S.history.filter((h) => h.t === "me" && h.a?.label === "한마디").length]]
+          <div class="pc-stats">${[["발언", said], ["답변", myHist("답변")], ["한마디", myHist("한마디")]]
             .map(([k, v]) => `<div class="pc-stat"><span>${k}</span><i>${[1, 2, 3, 4, 5].map((n) => `<b class="${n <= Math.min(5, v) ? "on" : ""}"></b>`).join("")}</i></div>`).join("")}</div>
           <div class="pc-foot"><div><small>MBTI</small><b>${p.mbti ? `${esc(p.mbti)} ${esc(MBTI_NAME[p.mbti] || "")}` : "-"}</b></div><div><small>오늘 회의</small><b>${said ? `발언 ${said}번` : "아직 발언 전"}</b></div></div>
           <p class="pc-quote">“${esc(quote)}”</p>
@@ -1863,13 +1968,13 @@ function showMeCard() {
         <div class="pc-face pc-back">
           <div class="pc-bubble"><b>${esc(p.name)}의 오늘 발언</b>${recent ? `<ul class="pc-mine">${recent}</ul>` : `<p>아직 회의에서 한 말이 없어요.</p>`}</div>
           <div class="pc-spacer"></div>
-          ${(() => { const done = S.meeting?.status === "done", b = done ? badgeStrip("me") : null;
+          ${(() => { const done = S.meeting?.status === "done", b = done ? badgeStrip(id) : null;
             return `<div class="pc-strip"><span class="pc-strip-h">사회자가 준 오늘의 배지</span><div class="pc-badges">${done ? b.html : `<p class="pc-none">회의가 끝나면 사회자가 배지를 줘요.${said ? ` 지금까지 ${said}번 말했어요.` : ""}</p>`}</div>${done ? b.why : ""}</div>`; })()}
         </div>
       </div>
     </div>`;
   $("#pc-ask").hidden = false; $("#pc-ask").disabled = false; $("#pc-ask").textContent = "프로필 고치기";
-  $("#pc-ask").onclick = () => { $("#dlg-card").close(); openMe(); };
+  $("#pc-ask").onclick = () => { $("#dlg-card").close(); openMe(id); };
   $(".pc-dev").hidden = true; $("#pc-flip").hidden = false;
   $("#pc-flip").textContent = "뒤집어 보기";
   $("#pc-flip").onclick = () => { const c = $("#pcard"); c.classList.toggle("flipped"); $("#pc-flip").textContent = c.classList.contains("flipped") ? "앞면 보기" : "뒤집어 보기"; };
@@ -1886,7 +1991,7 @@ function showBubble(id, text) {
   const x = r.left + r.width / 2 - sr.left, top = r.top - sr.top, below = top < 120;
   const side = id === "moderator";   // 사회자는 위쪽 가운데라 아래로 띄우면 탁자를 가려요 → 오른쪽 옆에
   const b = document.createElement("div");
-  b.className = `say-bubble ${side ? "side" : below ? "below" : ""} ${id === "moderator" || id === "me" ? "dark" : ""}`;
+  b.className = `say-bubble ${side ? "side" : below ? "below" : ""} ${id === "moderator" || isHuman(id) ? "dark" : ""}`;
   if (side) { b.style.left = `${r.right - sr.left + 14}px`; b.style.top = `${top + r.height / 2}px`; }
   else { b.style.left = `${Math.max(120, Math.min(sr.width - 120, x))}px`; b.style.top = `${below ? top + r.height + 12 : top - 10}px`; }
   b.innerHTML = text ? `<p>${esc(text)}</p>` : `<span class="typing"><i></i><i></i><i></i></span>`;
@@ -1896,23 +2001,23 @@ function showBubble(id, text) {
 function hideBubbles() { document.querySelectorAll(".say-bubble").forEach((b) => b.remove()); }
 // 손들기: 다음 차례에 사회자가 나를 먼저 불러요
 function raiseHand(on = !S.hand) {
-  S.hand = !!on && meOn() && !!S.meeting && S.meeting.status !== "done";
-  $("#seat-me")?.classList.toggle("hand", S.hand); $("#live-hand")?.classList.toggle("on", S.hand);
-  if (S.hand) cast(`${meProfile().name} 님이 손을 들었어요. 다음 차례에 사회자가 먼저 불러 줄 거예요.`, "me");
+  S.hand = !!on && meOn() && !!S.meeting && S.meeting.status !== "done" ? curSpeaker() : false;   // 손 든 사람의 자리 id (없으면 false)
+  document.querySelectorAll(".note.mine").forEach((e) => e.classList.toggle("hand", !!S.hand && e.id === `seat-${S.hand}`)); $("#live-hand")?.classList.toggle("on", !!S.hand);
+  if (S.hand) cast(`${meProfile(S.hand).name} 님이 손을 들었어요. 다음 차례에 사회자가 먼저 불러 줄 거예요.`, S.hand);
 }
 // 상황판: 내가 말한 칸에 작은 표시
-function markMeCell(i) {
+function markMeCell(i, who = "me") {
   const m = S.meeting; if (!m) return;
   const k = Math.min(i ?? m.i, m.plan.length - 1);
   (m.meCells ||= {})[k] = (m.meCells[k] || 0) + 1;
+  ((m.meCellWho ||= {})[k] ||= []).push(who);
   paintMeCells(); drawMood();
 }
-function paintMeCells() {   // 내가 말한 만큼 그 턴 앞에 내 칸을 끼워 넣어요 (사회자가 묻고 → 내가 답하고 → 다음 사람)
+function paintMeCells() {   // 사람이 말한 만큼 그 턴 앞에 칸을 끼워 넣어요 (사회자가 묻고 → 사람이 답하고 → 다음 사람)
   document.querySelectorAll(".cell.me-cell").forEach((c) => c.remove());
-  const p = meProfile();
   Object.entries(S.meeting?.meCells || {}).forEach(([k, n]) => {
     const ref = $(`#cell-${k}`); if (!ref) return;
-    for (let j = 0; j < n; j++) ref.insertAdjacentHTML("beforebegin", `<div class="cell me-cell done" title="${esc(p.name)} 님 발언"><span class="ava-fb" style="--t:#FFFFFF;--c:#0A0A0A">${esc(p.name.slice(0, 1))}</span></div>`);
+    for (let j = 0; j < n; j++) { const p = meProfile(S.meeting.meCellWho?.[k]?.[j] || "me"); ref.insertAdjacentHTML("beforebegin", `<div class="cell me-cell done" title="${esc(p.name)} 님 발언"><span class="ava-fb" style="--t:#FFFFFF;--c:#0A0A0A">${esc(p.name.slice(0, 1))}</span></div>`); }
   });
 }
 let pendingAsk = null;
@@ -1922,30 +2027,39 @@ function updateLive() {
   $("#live-q").hidden = !pendingAsk; $("#live-skip").hidden = !pendingAsk; $("#live-quick").hidden = !!pendingAsk;
   $("#live-send").textContent = pendingAsk ? "답하기" : "말하기";
   $("#live-text").placeholder = pendingAsk ? "답을 적어 주세요" : "회의에 한마디 하기";
+  // 사람이 여러 명이면 누가 말하는지 고르는 칩 (질문을 받은 동안에는 질문받은 사람으로 고정)
+  const hs = humans(), who = $("#live-who"), cur = pendingAsk?.who || curSpeaker();
+  who.hidden = hs.length < 2;
+  if (hs.length >= 2) {
+    who.innerHTML = `<span>${pendingAsk ? "답하는 사람" : "말하는 사람"}</span>` + hs.map((h) => `<button type="button" role="radio" aria-checked="${h.id === cur}" data-id="${h.id}" ${pendingAsk && h.id !== cur ? "disabled style=\"opacity:.4\"" : ""}>${meFace("", h.id)}${esc(h.name)}</button>`).join("");
+    who.querySelectorAll("button").forEach((b) => (b.onclick = () => { if (pendingAsk) return; S.speaker = b.dataset.id; updateLive(); $("#live-text").focus(); }));
+  }
 }
-function addMeMsg({ text, label, to }) {
-  const p = meProfile(), el = document.createElement("article"); el.className = "cmt me meme";
-  el.innerHTML = `<span class="ava-fb" style="--t:#0A0A0A;--c:#FFFFFF">${esc(p.name.slice(0, 1))}</span><div><div class="meta"><b>${esc(p.name)}</b>${to ? `<span class="to">→ ${esc(to)}</span>` : ""}<span class="phase">${esc(label || "한마디")}</span></div><div class="text">${esc(text)}</div></div>`;
+function addMeMsg({ text, label, to, who, name }) {
+  const p = meProfile(who || "me"), el = document.createElement("article"); el.className = "cmt me meme";
+  const nm = name || p.name;
+  el.innerHTML = `<span class="ava-fb" style="--t:${who && who !== "me" ? HUMAN_STYLE[p.id][0] : "#0A0A0A"};--c:#FFFFFF">${esc(nm.slice(0, 1))}</span><div><div class="meta"><b>${esc(nm)}</b>${to ? `<span class="to">→ ${esc(to)}</span>` : ""}<span class="phase">${esc(label || "한마디")}</span></div><div class="text">${esc(text)}</div></div>`;
   logPane().appendChild(el); el.scrollIntoView({ block: "end", behavior: "smooth" });
 }
 function logMe(a) { addMeMsg(a); S.history.push({ t: "me", a }); }
-function meSays(text, label, to) {
-  S.transcript.push({ role: "me", speaker: `${meProfile().name}(사용자)`, text });
-  logMe({ text, label, to }); setLogCount(S.transcript.length);
-  markMeCell(); showBubble("me", text);
-  cast(label === "답변" ? `${meProfile().name} 님이 답했어요. 이어서 진행할게요.` : `${meProfile().name} 님이 한마디 했어요. 다음 발언부터 모두 함께 들어요.`, "me");
+function meSays(text, label, to, who = curSpeaker()) {
+  const p = meProfile(who);
+  S.transcript.push({ role: "me", who: p.id, speaker: `${p.name}(사용자)`, text });
+  logMe({ text, label, to, who: p.id, name: p.name }); setLogCount(S.transcript.length);
+  markMeCell(undefined, p.id); showBubble(p.id, text);
+  cast(label === "답변" ? `${p.name} 님이 답했어요. 이어서 진행할게요.` : `${p.name} 님이 한마디 했어요. 다음 발언부터 모두 함께 들어요.`, p.id);
   saveSnapshot();
 }
-function askUserQuestion(fromId, question) {   // 답하거나 넘길 때까지 기다려요. 멈추기·새 회의면 그만둬요
+function askUserQuestion(fromId, question, target = "me") {   // 답하거나 넘길 때까지 기다려요. 멈추기·새 회의면 그만둬요
   return new Promise((resolve, reject) => {
-    const sig = S.abort?.signal, who = S.agents[fromId]?.name || "사회자";
-    pendingAsk = { resolve, fromId };
-    $("#live-from").textContent = who; $("#live-me").textContent = meProfile().name; $("#live-q-text").textContent = question;
-    setSpeaking("me", "thinking"); const sp = $("#seat-me .sel span"); if (sp) sp.textContent = "답을 기다려요"; moveCursor("me");
+    const sig = S.abort?.signal, who = S.agents[fromId]?.name || "사회자", me = meProfile(humanIds().includes(target) ? target : "me");
+    pendingAsk = { resolve, fromId, who: me.id };
+    $("#live-from").textContent = who; $("#live-me").textContent = me.name; $("#live-q-text").textContent = question;
+    setSpeaking(me.id, "thinking"); const sp = $(`#seat-${me.id} .sel span`); if (sp) sp.textContent = "답을 기다려요"; moveCursor(me.id);
     showBubble(fromId, question);
     if (isMobile()) setView("log");
     showTab("log"); updateLive(); setTimeout(() => $("#live-text").focus(), 60);
-    cast(`${fromId === "moderator" ? "사회자가" : `${who} 님이`} ${meProfile().name} 님께 물었어요. 답을 기다리는 중이에요.`, fromId);
+    cast(`${fromId === "moderator" ? "사회자가" : `${who} 님이`} ${me.name} 님께 물었어요. 답을 기다리는 중이에요.`, fromId);
     sig?.addEventListener("abort", () => { if (pendingAsk) { endAsk(); reject(new DOMException("회의를 멈췄어요.", "AbortError")); } }, { once: true });
   });
 }
@@ -1954,7 +2068,7 @@ function liveSend() {
   const t = $("#live-text").value.trim();
   if (pendingAsk) {
     if (!t) return toast("답을 적거나 '이번엔 넘기기'를 눌러 주세요.");
-    const p = pendingAsk; endAsk(); meSays(t, "답변", S.agents[p.fromId]?.name); p.resolve(t); return;
+    const p = pendingAsk; endAsk(); meSays(t, "답변", S.agents[p.fromId]?.name, p.who); p.resolve(t); return;
   }
   if (!t) return;
   meSays(t, "한마디"); $("#live-text").value = "";
@@ -2065,10 +2179,10 @@ async function buildResultPage() {
     return el.innerHTML;
   };
   const clone = (sel) => { const el = document.querySelector(sel); return el ? strip(el.cloneNode(true)) : ""; };
-  const people = [...seatIds(), ...(meOn() ? ["me"] : [])];
+  const people = [...seatIds(), ...humanIds()];
   const who = people.map((id) => {
-    const isMe = id === "me", a = S.agents[id] || {};
-    return `<span class="rp-who ${id === "moderator" ? "dark" : ""}" style="${isMe ? `--t:${ME_TINT};--c:${ME_COLOR}` : styleVars(id)}">${face(id)}<span><b>${esc(isMe ? meProfile().name : a.name)}</b><small>${esc(isMe ? meProfile().title || "사용자" : a.title || "")}</small></span></span>`;
+    const isMe = isHuman(id), a = S.agents[id] || {};
+    return `<span class="rp-who ${id === "moderator" ? "dark" : ""}" style="${isMe ? `--t:${HUMAN_STYLE[id][1]};--c:${HUMAN_STYLE[id][0]}` : styleVars(id)}">${face(id)}<span><b>${esc(isMe ? meProfile(id).name : a.name)}</b><small>${esc(isMe ? meProfile(id).title || "사용자" : a.title || "")}</small></span></span>`;
   }).join("");
   const m = S.meeting || {}, turns = (m.plan || S.plan || []).length, said = S.transcript.filter((t) => t.role !== "moderator").length;
   const when = new Date().toLocaleString("ko-KR", { dateStyle: "long", timeStyle: "short" });
@@ -2285,7 +2399,7 @@ function badgeStrip(id) {
   return { html, why: why.length ? `<p class="pc-why"><b>사회자</b> “${esc(why.join(" "))}”</p>` : "" };
 }
 // 사회자가 준 배지 (결론에 함께 와요). 이름 → 자리 id
-const badgeOwner = (name) => (meOn() && name === meProfile().name ? "me" : nameToId(name));
+const badgeOwner = (name) => (meOn() && humanByName(name)?.id) || nameToId(name);
 function earnedBadges() {
   const aw = S.review?.badges;
   if (Array.isArray(aw) && aw.length) {
@@ -2335,7 +2449,7 @@ function backHtml(id, a) {
 
 /* ───────────── 에이전트 카드 (포켓몬 카드처럼) ───────────── */
 function showCard(id) {
-  if (id === "me") return showMeCard();
+  if (isHuman(id)) return showMeCard(id);
   $("#pc-ask").hidden = false; $("#pc-flip").hidden = false; $(".pc-dev").hidden = false; $("#pc-ask").textContent = "이 사람에게 질문하기";
   const a = S.agents[id], p = a.profile || {}, m = modelFor(id), isMod = id === "moderator";
   const pips = (v) => [1, 2, 3, 4, 5].map((n) => `<b class="${n <= v ? "on" : ""}"></b>`).join("");
@@ -2520,7 +2634,7 @@ async function runCompare(v) {
 // 블라인드 채점: 결과 안의 참석자 이름·발언자 표시를 지워서 어느 쪽이 회의인지 드러나지 않게 해요
 // 이름을 '참석자 A'처럼 바꾸되, 받침 있는 이름에는 받침 있는 글자(L·M·N)를 써서 뒤의 조사(이/가, 은/는)가 어색해지지 않게 해요
 function blindReview(r) {
-  const names = [...new Set([...Object.values(S.agents).map((a) => a.name), meProfile().name].filter(Boolean))];
+  const names = [...new Set([...Object.values(S.agents).map((a) => a.name), ...humans().map((h) => h.name), meProfile().name].filter(Boolean))];
   const hasBatchim = (w) => { const c = w.slice(-1).charCodeAt(0); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 > 0; };
   const plain = ["A", "B", "C", "D", "E", "F"], closed = ["L", "M", "N", "R"];
   const label = {}; names.forEach((n) => { label[n] = `참석자 ${(hasBatchim(n) ? closed : plain).shift() || "X"}`; });
@@ -2543,7 +2657,7 @@ function renderReview(v) {
     <div class="vblock" data-tone="${toneOf(v)}"><span class="eyebrow ko">${L.verdict}</span><h2>${esc(v.verdict)}</h2><p>${esc(v.headline)}</p></div>
     <div class="rsec"><h3>${L.keys} ${cnt(keys)}</h3>${items(keys)}</div>
     ${v.badges?.length ? `<div class="rsec"><h3>오늘의 배지 <span class="eyebrow ko">사회자가 줬어요</span></h3><div class="awards">${v.badges.filter((b) => BADGES[b.badge]).map((b) => {
-      const id = badgeOwner(b.to), t = id === "me" ? "#E9E9EC" : S.agents[id]?.tint || "#fff";
+      const id = badgeOwner(b.to), t = isHuman(id) ? "#E9E9EC" : S.agents[id]?.tint || "#fff";
       return `<div class="award">${badgeImg(b.badge)}<div><b>${esc(BADGES[b.badge].name)}</b><span class="who" style="--t:${t}">${esc(b.to)}</span><p>${esc(b.reason || BADGES[b.badge].desc)}</p></div></div>`; }).join("")}</div></div>` : ""}
     <div class="rsec"><h3>${L.worries} ${cnt(worries)}</h3>${items(worries)}</div>
     <div class="rsec"><h3>${L.agree}</h3>${list(agree)}</div>
@@ -2817,7 +2931,7 @@ function drawModelRows() {
     const cb = row.querySelector(".tg input");
     if (cb) cb.onchange = () => {
       let list = members();
-      if (cb.checked && list.length >= maxMembers()) { cb.checked = false; return toast(`나도 참여 중이라 에이전트는 최대 ${maxMembers()}명이에요. 다른 사람을 먼저 빼 주세요.`); }
+      if (cb.checked && list.length >= maxMembers()) { cb.checked = false; return toast(humans().length ? `사람 ${humans().length}명이 참여 중이라 에이전트는 최대 ${maxMembers()}명이에요. 다른 사람을 먼저 빼 주세요.` : `에이전트는 최대 ${maxMembers()}명이에요.`); }
       if (cb.checked) list = ALL_MEMBERS.filter((x) => list.includes(x) || x === id);
       else if (list.length <= MIN_MEMBERS) { cb.checked = true; return toast(`참석자는 최소 ${MIN_MEMBERS}명이에요.`); }
       else list = list.filter((x) => x !== id);
@@ -2826,14 +2940,14 @@ function drawModelRows() {
     row.querySelector("button.pill").onclick = () => testAgent(id);
     box.appendChild(row);
   }
-  $("#members-count").textContent = `${members().length}/${maxMembers()} attending`; $("#models-desc").textContent = meOn() ? "나도 참여 중이라 최대 4명, 최소 2명이에요. 모델 칸을 비우면 기본 모델을 써요." : "최대 5명, 최소 2명이에요. 모델 칸을 비우면 기본 모델을 써요.";
+  $("#members-count").textContent = `${members().length}/${maxMembers()} attending`; $("#models-desc").textContent = meOn() ? `${humans().length > 1 ? `사람 ${humans().length}명이` : "나도"} 참여 중이라 최대 ${maxMembers()}명, 최소 2명이에요. 모델 칸을 비우면 기본 모델을 써요.` : "최대 5명, 최소 2명이에요. 모델 칸을 비우면 기본 모델을 써요.";
 }
 function drawTurns() {
   const n = members().length, t = turns(), rec = recommendedTurns(n);
   const cap = maxTurns();
   $("#t-val").textContent = t; $("#t-minus").disabled = t <= n + 1; $("#t-plus").disabled = t >= cap;
   $("#turns-eyebrow").textContent = t === rec ? "Recommended" : "Custom";
-  $("#turns-desc").textContent = `${meOn() ? `에이전트 ${n}명과 나, 모두 ${n + 1}명이면` : `에이전트 ${n}명이면`} ${rec}턴을 권해요. 인원이 바뀌면 권장값으로 자동으로 맞춰요. 1라운드는 모두 한 번씩 말하고, 그다음부터는 사회자가 흐름을 보고 발언권을 줘요. 최소 ${n + 1}턴, 최대 ${cap}턴까지 정할 수 있어요.`
+  $("#turns-desc").textContent = `${meOn() ? `에이전트 ${n}명과 사람 ${humans().length}명, 모두 ${n + humans().length}명이면` : `에이전트 ${n}명이면`} ${rec}턴을 권해요. 인원이 바뀌면 권장값으로 자동으로 맞춰요. 1라운드는 모두 한 번씩 말하고, 그다음부터는 사회자가 흐름을 보고 발언권을 줘요. 최소 ${n + 1}턴, 최대 ${cap}턴까지 정할 수 있어요.`
     + (cap < MAX_TURNS ? ` 공용 키로는 ${cap}턴까지예요. 더 길게 하려면 내 API 키를 넣어 주세요.` : "");
   $("#plan-preview").innerHTML = planGroups(buildPlan(n, t)).map((g) => `<span data-p="${g.phase}">${esc(phaseLabel(g.phase))} ${g.idx.length}</span>`).join("");
 }
@@ -2864,7 +2978,7 @@ function updateMode() {
   $("#pass-field").hidden = !(r.serverKey && r.requiresPasscode);
   $("#btn-settings").classList.toggle("nudge", m === "mock" || m === "locked");
   refreshSeats();
-  if ($("#drawer").classList.contains("on")) { drawModelRows(); drawTurns(); }
+  if ($("#drawer").classList.contains("on")) { drawModelRows(); drawTurns(); drawAnswer(); }
   if (S.agents.moderator && !S.running && !S.meeting) { describeConfig(); drawTracker(); if (S.table === "idle" || S.table === "ready") renderTable(S.table); }   // 키 종류가 바뀌면 턴 상한도 다시 반영
 }
 async function checkPass() {
@@ -2909,7 +3023,7 @@ async function cancelSettings() {
   const dirty = snap && (JSON.stringify(now) !== JSON.stringify(snap) || $("#key").value.trim() !== (getKey() || "") || ($("#pass").value.trim() && $("#pass").value.trim() !== (getPass() || "")));
   if (dirty) {
     // 프로필 카드는 따로 '저장'했으니 그대로 두고, 나머지만 열기 전으로
-    const keepMe = loadSettings().me || {}, back = { ...snap.settings, me: { ...keepMe, on: !!snap.settings.me?.on } };
+    const keepMe = loadSettings().me || {}, back = { ...snap.settings, me: { ...keepMe, on: !!snap.settings.me?.on, count: snap.settings.me?.count } };
     try { localStorage.setItem(SET_KEY, JSON.stringify(back)); } catch {}
     setKey(snap.key, snap.keyWhere); setPass(snap.pass, snap.keyWhere);
     $("#key").value = snap.key; $("#pass").value = snap.pass;
@@ -2960,7 +3074,7 @@ async function boot() {
         defaultModel: p.defaultModel, sharedModel: p.sharedModel, profile: p.profile || {}, bust: card.iconUrl || `vendor/avatars/${id}.png`, face: p.avatarFace || `vendor/avatars/${id}-face.png` };
     }
     newMeeting(); updateMode(); updateRunButton();
-    status(`에이전트 ${seatIds().length}명${meOn() ? `과 ${meProfile().name} 님` : ""}이 자리에 앉았어요. 토론 주제만 정해 주세요.`);
+    status(`에이전트 ${seatIds().length}명${meOn() ? `과 ${humans().map((h) => `${h.name} 님`).join(", ")}` : ""}이 자리에 앉았어요. 토론 주제만 정해 주세요.`);
     if (snap?.meeting && snap.doc && snap.meeting.status !== "done") { try { restoreSnapshot(snap); } catch (e) { console.error(e); clearSnapshot(); } }
   } catch (e) { status(`에이전트 명함을 받지 못했어요. ${esc(e.message)}`); }
   loadModels();
@@ -2969,7 +3083,10 @@ async function boot() {
 $("#btn-wrap").onclick = wrapUpMeeting;
 $("#me-mbti").insertAdjacentHTML("beforeend", MBTI.map((t) => `<option value="${t}">${t}</option>`).join(""));
 $("#me-on").onchange = () => setMe({ on: $("#me-on").checked });
-$("#me-edit").onclick = openMe;
+$("#me-edit").onclick = () => openMe("me");
+$("#ans-format").oninput = () => { saveSettings({ answer: { ...(loadSettings().answer || {}), format: $("#ans-format").value.slice(0, 300) } }); drawAnswer(); };
+$("#ans-cite").onchange = () => { const on = $("#ans-cite").checked; setAnswer(on ? { cite: true } : { cite: false, web: false }); };
+$("#ans-web").onchange = () => setAnswer({ web: $("#ans-web").checked });
 $("#me-save").onclick = () => saveMe(false);
 $("#me-card").onclick = () => { saveMe(true); };
 $("#me-seat").onclick = showMeCard;

@@ -64,7 +64,12 @@ const MOCK_BADGE_FREE = { critic: ["magnifier", "'그게 진짜 그럴까?' 한�
   reader: ["handshake", "자기 경험을 솔직하게 꺼내서 분위기를 편하게 만들어 줬어요."], method: ["link", "서로 다른 말 사이의 공통점을 찾아 이어 줬어요."], policy: ["rocket", "'만약에'로 시작하는 엉뚱한 상상으로 대화를 넓혔어요."] };
 // 사용자도 참석할 때 프롬프트에 넣는 소개
 const userLine = (u) => (u?.name ? `${u.name}(사용자${u.title ? `, ${u.title}` : ""})` : "");
-const userIntro = (u) => (u?.name ? `\n[사용자 참석] ${userLine(u)}도 이 회의에 함께합니다.${u.about ? ` 소개: ${String(u.about).slice(0, 300)}` : ""} 회의록에는 '${u.name}(사용자)'로 나옵니다.` : "");
+// 사람 참석자는 한 화면에서 최대 3명까지. 예전 요청(user 하나)도 그대로 받아요
+const usersOf = (input) => (Array.isArray(input?.users) && input.users.length ? input.users : input?.user?.name ? [input.user] : [])
+  .filter((u) => u?.name).slice(0, 3).map((u) => ({ name: String(u.name).slice(0, 12), title: String(u.title || "").slice(0, 30), about: String(u.about || "").slice(0, 300) }));
+const usersLine = (us) => us.map(userLine).join(", ");
+const usersIntro = (us) => (us.length ? `\n[사용자 참석] ${usersLine(us)}도 이 회의에 함께합니다.${us.filter((u) => u.about).map((u) => ` ${u.name} 소개: ${u.about}`).join("")} 회의록에는 '이름(사용자)'로 나옵니다.` : "");
+const spokeUsers = (us, transcript) => us.filter((u) => transcript.some((t) => t.role === "me" && String(t.speaker || "").startsWith(u.name)));
 // ── 회의 방식: 자료 검토(review) / 자유 토론(free) / 아이디어 회의(idea) ─────────────
 // 자료 없이 생각을 나누는 회의에서 근거·숫자를 따지면 대화가 딱딱해져요. 방식에 따라 말하는 법과 라운드 성격을 바꿔요.
 const styleOf = (input = {}) => (["free", "idea"].includes(input.style) ? input.style : "review");
@@ -253,6 +258,7 @@ function transcriptText(transcript = []) {
 async function moderate(llm, persona, input, state) {
   const { document, transcript = [], phase = "round1", turn = 1, totalTurns = 12, eligible = MEMBER_IDS, attendees = MEMBER_IDS, hint = "" } = input;
   const pool = eligible.filter((id) => MEMBER_IDS.includes(id));
+  const US = usersOf(input);
   // 흐름을 읽을 재료: 누가 몇 번 말했는지, 직전 발언자와 질문, 각자 지금 입장, 지금까지 다룬 쟁점
   const said = (id) => transcript.filter((t) => t.role === id).length;
   const lastTalk = [...transcript].reverse().find((t) => t.role !== "moderator");
@@ -272,7 +278,7 @@ async function moderate(llm, persona, input, state) {
 [지금까지 회의록]
 ${transcriptText(transcript)}
 
-[이번 회의 참석자] ${attendeeLine(attendees)}${input.user?.name ? `, ${userLine(input.user)}` : ""}${userIntro(input.user)}
+[이번 회의 참석자] ${attendeeLine(attendees)}${US.length ? `, ${usersLine(US)}` : ""}${usersIntro(US)}
 [진행 상황] 전체 ${totalTurns}턴 중 ${turn}번째 발언 차례. ${phaseGuide(phase, styleOf(input))}${styleOf(input) === "review" ? "" : `\n${MOD_STYLE[styleOf(input)]}`}
 ${flow}
 이번에 말할 수 있는 사람(eligible): ${pool.map((id) => `${id}(${PERSONAS[id].name})`).join(", ")}
@@ -281,7 +287,7 @@ ${transcript.length === 0 ? "첫 차례이니 say 앞에 짧은 개회 멘트를
 [지난 진행 메모(당신만 봄)] ${state.notes || "(없음)"}
 
 JSON 하나만 출력합니다.
-{"next": "eligible 중 하나의 id", "issue": "이번 차례에 다룰 쟁점 (15자 이내)", "say": "다음 발언자 이름을 부르며 하는 말 (1~2문장, 라운드 첫 차례는 최대 3문장)", "reason": "왜 이 사람에게 지금 발언권을 주는지 (메모용, 공개 안 됨)"${input.user?.name ? `, "ask_user": "사용자 ${input.user.name}의 경험·상황·선호를 알아야 판단할 수 있거나, 의견이 팽팽해서 사용자 생각을 들으면 좋을 때만, next보다 먼저 사용자에게 따로 묻는 질문 한 문장('${input.user.name} 님,'으로 시작). say는 그대로 next에게 하는 말로 씁니다. 필요 없으면 빈 문자열. 라운드마다 많아야 한 번"` : ""}}`,
+{"next": "eligible 중 하나의 id", "issue": "이번 차례에 다룰 쟁점 (15자 이내)", "say": "다음 발언자 이름을 부르며 하는 말 (1~2문장, 라운드 첫 차례는 최대 3문장)", "reason": "왜 이 사람에게 지금 발언권을 주는지 (메모용, 공개 안 됨)"${US.length ? `, "ask_user": "사용자(${US.map((u) => u.name).join(", ")})의 경험·상황·선호를 알아야 판단할 수 있거나, 의견이 팽팽해서 사용자 생각을 들으면 좋을 때만, next보다 먼저 사용자 한 명에게 따로 묻는 질문 한 문장('${US[0].name} 님,'처럼 이름으로 시작${US.length > 1 ? ". 사용자가 여러 명이니 아직 덜 말한 사람에게 고르게 물으세요" : ""}). say는 그대로 next에게 하는 말로 씁니다. 필요 없으면 빈 문자열. 라운드마다 많아야 한 번"${US.length > 1 ? `, "ask_user_to": "질문받을 사용자 이름 (${US.map((u) => u.name).join(" | ")})"` : ""}` : ""}}`,
   });
   let next = pool.includes(out.next) ? out.next : pool.includes(ID_BY_NAME[out.next]) ? ID_BY_NAME[out.next] : null;
   const fixed = !next;
@@ -291,10 +297,12 @@ JSON 하나만 출력합니다.
   const issue = String(out.issue || "").replace(/^쟁점\s*[:：]\s*/, "").trim().slice(0, 24);
   const issues = issue && (state.issues || []).at(-1) !== issue ? [...(state.issues || []), issue].slice(-12) : state.issues || [];
   const newState = { ...state, turns: state.turns + 1, issues, notes: clip(`${state.notes}\n${turn}: ${out.reason || ""}`.trim(), 1500) };
-  let askUser = input.user?.name ? String(out.ask_user || "").trim().slice(0, 200) : "";
+  let askUser = US.length ? String(out.ask_user || "").trim().slice(0, 200) : "";
+  // 누구에게 묻는지: 모델이 적은 이름 → 질문 문장에 나온 이름 순으로 찾아요 (못 찾으면 화면이 덜 말한 사람에게 돌려요)
+  let askUserTo = US.find((u) => u.name === String(out.ask_user_to || "").trim())?.name || US.find((u) => askUser.includes(u.name))?.name || "";
   // 모의 모드에서도 흐름을 볼 수 있게: 2라운드 첫 차례에 한 번 사용자에게 물어요
-  if (llm.mock && input.user?.name && phase === "round2" && !transcript.some((t) => t.role === "me")) askUser = `${input.user.name} 님은 이 주제를 직접 겪는 입장에서 어떻게 보세요?`;
-  return { text: say, data: { next, nextName: name, phase, issue, askUser, thoughts: cleanNote(out.reason) }, newState };
+  if (llm.mock && US.length && phase === "round2" && !transcript.some((t) => t.role === "me")) { askUserTo = US[(input.turn || 0) % US.length].name; askUser = `${askUserTo} 님은 이 주제를 직접 겪는 입장에서 어떻게 보세요?`; }
+  return { text: say, data: { next, nextName: name, phase, issue, askUser, askUserTo, thoughts: cleanNote(out.reason) }, newState };
 }
 
 // ── 사회자: 결론 ─────────────────────────────────────────────────────
@@ -339,15 +347,15 @@ JSON 하나만 출력합니다.
 [열린 반론] 아래는 아직 정리되지 않은 반론입니다. 결론에서 지우지 말고 concerns나 open_questions에 '미해결'로 남기세요.
 ${ledgerText(input.ledger)}
 [오늘의 배지] 사회자로서 참석자마다 회의에서 실제로 한 일에 맞는 배지를 1~2개 주세요. 근거 없이 주지 말고, 같은 배지를 여러 명에게 줘도 됩니다. 사회자 자신은 받지 않습니다.
-참석자: ${(input.attendees || []).map((id) => PERSONAS[id]?.name).filter(Boolean).join(", ")}${input.user?.name && transcript.some((t) => t.role === "me") ? `, ${input.user.name}(사용자, 발언했다면 1개)` : ""}
+참석자: ${(input.attendees || []).map((id) => PERSONAS[id]?.name).filter(Boolean).join(", ")}${spokeUsers(usersOf(input), transcript).map((u) => `, ${u.name}(사용자, 1개)`).join("")}
 배지 키: ${Object.entries(BADGE_GUIDE).map(([k, v]) => `${k}(${v})`).join(", ")}`,
   });
   if (!["positive", "mixed", "negative"].includes(review.tone)) review.tone = String(review.tone || "").match(/positive|negative/)?.[0] || "mixed";
   const thoughts = cleanNote(review.private_notes); delete review.private_notes;
-  const names = [...(input.attendees || []).map((id) => PERSONAS[id]?.name).filter(Boolean), ...(input.user?.name && transcript.some((t) => t.role === "me") ? [input.user.name] : [])];
+  const names = [...(input.attendees || []).map((id) => PERSONAS[id]?.name).filter(Boolean), ...spokeUsers(usersOf(input), transcript).map((u) => u.name)];
   review.badges = llm.mock
     ? [...(input.attendees || []).filter((id) => MOCK_BADGE[id]).map((id) => { const MB = styleOf(input) === "review" ? MOCK_BADGE : MOCK_BADGE_FREE; return { to: PERSONAS[id].name, badge: MB[id][0], reason: MB[id][1] }; }),
-       ...(names.includes(input.user?.name) ? [{ to: input.user.name, badge: "talk", reason: "현장 이야기를 직접 들려줘서 토론이 훨씬 구체적이 됐어요." }] : [])]
+       ...spokeUsers(usersOf(input), transcript).map((u) => ({ to: u.name, badge: "talk", reason: "현장 이야기를 직접 들려줘서 토론이 훨씬 구체적이 됐어요." }))]
     : pickBadges(review.badges, names);
   if (early) review.early = { doneTurns, totalTurns };
   review.style = styleOf(input);
@@ -416,9 +424,16 @@ async function judge(llm, persona, input, state) {
 async function reviewTurn(llm, persona, input, state) {
   const { document, transcript = [], request, turn = 1, totalTurns = 12, phase = "round1", attendees = MEMBER_IDS } = input;
   const myTurn = (state.turns || 0) + 1;
+  const US = usersOf(input);
+  // 답변 형식 요청·근거 표기·웹 검색 증강 (설정에서 켠 경우에만)
+  const format = String(input.format || "").trim().slice(0, 300);
+  const cite = Boolean(input.cite), web = Boolean(input.web) && Boolean(llm.webOk) && !llm.mock;
+  const hasDoc = Boolean(document?.text);
+  const citations = [];
   const A = agendaParts(input, 36000, { query: `${input.issue || ""} ${request?.text || ""} ${recentText(transcript, 3)}`, k: persona.id === "critic" ? 7 : 4 });
   const out = llm.mock ? mockMember(persona.id, { document, myTurn, phase, topic: input.topic, style: styleOf(input), ledger: input.ledger || [] }) : await chatJSON({
     ...llm, system: persona.system, temperature: 0.8, maxTokens: 2500, cachePrefixLen: A.stable.length,
+    web, onCitations: (c) => { for (const x of c) if (!citations.some((y) => y.url === x.url)) citations.push(x); },
     user: `${A.stable}${A.varying}
 
 [지금까지 회의록]
@@ -427,12 +442,15 @@ ${transcriptText(transcript)}
 [당신의 지난 속마음 (다른 참석자에게는 전달되지 않음)]
 ${state.notes || "(아직 없음)"}
 
-[이번 회의 참석자] ${attendeeLine(attendees)}${input.user?.name ? `, ${userLine(input.user)}` : ""}${userIntro(input.user)}${input.user?.name ? `\n사용자 ${input.user.name}에게는 직접 질문하지 마세요(발언 안에서도, ask에서도). 사용자 의견이 꼭 필요하면 JSON에 "user_question": "사용자에게 듣고 싶은 것 한 문장"을 덧붙이세요. 사회자가 판단해서 대신 물어봅니다.` : ""}
+[이번 회의 참석자] ${attendeeLine(attendees)}${US.length ? `, ${usersLine(US)}` : ""}${usersIntro(US)}${US.length ? `\n사용자(${US.map((u) => u.name).join(", ")})에게는 직접 질문하지 마세요(발언 안에서도, ask에서도). 사용자 의견이 꼭 필요하면 JSON에 "user_question": "사용자에게 듣고 싶은 것 한 문장"을 덧붙이세요. 사회자가 판단해서 대신 물어봅니다.` : ""}
 [열린 반론]\n${ledgerText(input.ledger)}
 [당신의 지난 입장] ${(state.stances || []).at(-1) ? `${state.stances.at(-1).position || ""} (${state.stances.at(-1).stance}, 확신 ${state.stances.at(-1).confidence}%)` : "(첫 발언)"}
 [지금 차례] 전체 ${totalTurns}턴 중 ${turn}번째. ${phaseGuide(phase, styleOf(input))}${styleBlock(input, persona.id)}
 사회자가 당신에게: "${request?.text || "의견 부탁드립니다."}"
-${myTurn === 1 ? (styleOf(input) === "review" ? "주제와 자료를 보고 당신 관점에서 가장 중요한 한 가지부터 말하세요." : "주제를 듣고 가장 먼저 떠오른 생각을 편하게 말하세요.") : "지난 메모와 다른 사람 발언을 참고해, 이미 한 말은 반복하지 마세요."}`,
+${myTurn === 1 ? (styleOf(input) === "review" ? "주제와 자료를 보고 당신 관점에서 가장 중요한 한 가지부터 말하세요." : "주제를 듣고 가장 먼저 떠오른 생각을 편하게 말하세요.") : "지난 메모와 다른 사람 발언을 참고해, 이미 한 말은 반복하지 마세요."}${format ? `
+[답변 형식 요청] 사용자가 발언 형식을 이렇게 요청했습니다: "${format}". JSON 구조와 회의 규칙은 그대로 지키고, utterance 안에서 이 형식을 따르세요(필요하면 6문장까지 괜찮습니다).` : ""}${cite ? `
+[근거 표기] utterance의 핵심 주장에는 근거를 대고, JSON에 "sources" 배열을 1~3개 덧붙이세요: [{"claim": "뒷받침하는 주장 (25자 이내)", "title": "자료·기관·문헌 이름", "where": "첨부 자료면 쪽·문단, 웹 문서면 URL, 그 밖은 발행처·연도", "type": "doc" | "web" | "memory"}]. doc=이번 회의 첨부 자료, web=이번 요청에 함께 주어진 웹 검색 결과, memory=당신이 기억하는 지식입니다. 웹 검색 결과로 주어지지 않은 URL은 절대 지어내지 마세요. 기억에 의존한 근거는 memory로 적고, 정확한 출처가 확실하지 않으면 title에 아는 만큼만 쓰세요. 근거가 없으면 빈 배열로 둡니다.` : ""}${web ? `
+[웹 검색] 이번 요청에는 웹 검색 결과가 함께 주어집니다. 주제와 관련된 최신 사실·숫자는 검색 결과로 확인하고, 검색 결과와 당신의 기억이 다르면 검색 결과를 따르되 그 사실을 말하세요.` : ""}`,
   });
   const utterance = String(out.utterance || "").trim() || "잠시 생각을 정리해 볼게요.";
   let stance = ["동의", "우려", "보류"].includes(out.stance) ? out.stance : "보류";
@@ -457,17 +475,37 @@ ${myTurn === 1 ? (styleOf(input) === "review" ? "주제와 자료를 보고 당�
   const position = String(out.position || "").replace(/^["'“‘]|["'”’]$/g, "").trim().slice(0, 30);
   const names = attendees.map((id) => PERSONAS[id]?.name).filter(Boolean);
   // 사용자에게 묻고 싶은 건 사회자에게 넘겨요 (ask.to에 사용자를 적었어도 마찬가지)
-  const toUser = !!input.user?.name && out.ask?.to === input.user.name;
-  const wantsUser = input.user?.name ? String((toUser ? out.ask?.question : "") || out.user_question || "").trim().slice(0, 200) : "";
+  const toUser = US.some((u) => u.name === out.ask?.to);
+  const wantsUser = US.length ? String((toUser ? out.ask?.question : "") || out.user_question || "").trim().slice(0, 200) : "";
   const ask = !toUser && out.ask?.to && MEMBER_NAMES.includes(out.ask.to) && names.includes(out.ask.to) && out.ask.to !== persona.name
     ? { to: out.ask.to, question: String(out.ask.question || "") } : null;
+  // 출처 정리: 웹 출처는 검색에서 실제로 돌아온 문서만 인정해요. 모델이 적은 URL이 검색 결과에 없으면 '기억'으로 내리고 URL은 지워요
+  const urlKey = (u) => String(u || "").replace(/^https?:\/\/(www\.)?/i, "").replace(/[#?].*$/, "").replace(/\/+$/, "").toLowerCase();
+  const URL_RE = /https?:\/\/[^\s)\]"'<>]+/i;
+  let sources = [];
+  if (cite || web) {
+    for (const x of Array.isArray(out.sources) ? out.sources.slice(0, 4) : []) {
+      const raw = `${x?.where || ""} ${x?.url || ""} ${x?.title || ""}`, found = raw.match(URL_RE)?.[0];
+      const hit = found && citations.find((c) => urlKey(c.url) === urlKey(found) || urlKey(c.url).startsWith(urlKey(found)) || urlKey(found).startsWith(urlKey(c.url)));
+      let type = x?.type === "doc" && hasDoc ? "doc" : hit ? "web" : "memory";
+      const strip = (v) => String(v || "").replace(new RegExp(URL_RE.source, "gi"), "").replace(/\s{2,}/g, " ").trim();
+      const item = { type, claim: String(x?.claim || "").trim().slice(0, 60), title: (strip(x?.title) || (hit ? hit.title : "")).slice(0, 120), where: type === "web" ? "" : strip(x?.where).slice(0, 80), url: type === "web" ? hit.url : "" };
+      if (item.title || item.where || item.url) sources.push(item);
+    }
+    // 모델이 출처를 안 적었어도 검색에서 실제로 쓴 문서는 보여 줘요
+    for (const c of citations) if (sources.length < 4 && !sources.some((x) => x.url && urlKey(x.url) === urlKey(c.url))) sources.push({ type: "web", claim: "", title: c.title || urlKey(c.url).split("/")[0], where: "", url: c.url });
+    if (llm.mock && cite) sources = [hasDoc
+      ? { type: "doc", claim: "모의 근거", title: "첨부 자료", where: "모의 모드라 위치는 표시하지 않아요", url: "" }
+      : { type: "memory", claim: "모의 근거", title: "모의 모드 예시 (실제 출처가 아니에요)", where: "", url: "" }];
+    sources = sources.slice(0, 4);
+  }
   const newState = {
     ...state, turns: myTurn,
     notes: clip(cleanNote(out.private_notes) || state.notes || "", 1200),
     said: [...(state.said || []), utterance].slice(-6),
     stances: [...(state.stances || []), { turn, stance, confidence, position }],
   };
-  return { text: utterance, data: { stance, confidence, position, ask, wantsUser, phase, refs: A.refs, thoughts: newState.notes,
+  return { text: utterance, data: { stance, confidence, position, ask, wantsUser, phase, refs: A.refs, thoughts: newState.notes, sources, webUsed: web, webHits: citations.length,
     criterion, changedBecause: shifted && !unjustified ? changedBecause : "", unjustified, redTeamBlocked, objections, resolves }, newState };
 }
 
@@ -561,7 +599,9 @@ export default async function handler(req, res) {
   // 대체 모델 순서: 이 에이전트의 기본 모델 → 공통 대체 모델들(회사를 섞어 둬서 한 회사가 막혀도 이어져요). 공용 키는 비싼 기본 모델로 넘어가지 않게
   const fallbacks = [userKey || !apiKey ? defaultModelOf(persona) : sharedModelOf(persona), ...FALLBACK_MODELS()];
   const usage = { in: 0, out: 0, cost: 0 };
-  const llm = { apiKey, model, mock: !apiKey, fallbacks, onModel: (m) => { llm.model = m; }, onUsage: (u) => { usage.in += u.in; usage.out += u.out; usage.cost += u.cost; },
+  // 웹 검색 증강은 검색 비용이 따로 들어서 기본은 내 키로만. 공용 키에도 열려면 SHARED_WEB_SEARCH=1
+  const webOk = Boolean(apiKey) && (Boolean(userKey) || process.env.SHARED_WEB_SEARCH === "1");
+  const llm = { apiKey, model, mock: !apiKey, fallbacks, webOk, onModel: (m) => { llm.model = m; }, onUsage: (u) => { usage.in += u.in; usage.out += u.out; usage.cost += u.cost; },
     onFallback: (f) => { llm.fallback = f; } };
 
   const input = msg.parts.find((p) => p.data)?.data || {};
