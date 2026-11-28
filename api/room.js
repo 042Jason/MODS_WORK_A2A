@@ -10,7 +10,7 @@ const TOKEN = () => process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_R
 export const roomsReady = () => Boolean(URL_() && TOKEN()) || !process.env.VERCEL;
 
 const TTL = 4 * 3600;               // 방은 마지막 사용 뒤 4시간이면 사라져요
-const MAX_INBOX = 60, MAX_TEXT = 300, SEATS = ["me", "me2", "me3"];
+const MAX_INBOX = 60, MAX_TEXT = 300, SEATS = ["me", "me2", "me3", "me4"];
 const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";   // 헷갈리는 글자(0·O, 1·I·L)는 뺐어요
 const newCode = () => Array.from(crypto.randomBytes(6), (b) => ALPHA[b % ALPHA.length]).join("");
 const newToken = () => crypto.randomBytes(18).toString("base64url");
@@ -64,7 +64,7 @@ const taken = (meta) => Object.fromEntries(SEATS.map((id) => [id, Boolean(meta.s
 function cleanState(st = {}) {
   return {
     at: Date.now(), topic: clip(st.topic, 160), status: ["idle", "ready", "running", "paused", "done"].includes(st.status) ? st.status : "idle", turn: clip(st.turn, 60),
-    seats: (Array.isArray(st.seats) ? st.seats : []).filter((s) => SEATS.includes(s?.id)).slice(0, 3).map((s) => ({ id: s.id, name: clip(s.name, 12) })),
+    seats: (Array.isArray(st.seats) ? st.seats : []).filter((s) => SEATS.includes(s?.id)).slice(0, 4).map((s) => ({ id: s.id, name: clip(s.name, 12) })),
     ask: st.ask && SEATS.includes(st.ask.who) ? { who: st.ask.who, from: clip(st.ask.from, 12), q: clip(st.ask.q, 300) } : null,
     hand: SEATS.includes(st.hand) ? st.hand : null,
     last: (Array.isArray(st.last) ? st.last : []).slice(-6).map((t) => ({ speaker: clip(t?.speaker, 24), text: clip(t?.text, 400) })),

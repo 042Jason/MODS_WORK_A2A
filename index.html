@@ -654,6 +654,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
   .conn .set{padding:6px 8px}
   .conn .set-t{display:none}
   #btn-new{display:none}
+  #btn-history{padding:0 12px;font-size:13px}
   .m-only{display:inline-flex}
   .pill.icon{width:38px;height:38px;padding:0;justify-content:center}
   #btn-run{padding:8px 13px 9px;font-size:14px}
@@ -775,6 +776,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
     <span class="dot"></span><span id="conn-label">확인 중</span>
     <span class="set"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="6" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="18" r="2" fill="none" stroke="currentColor" stroke-width="2"/></svg><span class="set-t">설정</span></span>
   </button>
+  <button class="pill" id="btn-history" title="이 기기에서 한 지난 회의를 다시 열어요">지난 회의</button>
   <button class="pill" id="btn-new">새 회의</button>
   <button class="pill icon m-only" id="btn-new-m" aria-label="새 회의"><svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg></button>
   <button class="pill" id="btn-wrap" hidden title="남은 턴은 건너뛰고 지금까지의 이야기로 결론을 정리해요">여기서 마무리</button>
@@ -893,7 +895,7 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
       <p class="help" id="me-summary"></p>
       <div id="me-more" hidden>
         <div class="row" style="margin-top:10px"><b style="font-size:13px">함께 앉는 사람</b><span class="spacer"></span><span id="me-count" role="radiogroup" aria-label="함께 앉는 사람 수" style="display:inline-flex;gap:6px"></span></div>
-        <p class="help">한 화면을 같이 보며 최대 3명까지 참여해요. 2명이면 에이전트는 최대 4명, 3명이면 최대 3명이에요. 말할 때 입력창에서 이름을 고르면 돼요.</p>
+        <p class="help">최대 4명까지 함께 참여해요. 2명이면 에이전트는 최대 4명, 3명이면 3명, 4명이면 2명이에요. 말할 때 입력창에서 이름을 고르면 돼요.</p>
         <div class="row" id="me-people" style="margin-top:6px;flex-wrap:wrap;gap:6px"></div>
         <div class="row" style="margin-top:14px"><b style="font-size:13px">각자 폰으로 참여</b><span class="spacer"></span><button class="pill sm" id="room-open">방 열기</button></div>
         <p class="help" id="room-help"></p>
@@ -935,6 +937,14 @@ dialog pre{margin:0;max-height:62vh;overflow:auto;background:#0B0B0B;color:#E4E4
           <button type="button" data-v="auto" class="on">자동</button><button type="button" data-v="review">자료 검토</button><button type="button" data-v="free">자유 토론</button><button type="button" data-v="idea">아이디어 회의</button></div>
         <p class="tp-hint" id="tp-style-hint" style="margin:6px 0 0"></p></div>
       <div class="tp-foot"><span id="tp-count" class="eyebrow ko"></span><div class="spacer"></div><button class="pill" id="tp-save">저장</button><button class="pill dark" id="tp-start">회의 시작</button></div>
+  </div>
+</dialog>
+<dialog id="dlg-history" class="newdlg" aria-label="지난 회의">
+  <div class="dh"><h2>지난 회의</h2><button class="pill sm" data-close>닫기</button></div>
+  <div class="db">
+    <p class="tp-hint" style="margin:2px 0 12px">이 기기의 브라우저에만 저장돼요(최대 30개). 고르면 회의록과 결론을 그 화면 그대로 다시 열어요.</p>
+    <div id="hist-list" style="display:grid;grid-template-columns:minmax(0,1fr);gap:8px;max-height:56vh;overflow-y:auto;overflow-x:hidden"></div>
+    <div class="tp-foot"><button class="pill sm ghost" id="hist-clear">모두 지우기</button><span class="spacer"></span><button class="pill dark" data-close>확인</button></div>
   </div>
 </dialog>
 <dialog id="dlg-room" class="newdlg" aria-label="폰으로 참여">
@@ -1065,7 +1075,7 @@ const pickedModels = () => (sharedMode() ? loadSettings().sharedModels : loadSet
 const modelFor = (id) => (pickedModels()[id] || (sharedMode() ? S.agents[id]?.sharedModel || S.agents[id]?.defaultModel : S.agents[id]?.defaultModel)) || "";
 const isCheap = (m) => m.priceOut != null && m.priceOut <= (S.sharedMaxOut || 5);
 // 자리는 사회자 포함 6개예요. 나도 참여하면 에이전트 참석자는 최대 4명
-function maxMembers() { const h = humans().length; return h <= 1 ? ALL_MEMBERS.length - h : 6 - h; }   // 사람 1명: 4, 2명: 4, 3명: 3
+function maxMembers() { const h = humans().length; return h <= 1 ? ALL_MEMBERS.length - h : 6 - h; }   // 사람 1명: 4, 2명: 4, 3명: 3, 4명: 2
 function members() {
   const saved = loadSettings().members;
   let list = Array.isArray(saved) ? ALL_MEMBERS.filter((id) => saved.includes(id)) : ALL_MEMBERS.slice();
@@ -1210,9 +1220,9 @@ function drawSeats() {
     b.onclick = () => showCard(id);
     $("#stage").appendChild(b);
   }
-  humans().forEach((p, k) => {   // 사람도 같은 모양의 자리에 (최대 3명)
+  humans().forEach((p, k) => {   // 사람도 같은 모양의 자리에 (최대 4명)
     const b = document.createElement("button"), [c, t] = HUMAN_STYLE[p.id];
-    b.className = `note mine ${S.hand === p.id ? "hand" : ""}`; b.id = `seat-${p.id}`; b.setAttribute("style", `--c:${c};--t:${t};--rot:${[-1.5, 1.2, -0.8][k]}deg`);
+    b.className = `note mine ${S.hand === p.id ? "hand" : ""}`; b.id = `seat-${p.id}`; b.setAttribute("style", `--c:${c};--t:${t};--rot:${[-1.5, 1.2, -0.8, 1][k]}deg`);
     b.setAttribute("aria-label", `${p.name}, 사용자. 프로필 카드 보기`);
     b.innerHTML = `<div class="sel"><b></b><b></b><b></b><b></b><span></span></div>
       <div class="n-top">${meFace("n-av", p.id)}<span class="eyebrow" style="opacity:.6">${p.id === "me" ? "YOU" : "HUMAN"}</span></div>
@@ -1759,7 +1769,7 @@ async function concludeMeeting(m, i, { early = false } = {}) {
   m.early = early ? { doneTurns: m.i - ss, totalTurns: total - ss } : null;
   m.i = total; m.status = "done"; clearSnapshot();
   if (review) {
-    S.review = review; renderReview(review); renderTable("done", { review }); showTab("review");
+    S.review = review; renderReview(review); renderTable("done", { review }); showTab("review"); archiveSession();
     const vd = `'${esc(review.verdict)}'${josaIeyo(review.verdict)}`, head = review.style && review.style !== "review" ? "한 줄 정리는" : "판정은";
     cast(early ? `여기서 마무리했어요. ${head} ${vd}. 이제 후속 질문도 할 수 있어요.`
                : `회의 끝! ${head} ${vd}. 이제 사회자나 참석자에게 후속 질문도 할 수 있어요.`, "moderator");
@@ -1816,11 +1826,76 @@ function showPaused(note) {
 /* ───────────── 멈춘 회의 저장과 복구 (새로고침해도 이어서) ───────────── */
 const SNAP_KEY = "meetingroom.snapshot";
 function saveSnapshot() {
+  archiveSession();   // 지난 회의 목록에도 남겨요 (끝난 회의 포함)
   if (!S.meeting || !S.doc || S.meeting.status === "done") return;
   try {
     localStorage.setItem(SNAP_KEY, JSON.stringify({ v: 1, savedAt: Date.now(), doc: S.doc, meeting: S.meeting, transcript: S.transcript,
       tokens: S.tokens, contexts: S.contexts, last: S.last, thoughts: S.thoughts, trail: S.trail, history: S.history, reviews: S.reviews || [] }));
   } catch {}
+}
+// ───── 지난 회의: 이 브라우저(IndexedDB)에 회의를 통째로 남겨 두고, 목록에서 골라 그 화면 그대로 다시 열어요 ─────
+const HIST_DB = "ensembly-history", HIST_MAX = 30;
+let histTimer = null;
+function histStore(mode, fn) {
+  return new Promise((res, rej) => {
+    let open; try { open = indexedDB.open(HIST_DB, 1); } catch (e) { return rej(e); }
+    open.onupgradeneeded = () => open.result.createObjectStore("sessions", { keyPath: "id" });
+    open.onerror = () => rej(open.error);
+    open.onsuccess = () => { const db = open.result, tx = db.transaction("sessions", mode), req = fn(tx.objectStore("sessions")); tx.oncomplete = () => { db.close(); res(req?.result); }; tx.onerror = tx.onabort = () => { db.close(); rej(tx.error); }; };
+  });
+}
+function archiveSession() { clearTimeout(histTimer); histTimer = setTimeout(() => archiveNow().catch(() => {}), 700); }
+async function archiveNow() {
+  const m = S.meeting; if (!m || !S.doc || !S.transcript.length) return;
+  m.sid ||= `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const done = m.status === "done";
+  const rec = { id: m.sid, savedAt: Date.now(), title: String(S.doc.name || S.doc.prompt || "회의").slice(0, 90), status: done ? "done" : "paused", verdict: S.review?.verdict || "",
+    people: [...(m.team || []).map((id) => S.agents[id]?.name), ...humans().map((h) => h.name)].filter(Boolean), turns: m.plan.length, at: Math.min(m.i, m.plan.length), said: S.transcript.length,
+    snap: JSON.parse(JSON.stringify({ doc: S.doc, meeting: m, transcript: S.transcript, tokens: S.tokens, contexts: S.contexts, last: S.last, thoughts: S.thoughts, trail: S.trail,
+      history: S.history, reviews: S.reviews || [], review: done ? S.review : null, followups: S.followups || [] })) };
+  await histStore("readwrite", (st) => st.put(rec));
+  const all = (await histStore("readonly", (st) => st.getAll())) || [];
+  const extra = all.sort((a, b) => b.savedAt - a.savedAt).slice(HIST_MAX);
+  if (extra.length) await histStore("readwrite", (st) => { extra.forEach((r) => st.delete(r.id)); });
+}
+async function openHistory() {
+  let all = []; try { all = (await histStore("readonly", (st) => st.getAll())) || []; } catch { return toast("이 브라우저에서는 지난 회의를 저장할 수 없어요(시크릿 창이거나 저장소가 꺼져 있어요)."); }
+  all.sort((a, b) => b.savedAt - a.savedAt);
+  const when = (t) => new Date(t).toLocaleString("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  $("#hist-list").innerHTML = all.length ? all.map((r) => `<div style="border:1px solid var(--hair);border-radius:14px;padding:10px 12px;display:flex;gap:10px;align-items:center${r.id === S.meeting?.sid ? ";border-color:var(--ink)" : ""}">
+      <div style="min-width:0;flex:1"><b style="display:block;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.title)}</b>
+        <span style="font-size:12.5px;color:var(--muted)">${esc(when(r.savedAt))} · ${r.status === "done" ? `끝남${r.verdict ? ` · ${esc(r.verdict)}` : ""}` : `멈춤 · ${r.at}/${r.turns}턴`} · 참석 ${r.people.length}명${r.id === S.meeting?.sid ? " · 지금 열려 있어요" : ""}</span></div>
+      <button class="pill sm dark" style="flex:none" data-open="${esc(r.id)}">열기</button><button class="pill sm ghost" style="flex:none" data-del="${esc(r.id)}" aria-label="${esc(r.title)} 지우기">지우기</button></div>`).join("")
+    : `<p class="help" style="margin:8px 2px">아직 저장된 회의가 없어요. 회의를 하면 여기에 자동으로 쌓여요.</p>`;
+  $("#hist-clear").hidden = !all.length;
+  $("#hist-list").querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => { const r = all.find((x) => x.id === b.dataset.open); if (r) openSession(r); }));
+  $("#hist-list").querySelectorAll("[data-del]").forEach((b) => (b.onclick = async () => { await histStore("readwrite", (st) => st.delete(b.dataset.del)).catch(() => {}); openHistory(); }));
+  if (!$("#dlg-history").open) $("#dlg-history").showModal();
+}
+async function openSession(rec) {
+  if (S.running || S.wrapping || S.fuBusy || pendingAsk) return toast("회의가 진행 중이에요. 멈춘 뒤에 지난 회의를 열 수 있어요.");
+  if (rec.id === S.meeting?.sid) { $("#dlg-history").close(); return; }
+  clearTimeout(histTimer); await archiveNow().catch(() => {});   // 지금 보던 회의부터 남겨 두고
+  $("#dlg-history").close();
+  const snap = rec.snap, m = snap.meeting;
+  if (m.status !== "done") { restoreSnapshot(snap); return; }
+  saveSettings({ members: m.team, turns: m.plan.length });
+  S.doc = snap.doc; showDocChip(); newMeeting();
+  Object.assign(S, { transcript: snap.transcript || [], tokens: snap.tokens || {}, contexts: snap.contexts || {}, last: snap.last || {}, thoughts: snap.thoughts || {}, trail: snap.trail || {},
+    history: [], meeting: m, reviews: snap.reviews || [], review: snap.review || null, followups: [] });
+  drawTracker();
+  for (const h of snap.history || []) h.t === "divider" ? logDivider(h.phase) : h.t === "user" ? logUserNote(h.a) : h.t === "me" ? logMe(h.a) : logMsg(h.a);
+  Object.entries(m.cells || {}).forEach(([i, who]) => markCell(+i, "done", who));
+  paintMeCells(); refreshSeats(); drawMinds(); drawMood(); drawLedger(); setLogCount(S.transcript.length);
+  for (const f of snap.followups || []) {   // 후속 질문도 그대로
+    if (!S.agents[f.to]) continue;
+    if (!S.followups.length) logPane().insertAdjacentHTML("beforeend", `<div class="divider"><span class="eyebrow">Follow-up</span><span style="font-size:13px">후속 질문</span></div>`);
+    addUserMsg(f.question, f.to); addMsg({ id: f.to, text: f.answer, label: "Answer" }); S.followups.push(f);
+  }
+  if (S.review) { renderReview(S.review); renderTable("done", { review: S.review }); showTab("review"); }
+  drawComposerTargets(); updateComposer(); updateRunButton();
+  status("지난 회의를 다시 열었어요. 회의록과 결론을 보고, 후속 질문도 이어서 할 수 있어요.");
+  toast("지난 회의를 열었어요.");
 }
 function clearSnapshot() { try { localStorage.removeItem(SNAP_KEY); } catch {} }
 function loadSnapshot() { try { return JSON.parse(localStorage.getItem(SNAP_KEY) || "null"); } catch { return null; } }
@@ -1863,11 +1938,11 @@ function updateRunButton() {
 // ───── 나도 참여: 내 프로필, 내 카드, 회의 중 한마디와 질문에 답하기 ─────
 const MBTI = ["ISTJ", "ISFJ", "INFJ", "INTJ", "ISTP", "ISFP", "INFP", "INTP", "ESTP", "ESFP", "ENFP", "ENTP", "ESTJ", "ESFJ", "ENFJ", "ENTJ"];
 const ME_COLOR = "#3B3486", ME_TINT = "#E6E3F5";   // 내 자리·카드 색 (다른 참석자처럼 파스텔 바탕)
-// 사람 참석자는 한 화면에서 최대 3명. 첫 사람은 "me", 함께 앉는 사람은 "me2"·"me3" (설정의 me.mates에 저장)
-const HUMAN_IDS = ["me", "me2", "me3"];
-const HUMAN_STYLE = { me: [ME_COLOR, ME_TINT], me2: ["#1F5F4A", "#DDF1E7"], me3: ["#8A4B14", "#FBE8D2"] };
+// 사람 참석자는 최대 4명. 첫 사람은 "me", 함께 앉는 사람은 "me2"·"me3"·"me4" (설정의 me.mates에 저장)
+const HUMAN_IDS = ["me", "me2", "me3", "me4"];
+const HUMAN_STYLE = { me: [ME_COLOR, ME_TINT], me2: ["#1F5F4A", "#DDF1E7"], me3: ["#8A4B14", "#FBE8D2"], me4: ["#8A1F4B", "#FADDE8"] };
 const isHuman = (id) => HUMAN_IDS.includes(id);
-const humanCount = () => { const m = loadSettings().me || {}; return m.on ? Math.max(1, Math.min(3, parseInt(m.count, 10) || 1)) : 0; };
+const humanCount = () => { const m = loadSettings().me || {}; return m.on ? Math.max(1, Math.min(4, parseInt(m.count, 10) || 1)) : 0; };
 function meProfile(id = "me") {
   const m = loadSettings().me || {}, k = Math.max(0, HUMAN_IDS.indexOf(id)), src = k ? (m.mates || [])[k - 1] || {} : m;
   return { id: HUMAN_IDS[k], on: !!m.on && k < Math.max(1, humanCount()), name: String(src.name || "").trim() || (k ? `참석자${k + 1}` : "나"), title: String(src.title || "").trim(), about: String(src.about || "").trim(), mbti: src.mbti || "" };
@@ -1905,7 +1980,7 @@ function drawMe() {
   $("#me-summary").textContent = !p.on ? "" : n > 1 ? `${hs.map((h) => `'${h.name}'`).join(", ")} ${n}명이 참여해요.` : `'${p.name}'${p.title ? ` (${p.title})` : ""}로 참여해요.`;
   $("#me-seat").hidden = true;
   $("#me-more").hidden = !p.on;
-  $("#me-count").innerHTML = [1, 2, 3].map((k) => `<button type="button" class="pill sm ${k === n ? "dark" : ""}" role="radio" aria-checked="${k === n}" data-n="${k}">${k}명</button>`).join("");
+  $("#me-count").innerHTML = [1, 2, 3, 4].map((k) => `<button type="button" class="pill sm ${k === n ? "dark" : ""}" role="radio" aria-checked="${k === n}" data-n="${k}">${k}명</button>`).join("");
   $("#me-count").querySelectorAll("button").forEach((b) => (b.onclick = () => setHumanCount(+b.dataset.n)));
   $("#me-people").innerHTML = n > 1 ? hs.map((h) => `<button type="button" class="pill sm" data-id="${h.id}">${esc(h.name)} 프로필</button>`).join("") : "";
   $("#me-people").querySelectorAll("button").forEach((b) => (b.onclick = () => openMe(b.dataset.id)));
@@ -2458,7 +2533,7 @@ async function askFollowup() {
     const r = await call(to, `[사용자→${name}] ${q}`, { type: "followup", style: meetingStyle(), topic: S.doc.prompt, document: docForAgents(), transcript: publicTranscript(), review: S.review, question: q,
       thread: S.followups.map((f) => ({ to: S.agents[f.to].name, question: f.question, answer: f.answer })) });
     if (r.failed) throw failErr(r.text);
-    S.followups.push({ to, question: q, answer: r.text });
+    S.followups.push({ to, question: q, answer: r.text }); archiveSession();
     if (r.data.thoughts) { S.thoughts[to] = r.data.thoughts; drawMinds(); }
     addMsg({ id: to, text: r.text, thought: r.data.thoughts, raw: r.raw, model: r.data.model, label: "Answer" });
     cast(`${josa(`${name} 님`, "이/가")} 답했어요. 이어서 더 물어봐도 돼요.`, to);
@@ -2736,7 +2811,7 @@ async function runCompare(v) {
     if (b) b.textContent = "두 결과를 가린 채 채점하는 중…";
     const j = await call("moderator", "[회의실→사회자] 두 결과 채점 요청", { type: "judge", topic: topicForAgents(), a: blindReview(flip ? base : v), b: blindReview(flip ? v : base) });
     if (j.failed) throw failErr(j.text);
-    v.compare = { base, flip, judge: j.data, at: Date.now(), revealed: false, vote: null };
+    v.compare = { base, flip, judge: j.data, at: Date.now(), revealed: false, vote: null }; archiveSession();
     renderReview(v); toast("비교를 마쳤어요. 어느 쪽이 더 유용했는지 골라 주세요.");
   } catch (e) {
     toast(`비교하지 못했어요. ${e.message || ""}`.trim());
@@ -3196,6 +3271,8 @@ $("#btn-wrap").onclick = wrapUpMeeting;
 $("#me-mbti").insertAdjacentHTML("beforeend", MBTI.map((t) => `<option value="${t}">${t}</option>`).join(""));
 $("#me-on").onchange = () => setMe({ on: $("#me-on").checked });
 $("#me-edit").onclick = () => openMe("me");
+$("#btn-history").onclick = openHistory;
+$("#hist-clear").onclick = async () => { if (!(await askConfirm("지난 회의를 모두 지울까요?", "이 기기에 저장된 회의 기록이 모두 사라져요. 되돌릴 수 없어요.", "모두 지우기"))) return; await histStore("readwrite", (st) => st.clear()).catch(() => {}); openHistory(); };
 $("#room-open").onclick = openRoom; $("#room-pill").onclick = openRoom;
 $("#room-close").onclick = () => { closeRoom(); toast("방을 닫았어요. 폰에서는 더 들어올 수 없어요."); };
 $("#room-copy").onclick = async () => { try { await navigator.clipboard.writeText(roomUrl()); toast("주소를 복사했어요."); } catch { toast(roomUrl()); } };

@@ -117,7 +117,7 @@ textarea.inp{resize:none;min-height:88px}
 // 폰 참여 화면: 방 코드로 들어와 자리를 고르고, 답하기·한마디·발언 신청을 진행 화면으로 보내요. 키나 비밀값은 다루지 않아요.
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const COLOR = { me: "#3B3486", me2: "#1F5F4A", me3: "#8A4B14" };
+const COLOR = { me: "#3B3486", me2: "#1F5F4A", me3: "#8A4B14", me4: "#8A1F4B" };
 const STATUS = { idle: "주제를 정하는 중", ready: "곧 시작해요", running: "회의 중", paused: "잠시 멈춤", done: "회의가 끝났어요" };
 let code = (location.pathname.match(/^\/j\/([A-Za-z0-9]+)/)?.[1] || new URLSearchParams(location.search).get("room") || "").toUpperCase();
 let token = "", seat = null, pick = null, state = null, taken = {}, timer = null, answered = "", busy = false;

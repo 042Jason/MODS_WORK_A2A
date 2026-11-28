@@ -64,9 +64,9 @@ const MOCK_BADGE_FREE = { critic: ["magnifier", "'그게 진짜 그럴까?' 한�
   reader: ["handshake", "자기 경험을 솔직하게 꺼내서 분위기를 편하게 만들어 줬어요."], method: ["link", "서로 다른 말 사이의 공통점을 찾아 이어 줬어요."], policy: ["rocket", "'만약에'로 시작하는 엉뚱한 상상으로 대화를 넓혔어요."] };
 // 사용자도 참석할 때 프롬프트에 넣는 소개
 const userLine = (u) => (u?.name ? `${u.name}(사용자${u.title ? `, ${u.title}` : ""})` : "");
-// 사람 참석자는 한 화면에서 최대 3명까지. 예전 요청(user 하나)도 그대로 받아요
+// 사람 참석자는 최대 4명까지. 예전 요청(user 하나)도 그대로 받아요
 const usersOf = (input) => (Array.isArray(input?.users) && input.users.length ? input.users : input?.user?.name ? [input.user] : [])
-  .filter((u) => u?.name).slice(0, 3).map((u) => ({ name: String(u.name).slice(0, 12), title: String(u.title || "").slice(0, 30), about: String(u.about || "").slice(0, 300) }));
+  .filter((u) => u?.name).slice(0, 4).map((u) => ({ name: String(u.name).slice(0, 12), title: String(u.title || "").slice(0, 30), about: String(u.about || "").slice(0, 300) }));
 const usersLine = (us) => us.map(userLine).join(", ");
 const usersIntro = (us) => (us.length ? `\n[사용자 참석] ${usersLine(us)}도 이 회의에 함께합니다.${us.filter((u) => u.about).map((u) => ` ${u.name} 소개: ${u.about}`).join("")} 회의록에는 '이름(사용자)'로 나옵니다.` : "");
 const spokeUsers = (us, transcript) => us.filter((u) => transcript.some((t) => t.role === "me" && String(t.speaker || "").startsWith(u.name)));
